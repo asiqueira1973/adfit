@@ -9,7 +9,8 @@ import { fill } from "@/lib/copy";
 import { costSuffix, formatDate, formatMoney, signedCredits } from "@/lib/format";
 import type { Dictionary } from "@/lib/i18n";
 import { brandContext } from "@/server/brand/context";
-import { listActionPrices, listBrandLedger, listBrandPayments } from "@/server/brand/credits";
+import { listActionPrices, listActivePackages, listBrandLedger, listBrandPayments } from "@/server/brand/credits";
+import { adEstimate } from "@/lib/pricing";
 
 const PAYMENT_TONE: Record<string, Tone> = { iniciado: "processing", pago: "success", falhou: "danger", expirado: "neutral", reembolsado: "warning" };
 
@@ -37,7 +38,11 @@ function describe(m: LedgerItem, t: Dictionary): string {
 async function Content({ searchParams }: { searchParams: PageProps<"/creditos">["searchParams"] }) {
   const { profile, brand, t, intl } = await brandContext();
   const { compra } = await searchParams;
-  const [ledger, prices, payments] = await Promise.all([listBrandLedger(profile.marcaId), listActionPrices(), listBrandPayments(profile.marcaId)]);
+  const [ledger, prices, payments, packs] = await Promise.all([listBrandLedger(profile.marcaId), listActionPrices(), listBrandPayments(profile.marcaId), listActivePackages()]);
+  // Custo médio de um anúncio e valor do crédito pelos pacotes (pedido do Alexandre, 01/11/2026).
+  const est = adEstimate(prices, packs);
+  const money = (c: number) => formatMoney(c, est.moeda!, intl);
+  const range = (min: number | null, max: number | null) => (min === null || max === null ? null : min === max ? money(min) : `${money(min)}–${money(max)}`);
   const costLabels = t.custo;
 
   return (
@@ -76,7 +81,20 @@ async function Content({ searchParams }: { searchParams: PageProps<"/creditos">[
         ))}
       </ListGroup>
 
-      <ListGroup title={t.creditos.quantoCusta} footer={t.creditos.quantoCustaRodape}>
+      <ListGroup
+        title={t.creditos.quantoCusta}
+        footer={[est.creditoMin !== null ? fill(t.creditos.valorCredito, { valor: range(est.creditoMin, est.creditoMax)! }) : null, t.creditos.quantoCustaRodape].filter(Boolean).join(" ")}
+      >
+        <ListRow
+          label={<span className="font-semibold">{t.creditos.anuncioMedio}</span>}
+          detail={t.creditos.anuncioMedioDica}
+          value={
+            <span className="tabular text-right">
+              <span className="block font-semibold">{est.creditos} {t.custo.creditos}</span>
+              {est.anuncioMin !== null && <span className="block text-[13px] text-text-2">≈ {range(est.anuncioMin, est.anuncioMax)}</span>}
+            </span>
+          }
+        />
         {prices.map((p) => (
           <ListRow key={p.acao} label={t.admin.acoes[p.acao]} value={<span className="tabular">{costSuffix(p.creditos, costLabels)}</span>} />
         ))}
