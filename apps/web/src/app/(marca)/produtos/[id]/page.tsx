@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ButtonLink } from "@/components/ui/button";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/feedback";
 import { ArchiveProductButton } from "@/features/products/archive-button";
@@ -44,6 +45,7 @@ async function Content({ params }: Pick<PageProps<"/produtos/[id]">, "params">) 
         hasPhotos={product.fotos.length > 0}
         t={{ produtos: t.produtos, copy: t.copy, erros: t.erros }}
       />
+      {product.ficha_aprovada_id && <ButtonLink href={`/anuncios/novo?produto=${product.id}`}>{t.produtos.novoAnuncioComProduto}</ButtonLink>}
     </div>
   );
 }

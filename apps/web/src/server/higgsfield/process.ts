@@ -7,6 +7,7 @@ import { createHiggsfieldClient, downloadResult } from "./client";
 import { referenceUrls } from "./inputs";
 import { buildImageBody, type ImageRequest } from "./models";
 import type { Downloader, GenerationClient, HfResult } from "./types";
+import { frameTarget } from "../ads/frames";
 
 /** Dependências externas da geração (seção 22: dublês nos testes). */
 export type GenerationDeps = { hf: GenerationClient; download: Downloader };
@@ -33,7 +34,7 @@ export type GenerationInput = {
   resumo_refacao?: string | null;
 };
 
-type GenerationRow = {
+export type GenerationRow = {
   id: string;
   marca_id: string;
   tipo: "ficha_produto" | "quadro_chave" | "clipe_video";
@@ -99,9 +100,69 @@ function imageType(contentType: string): { ext: string; mime: string } {
 }
 
 /**
+ * Alvo de uma geração: a linha que recebe o resultado (`fichas_produto` ou `quadros`, ambas com
+ * `geracao_id`, `status = gerando` e `imagem_path`). Cada tipo diz onde gravar o arquivo e o que
+ * acontece depois de gravar ou da falha definitiva.
+ */
+export type GenerationTarget = {
+  table: "fichas_produto" | "quadros";
+  id: string;
+  /** Caminho completo (com bucket) do arquivo do resultado. */
+  path(ext: string): string;
+  /** Depois de copiar ao Storage (ficha: libera para aprovação; quadro: agenda o QC). */
+  afterStored(g: GenerationRow, path: string): Promise<void>;
+  /** Depois da falha definitiva (ficha: estorno; quadro: confere o fechamento do anúncio). */
+  afterFinalFailure(g: GenerationRow): Promise<void>;
+};
+
+/** Acha o alvo da geração pelo `geracao_id` (null se a tentativa já foi substituída). */
+async function findTarget(g: GenerationRow): Promise<GenerationTarget | null> {
+  if (g.tipo === "ficha_produto") return sheetTarget(g);
+  if (g.tipo === "quadro_chave") return frameTarget(g);
+  throw new Error(`tipo_nao_suportado:${g.tipo}`);
+}
+
+/** Alvo `fichas_produto` (épico 8.4). */
+async function sheetTarget(g: GenerationRow): Promise<GenerationTarget | null> {
+  const db = createAdminClient();
+  const { data: ficha } = await db.from("fichas_produto").select("id, produto_id, versao").eq("geracao_id", g.id).maybeSingle();
+  if (!ficha) return null;
+  return {
+    table: "fichas_produto",
+    id: ficha.id,
+    path: (ext) => `${PHOTO_BUCKET}/${g.marca_id}/${ficha.produto_id}/fichas/v${ficha.versao}-${g.id}.${ext}`,
+    // Libera a ficha para aprovação (12.1) — só enquanto ela ainda segue esta geração.
+    afterStored: async (_g, path) => {
+      await db.from("fichas_produto").update({ imagem_path: path, status: "aguardando_aprovacao" }).eq("id", ficha.id).eq("geracao_id", g.id).eq("status", "gerando");
+    },
+    // Ficha `falhou` e estorno integral (regra 11.2.4; idempotente por consumo).
+    afterFinalFailure: async (gen) => {
+      const { data: failed } = await db.from("fichas_produto").update({ status: "falhou" }).eq("id", ficha.id).eq("geracao_id", gen.id).eq("status", "gerando").select("id");
+      if (failed?.length && gen.cobranca_id) {
+        const { error } = await db.rpc("estornar_creditos", {
+          p_movimentacao_id: gen.cobranca_id,
+          p_observacao: `Falha técnica na ficha (versão ${ficha.versao})`,
+          p_referencia_tipo: "ficha",
+          p_referencia_id: ficha.id,
+        });
+        // `ja_estornado`: outro processo já devolveu — idempotente.
+        if (error && error.message !== "ja_estornado") throw error;
+      }
+    },
+  };
+}
+
+/** Custo USD de uma geração concluída (seção 7.3): imagem = `preco_usd_por_imagem`. */
+async function generationCost(g: GenerationRow): Promise<number> {
+  const { preco_usd_por_imagem } = await readConfig(["preco_usd_por_imagem"]);
+  if (g.tipo === "clipe_video") throw new Error("custo_de_video_no_8_6");
+  return Number(preco_usd_por_imagem);
+}
+
+/**
  * Processa um resultado da Higgsfield — webhook, polling ou "Reconsultar" (seções 4.3 e 13).
  * Idempotente por `request_id`: geração em estado final não muda; a cópia ao Storage usa caminho
- * determinístico (upsert). `completed` → copia o arquivo ao Storage ANTES de liberar a ficha
+ * determinístico (upsert). `completed` → copia o arquivo ao Storage ANTES de liberar o alvo
  * (pegadinha do CLAUDE.md), grava custo e conclui. `failed`/`nsfw` → política de falha.
  * Recebe: geração, resultado e dependências. Devolve: nada.
  */
@@ -119,15 +180,14 @@ export async function applyResult(g: GenerationRow, result: HfResult, deps = gen
   const url = result.images?.[0]?.url ?? result.video?.url;
   if (!url) return failGeneration(g, "falhou", "resultado_sem_arquivo", deps);
 
-  if (g.tipo !== "ficha_produto") throw new Error(`tipo_nao_suportado:${g.tipo}`);
-  const { preco_usd_por_imagem } = await readConfig(["preco_usd_por_imagem"]);
-  const { data: ficha } = await db.from("fichas_produto").select("id, produto_id, versao").eq("geracao_id", g.id).maybeSingle();
-  if (!ficha) {
+  const custo = await generationCost(g);
+  const target = await findTarget(g);
+  if (!target) {
     // Resultado atrasado de uma tentativa já substituída (corrida webhook × timeout): a Higgsfield
-    // cobrou, então registra o custo, mas não toca a ficha (ela segue a tentativa atual).
+    // cobrou, então registra o custo, mas não toca o alvo (ele segue a tentativa atual).
     await db
       .from("geracoes")
-      .update({ status: "concluida", custo_usd: Number(preco_usd_por_imagem), concluido_em: new Date().toISOString(), erro: "resultado_de_tentativa_substituida" })
+      .update({ status: "concluida", custo_usd: custo, concluido_em: new Date().toISOString(), erro: "resultado_de_tentativa_substituida" })
       .eq("id", g.id)
       .in("status", ["na_fila", "processando"]);
     return;
@@ -136,25 +196,27 @@ export async function applyResult(g: GenerationRow, result: HfResult, deps = gen
   // 1. Copia para o Storage (nunca guardamos só a URL externa — seção 4.3).
   const file = await deps.download(url);
   const { ext, mime } = imageType(file.contentType);
-  const object = `${g.marca_id}/${ficha.produto_id}/fichas/v${ficha.versao}-${g.id}.${ext}`;
-  const { error: upErr } = await db.storage.from(PHOTO_BUCKET).upload(object, file.bytes, { contentType: mime, upsert: true });
+  const path = target.path(ext);
+  const [bucket, ...rest] = path.split("/");
+  const { error: upErr } = await db.storage.from(bucket).upload(rest.join("/"), file.bytes, { contentType: mime, upsert: true });
   if (upErr) throw upErr;
-  const path = `${PHOTO_BUCKET}/${object}`;
 
-  // 2. Libera a ficha para aprovação (12.1) e 3. conclui a geração com o custo real (seção 7.3).
-  await db.from("fichas_produto").update({ imagem_path: path, status: "aguardando_aprovacao" }).eq("id", ficha.id).eq("geracao_id", g.id).eq("status", "gerando");
+  // 2. Segue o fluxo do alvo ANTES de concluir: se a função cair entre os passos, a geração continua
+  //    `processando`, o polling reprocessa e os updates condicionais do alvo tornam isso seguro.
+  await target.afterStored(g, path);
+  // 3. Conclui a geração com o custo real (seção 7.3).
   await db
     .from("geracoes")
-    .update({ status: "concluida", resultado_url: path, custo_usd: Number(preco_usd_por_imagem), concluido_em: new Date().toISOString() })
+    .update({ status: "concluida", resultado_url: path, custo_usd: custo, concluido_em: new Date().toISOString() })
     .eq("id", g.id)
     .in("status", ["na_fila", "processando"]);
 }
 
 /**
- * Política de falha técnica (seção 8.4; 12.1 e 12.3): marca a geração como falha (só quem "ganha"
- * a atualização condicional segue — webhook repetido não duplica efeito). Tentativa 1 → nova
- * geração, tentativa 2, mesma cobrança, sem novo débito. Tentativa 2 → ficha `falhou` e estorno
- * integral via `estornar_creditos` (regra 11.2.4; idempotente por consumo).
+ * Política de falha técnica (seção 8.4/8.5; 12.1, 12.3 e 12.4): marca a geração como falha (só
+ * quem "ganha" a atualização condicional segue — webhook repetido não duplica efeito). Tentativa 1
+ * com prompt → nova geração (tentativa 2, mesma cobrança, sem novo débito), ligada ao alvo só se
+ * ele ainda segue a tentativa 1. Sem prompt ou na tentativa 2 → falha definitiva do alvo.
  * Recebe: geração, status final, motivo técnico e dependências. Devolve: nada.
  */
 export async function failGeneration(
@@ -172,50 +234,47 @@ export async function failGeneration(
     .select("id");
   if (!claimed?.length) return;
 
-  if (g.tipo !== "ficha_produto") throw new Error(`tipo_nao_suportado:${g.tipo}`);
-  const { data: ficha } = await db.from("fichas_produto").select("id, versao").eq("geracao_id", g.id).maybeSingle();
-  if (!ficha) return;
+  const target = await findTarget(g);
+  if (!target) return;
 
   // Sem prompt (falhou no preparo, ex.: Claude) não há o que retentar.
   const hasPrompt = !!(g.entrada as GenerationInput | null)?.prompt;
   if (g.tentativa < MAX_ATTEMPTS && hasPrompt) {
-    const { data: retry, error } = await db
-      .from("geracoes")
-      .insert({ marca_id: g.marca_id, tipo: g.tipo, modelo: g.modelo, entrada: g.entrada as never, tentativa: g.tentativa + 1, cobranca_id: g.cobranca_id })
-      .select("id")
-      .single();
-    if (error) throw error;
-    // Só troca se a ficha ainda segue ESTA tentativa (um resultado atrasado pode tê-la resolvido).
-    const { data: linked } = await db
-      .from("fichas_produto")
-      .update({ geracao_id: retry.id })
-      .eq("id", ficha.id)
-      .eq("geracao_id", g.id)
-      .eq("status", "gerando")
-      .select("id");
-    if (!linked?.length) {
-      await db.from("geracoes").update({ status: "falhou", erro: "ficha_ja_resolvida", concluido_em: new Date().toISOString() }).eq("id", retry.id);
-      return;
-    }
-    await submitGeneration(retry.id, deps);
+    const retryId = await chainGeneration(g, target, { tentativa: g.tentativa + 1, entrada: g.entrada as GenerationInput });
+    if (retryId) await submitGeneration(retryId, deps);
     return;
   }
+  await target.afterFinalFailure(g);
+}
 
-  const { data: failed } = await db
-    .from("fichas_produto")
-    .update({ status: "falhou" })
-    .eq("id", ficha.id)
+/**
+ * Cria a próxima geração do mesmo alvo (retentativa técnica ou regeneração do QC) com a mesma
+ * cobrança e troca `geracao_id` do alvo só se ele ainda segue `g` e está `gerando`. Se não seguir
+ * mais, a nova geração fica `falhou` ("ja_resolvido") e não é submetida.
+ * Recebe: geração atual, alvo, tentativa e entrada. Devolve: id da nova geração ou null.
+ */
+export async function chainGeneration(
+  g: GenerationRow,
+  target: Pick<GenerationTarget, "table" | "id">,
+  next: { tentativa: number; entrada: GenerationInput },
+): Promise<string | null> {
+  const db = createAdminClient();
+  const { data: created, error } = await db
+    .from("geracoes")
+    .insert({ marca_id: g.marca_id, tipo: g.tipo, modelo: g.modelo, entrada: next.entrada as never, tentativa: next.tentativa, cobranca_id: g.cobranca_id })
+    .select("id")
+    .single();
+  if (error) throw error;
+  const { data: linked } = await db
+    .from(target.table)
+    .update({ geracao_id: created.id })
+    .eq("id", target.id)
     .eq("geracao_id", g.id)
     .eq("status", "gerando")
     .select("id");
-  if (failed?.length && g.cobranca_id) {
-    const { error } = await db.rpc("estornar_creditos", {
-      p_movimentacao_id: g.cobranca_id,
-      p_observacao: `Falha técnica na ficha (versão ${ficha.versao})`,
-      p_referencia_tipo: "ficha",
-      p_referencia_id: ficha.id,
-    });
-    // `ja_estornado`: outro processo já devolveu — idempotente.
-    if (error && error.message !== "ja_estornado") throw error;
+  if (!linked?.length) {
+    await db.from("geracoes").update({ status: "falhou", erro: "alvo_ja_resolvido", concluido_em: new Date().toISOString() }).eq("id", created.id);
+    return null;
   }
+  return created.id;
 }

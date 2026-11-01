@@ -42,7 +42,7 @@ export async function listProducts(marcaId: string, categoria?: string) {
     const aprovada = fichas.find((f) => f.id === p.ficha_aprovada_id);
     const fotos = [...((p.fotos_produto ?? []) as Array<{ storage_path: string; ordem: number }>)].sort((a, b) => a.ordem - b.ordem);
     const status: ProductStatus = p.ficha_aprovada_id ? "pronto" : fichas.some((f) => f.status === "gerando") ? "gerando" : "sem_ficha";
-    return { id: p.id, nome: p.nome, categoria: p.categoria, status, fichaPath: aprovada?.imagem_path ?? null, fotoPath: fotos[0]?.storage_path ?? null };
+    return { id: p.id, nome: p.nome, categoria: p.categoria, genero_alvo: p.genero_alvo, status, fichaPath: aprovada?.imagem_path ?? null, fotoPath: fotos[0]?.storage_path ?? null };
   });
   const [fichaUrls, fotoUrls] = await Promise.all([
     signMany(marcaId, rows.flatMap((r) => (r.fichaPath ? [r.fichaPath] : []))),

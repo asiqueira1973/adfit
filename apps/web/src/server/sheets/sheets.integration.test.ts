@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { assertLocalSupabase } from "@/test/local-db";
+import { higgsfieldHeaders } from "@/test/higgsfield";
 import { createAdminClient } from "../db/supabase";
 import { businessCodeOf } from "../api/http";
 import type { PromptAdjuster } from "../claude/types";
@@ -167,7 +168,7 @@ describe("8.4 — webhook e resultado", () => {
     const produto = await newProduct();
     const { fichaId } = await requestSheet(actor, produto, undefined);
     const rid = hf.submitted[0].requestId;
-    const res = await handleHiggsfieldWebhook("errado", new Headers(), payload(webhookCompleted, rid));
+    const res = await handleHiggsfieldWebhook("errado", higgsfieldHeaders(payload(webhookCompleted, rid)), payload(webhookCompleted, rid));
     expect(res.status).toBe(401);
     expect((await ficha(fichaId)).status).toBe("gerando");
   });
@@ -177,8 +178,8 @@ describe("8.4 — webhook e resultado", () => {
     const { fichaId } = await requestSheet(actor, produto, undefined);
     const rid = hf.submitted[0].requestId;
     const body = payload(webhookCompleted, rid);
-    expect((await handleHiggsfieldWebhook(token(), new Headers(), body)).status).toBe(200);
-    expect((await handleHiggsfieldWebhook(token(), new Headers(), body)).status).toBe(200);
+    expect((await handleHiggsfieldWebhook(token(), higgsfieldHeaders(body), body)).status).toBe(200);
+    expect((await handleHiggsfieldWebhook(token(), higgsfieldHeaders(body), body)).status).toBe(200);
 
     const f = await ficha(fichaId);
     expect(f.status).toBe("aguardando_aprovacao");
@@ -193,7 +194,7 @@ describe("8.4 — webhook e resultado", () => {
   });
 
   it("request_id desconhecido → 404", async () => {
-    const res = await handleHiggsfieldWebhook(token(), new Headers(), payload(webhookCompleted, `nao_existe_${sfx}`));
+    const res = await handleHiggsfieldWebhook(token(), higgsfieldHeaders(payload(webhookCompleted, `nao_existe_${sfx}`)), payload(webhookCompleted, `nao_existe_${sfx}`));
     expect(res.status).toBe(404);
   });
 
@@ -203,17 +204,17 @@ describe("8.4 — webhook e resultado", () => {
     const { fichaId } = await requestSheet(actor, produto, undefined);
     expect(await saldo()).toBe(antes - 2);
 
-    await handleHiggsfieldWebhook(token(), new Headers(), payload(webhookFailed, hf.submitted[0].requestId));
+    await handleHiggsfieldWebhook(token(), higgsfieldHeaders(payload(webhookFailed, hf.submitted[0].requestId)), payload(webhookFailed, hf.submitted[0].requestId));
     const f1 = await ficha(fichaId);
     expect(f1.status).toBe("gerando");
     const g2 = await getGeneration(f1.geracao_id!);
     expect(g2).toMatchObject({ tentativa: 2, status: "processando" });
     expect(await saldo()).toBe(antes - 2);
     // Reenvio do webhook da tentativa 1 não cria outra tentativa.
-    await handleHiggsfieldWebhook(token(), new Headers(), payload(webhookFailed, hf.submitted[0].requestId));
+    await handleHiggsfieldWebhook(token(), higgsfieldHeaders(payload(webhookFailed, hf.submitted[0].requestId)), payload(webhookFailed, hf.submitted[0].requestId));
     expect(hf.submitted).toHaveLength(2);
 
-    await handleHiggsfieldWebhook(token(), new Headers(), payload(webhookNsfw, hf.submitted[1].requestId));
+    await handleHiggsfieldWebhook(token(), higgsfieldHeaders(payload(webhookNsfw, hf.submitted[1].requestId)), payload(webhookNsfw, hf.submitted[1].requestId));
     expect((await ficha(fichaId)).status).toBe("falhou");
     expect((await getGeneration(g2!.id))!.status).toBe("bloqueada_nsfw");
     // Seção 7.3: custo_usd nulo quando falhou (não cobrado pela Higgsfield).
@@ -221,7 +222,7 @@ describe("8.4 — webhook e resultado", () => {
     expect(custos!.every((c) => c.custo_usd === null)).toBe(true);
     expect(await saldo()).toBe(antes);
     // Webhook repetido da tentativa 2 não estorna de novo.
-    await handleHiggsfieldWebhook(token(), new Headers(), payload(webhookNsfw, hf.submitted[1].requestId));
+    await handleHiggsfieldWebhook(token(), higgsfieldHeaders(payload(webhookNsfw, hf.submitted[1].requestId)), payload(webhookNsfw, hf.submitted[1].requestId));
     expect(await saldo()).toBe(antes);
   });
 

@@ -9,6 +9,12 @@ export const FORBIDDEN_TERMS: RegExp[] = [
   /queima\s+gordura/i,
   /\bcura\b/i,
   /garantid[oa]s?/i,
+  // Equivalentes em inglês para marcas com idioma_anuncios = 'en' (MD-1).
+  /lose\s+weight/i,
+  /lose\s+\d+([.,]\d+)?\s*(kg|kilos?|lbs?|pounds?)/i,
+  /(burn|burns|burning)\s+fat|fat[\s-]?burn(ing|er)?/i,
+  /\bcures?\b/i,
+  /\bguarantee(d|s)?\b/i,
 ];
 
 /**

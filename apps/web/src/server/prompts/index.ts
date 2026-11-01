@@ -11,6 +11,13 @@ export const PROMPT_VERSIONS = {
   // ou painel 3 com o tecido quando não há logo, rugas sem perder textura. v1 fica guardado.
   ficha: "ficha.v2",
   refacao: "refacao.v1",
+  // v2 (aprovado em 01/11/2026): mesma modelo nas 3 cenas (campo `modelo`) e texto no idioma da marca (MD-1).
+  roteiro: "roteiro.v2",
+  qcQuadro: "qc-quadro.v1",
+  // v2: revisão no idioma do texto (MD-1) e formato de saída explícito.
+  qcTexto: "qc-texto.v2",
+  tabelaModalidades: "tabela-modalidades.v1",
+  tabelaEstilos: "tabela-estilos.v1",
 } as const;
 
 export type PromptName = keyof typeof PROMPT_VERSIONS;

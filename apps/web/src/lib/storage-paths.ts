@@ -14,3 +14,11 @@ export function photoStoragePath(marcaId: string, produtoId: string, arquivo: st
 export function objectPath(storagePath: string, bucket = PHOTO_BUCKET): string {
   return storagePath.startsWith(`${bucket}/`) ? storagePath.slice(bucket.length + 1) : storagePath;
 }
+
+/** Bucket das imagens e vídeos dos anúncios (seção 6.4): `anuncios/<marca>/<anuncio>/…`. */
+export const AD_BUCKET = "anuncios";
+
+/** Caminho completo (com bucket) de um quadro: `anuncios/<marca>/<anuncio>/quadros/c<ordem>-v<versao>-<geracao>.<ext>`. */
+export function framePath(marcaId: string, anuncioId: string, ordem: number, versao: number, geracaoId: string, ext: string): string {
+  return `${AD_BUCKET}/${marcaId}/${anuncioId}/quadros/c${ordem}-v${versao}-${geracaoId}.${ext}`;
+}

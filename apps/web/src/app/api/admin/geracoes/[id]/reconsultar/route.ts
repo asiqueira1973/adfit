@@ -26,3 +26,6 @@ export async function POST(_request: NextRequest, ctx: RouteContext<"/api/admin/
     return errorResponse(e, profile.idioma);
   }
 }
+
+/** Duração máxima da função na Vercel: o trabalho com o Claude/Higgsfield segue depois da resposta. */
+export const maxDuration = 300;

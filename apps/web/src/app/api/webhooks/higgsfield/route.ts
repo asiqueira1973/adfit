@@ -11,3 +11,6 @@ export async function POST(request: NextRequest) {
   const { status, body } = await handleHiggsfieldWebhook(request.nextUrl.searchParams.get("token"), request.headers, raw);
   return NextResponse.json(body, { status });
 }
+
+/** Duração máxima da função na Vercel: o trabalho com o Claude/Higgsfield segue depois da resposta. */
+export const maxDuration = 300;
