@@ -451,6 +451,10 @@ export async function downloadAd(actor: AdActor, anuncioId: string): Promise<{ u
   if (!object.startsWith(`${ad.marca_id}/`)) throw new Error("caminho_fora_da_marca");
   const { data, error } = await db.storage.from("anuncios").createSignedUrl(object, 3600, { download: nome });
   if (error || !data) throw error ?? new Error("assinatura_falhou");
+  // Métrica da seção 21 (anúncios baixados por semana): um registro por download. Falha aqui não
+  // impede o download.
+  const { error: dlErr } = await db.from("downloads_anuncio").insert({ anuncio_id: anuncioId, marca_id: ad.marca_id });
+  if (dlErr) console.error("Registro de download falhou:", dlErr.message);
   await track({ nome: "adfit_video_baixado", distinctId: actor.email ?? "", tela: "Anúncio", descricao: "baixou o vídeo do anúncio", propriedades: { anuncio_id: anuncioId, versao_montagem: ad.versao_montagem } });
   return { url: data.signedUrl, nome };
 }

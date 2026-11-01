@@ -6,8 +6,8 @@ select plan(32);
 select tables_are('public', array[
   'marcas', 'perfis', 'produtos', 'fotos_produto', 'fichas_produto', 'anuncios', 'cenas', 'quadros', 'clipes',
   'geracoes', 'movimentacoes_creditos', 'pacotes_creditos', 'pagamentos', 'precos_acoes', 'configuracoes',
-  'feedbacks', 'pedidos_convite'
-], 'tabelas da seção 7.3 (+ feedbacks, MD-6; + pedidos_convite, MD-9)');
+  'feedbacks', 'pedidos_convite', 'downloads_anuncio'
+], 'tabelas da seção 7.3 (+ feedbacks, MD-6; + pedidos_convite, MD-9; + downloads_anuncio, métrica da seção 21)');
 
 select enums_are('public', array[
   'papel_usuario', 'categoria_peca', 'genero_alvo', 'status_ficha', 'status_anuncio', 'status_item', 'status_geracao',

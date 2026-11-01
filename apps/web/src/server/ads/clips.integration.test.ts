@@ -156,6 +156,9 @@ describe("8.6 — gerar vídeo", () => {
     expect(dl.nome).toBe(`video_${sfx}_bermuda-${sfx}_9x16_v1.mp4`);
     const outro: AdActor = { id: actor.id, papel: "usuario_marca", marcaId: outraMarcaId, idioma: "pt_br" };
     expect(businessCodeOf(await downloadAd(outro, ad.id).catch((e) => e))).toBe("anuncio_inexistente");
+    // Seção 21: cada download fica registrado (o recusado não).
+    const { count: downloads } = await db.from("downloads_anuncio").select("id", { count: "exact", head: true }).eq("anuncio_id", ad.id);
+    expect(downloads).toBe(1);
 
     // 8.7: editar texto com o vídeo pronto remonta de graça (versao_montagem 2).
     const semCusto = await saldo();

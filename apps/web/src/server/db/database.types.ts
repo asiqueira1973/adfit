@@ -133,7 +133,19 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
-                },"feedbacks": {
+                },"downloads_anuncio": {
+                Row: {
+                    "anuncio_id": string,"criado_em": string,"id": string,"marca_id": string
+                };
+                Insert: {
+                    "anuncio_id": string,"criado_em"?: string,"id"?: string,"marca_id": string
+                };
+                Update: {
+                    "anuncio_id"?: string,"criado_em"?: string,"id"?: string,"marca_id"?: string
+                };
+                Relationships: [];
+            };
+            "feedbacks": {
                   Row: {
                     "atualizado_em": string,"criado_em": string,"id": string,"marca_id": string | null,"status": Database["public"]['Enums']["feedback_status"],"tela": string | null,"texto": string,"tipo": Database["public"]['Enums']["feedback_tipo"],"usuario_id": string
                   }
