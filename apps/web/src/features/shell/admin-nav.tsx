@@ -7,13 +7,13 @@ import { cn } from "@/components/ui/cn";
 /** Rótulos do menu do admin (do dicionário, MD-1). */
 export type AdminNavLabels = {
   adminGrupoClientes: string; adminGrupoOperacao: string; adminGrupoSistema: string;
-  adminMarcas: string; adminUsuarios: string; adminGeracoes: string; adminCustos: string; adminConfiguracoes: string; adminFeedbacks: string;
+  adminMarcas: string; adminUsuarios: string; adminGeracoes: string; adminCustos: string; adminConfiguracoes: string; adminFeedbacks: string; adminPedidos: string;
 };
 
 /** Grupos do menu lateral do admin (seção 16.4). */
 function groups(l: AdminNavLabels) {
   return [
-    { title: l.adminGrupoClientes, items: [{ href: "/admin/marcas", label: l.adminMarcas }, { href: "/admin/usuarios", label: l.adminUsuarios }] },
+    { title: l.adminGrupoClientes, items: [{ href: "/admin/marcas", label: l.adminMarcas }, { href: "/admin/usuarios", label: l.adminUsuarios }, { href: "/admin/pedidos", label: l.adminPedidos }] },
     { title: l.adminGrupoOperacao, items: [{ href: "/admin/geracoes", label: l.adminGeracoes }, { href: "/admin/custos", label: l.adminCustos }, { href: "/admin/feedbacks", label: l.adminFeedbacks }] },
     { title: l.adminGrupoSistema, items: [{ href: "/admin/configuracoes", label: l.adminConfiguracoes }] },
   ];

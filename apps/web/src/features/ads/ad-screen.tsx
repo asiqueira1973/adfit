@@ -169,7 +169,13 @@ export function AdScreen({
               </Button>
             )}
             {ad.status === "aguardando_aprovacao" && failedClipScenes.length === 0 && (
-              <CostButton label={a.gerarVideo} cost={prices.gerarVideo} balance={0} disabled={!readyForVideo || saving || dirty} onClick={() => post(`/api/anuncios/${ad.id}/gerar-video`, "POST", {})} />
+              saving ? (
+                <Button type="button" disabled>
+                  {a.iniciandoVideo}
+                </Button>
+              ) : (
+                <CostButton label={a.gerarVideo} cost={prices.gerarVideo} balance={0} disabled={!readyForVideo || dirty} onClick={() => post(`/api/anuncios/${ad.id}/gerar-video`, "POST", {})} />
+              )
             )}
           </div>
         </div>

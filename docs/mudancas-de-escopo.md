@@ -127,3 +127,17 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 - **Regras:** o envio roda depois da resposta (`after`), com timeout de 4 s, e erro só vai para o log; analytics nunca atrapalha a ação. Nada de prompt, URL assinada ou dado de cartão.
 - **Privacidade (seção 20 / 25.7):** o e-mail do usuário vai para o Visão de Produto (ferramenta da Dab Lab) como identificador. A política de privacidade precisa citar isso, junto com Stripe, Higgsfield e Anthropic.
 - **Próximos eventos naturais** (8.6–8.8): vídeo gerado, vídeo baixado, refação de cena.
+
+## MD-9 — Pedido de convite na tela Entrar + novo layout (01/11/2026, Alexandre)
+- **Layout da tela Entrar:**
+  - marca AdFit em destaque (ícone + nome grande);
+  - proposta de valor ("Anúncios em vídeo para a sua marca de roupa fitness");
+  - os 3 passos (foto → cenas → vídeo);
+  - cartão "Já tem acesso? Entre com a sua conta Google".
+- **Pedir convite:** link "Ainda não tem acesso? Pedir um convite" leva a `/pedir-convite`.
+  - Campos: nome, e-mail de preferência Gmail, marca, Instagram e mensagem opcionais, e uma armadilha para robôs.
+  - O pedido é gravado em `pedidos_convite` pelo servidor, que tem um pedido em aberto por e-mail.
+  - **Não cria conta nem marca:** o autocadastro continua fora (seção 28).
+  - Evento `adfit_convite_pedido` (MD-8).
+- **Admin:** "Pedidos de acesso", no grupo Clientes, com filtro e status por linha (novo, convidado, recusado). Para dar acesso: criar a marca, Convidar usuário e marcar como convidado.
+- Migration `20261101001300_pedidos_convite.sql`: RLS só para admin; o cliente não lê nem grava. Teste pgTAP `08_pedidos_convite`.

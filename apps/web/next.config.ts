@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // ffmpeg-static calcula o caminho do binário pelo __dirname; empacotado, o caminho vira /ROOT/… (B-8).
+  serverExternalPackages: ["ffmpeg-static"],
   // Sem o selo do modo dev: ele cobre a barra inferior nas capturas de tela (seção 22.1).
   devIndicators: false,
   partialPrefetching: true,

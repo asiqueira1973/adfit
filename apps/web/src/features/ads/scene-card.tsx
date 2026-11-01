@@ -91,10 +91,14 @@ export function SceneCard({
   const media =
     mode === "video" ? (
       clipGenerating || !currentClip?.url ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-text-2">
-          <Spinner className="size-6" />
-          <span className="text-[13px]">{a.animandoCena}</span>
-        </div>
+        <>
+          {/* Enquanto anima, mostra a imagem aprovada esmaecida (em vez de um quadro cinza). */}
+          {currentFrame?.url && <Image src={currentFrame.url} alt="" fill unoptimized sizes="(max-width: 768px) 100vw, 33vw" className="object-cover opacity-40" />}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-text">
+            <Spinner className="size-6" />
+            <span className="rounded-full bg-bg/80 px-3 py-1 text-[13px] font-medium">{a.animandoCena}</span>
+          </div>
+        </>
       ) : (
         <video key={currentClip.id} src={currentClip.url} className="absolute inset-0 size-full object-cover" muted loop autoPlay playsInline />
       )

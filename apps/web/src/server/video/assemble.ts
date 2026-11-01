@@ -1,6 +1,6 @@
 import "server-only";
 import { execFile, execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -8,10 +8,25 @@ import ffmpegStatic from "ffmpeg-static";
 
 const run = promisify(execFile);
 
-/** Caminho do ffmpeg empacotado (ffmpeg-static; divergência D-23: montagem na própria Vercel). */
+let resolved: string | null = null;
+
+/**
+ * Caminho do ffmpeg empacotado (ffmpeg-static; divergência D-23: montagem na própria Vercel). O valor
+ * do pacote depende do `__dirname`, que muda quando o código é empacotado (bug B-8: `/ROOT/…`); por
+ * isso confere a existência e tenta os caminhos reais da função (monorepo: `node_modules` na raiz).
+ */
 export function ffmpegPath(): string {
-  if (!ffmpegStatic) throw new Error("ffmpeg_indisponivel");
-  return ffmpegStatic;
+  if (resolved) return resolved;
+  const candidates = [
+    ffmpegStatic,
+    join(process.cwd(), "node_modules/ffmpeg-static/ffmpeg"),
+    join(process.cwd(), "../../node_modules/ffmpeg-static/ffmpeg"),
+    "/var/task/node_modules/ffmpeg-static/ffmpeg",
+  ].filter((c): c is string => !!c);
+  const found = candidates.find((c) => existsSync(c));
+  if (!found) throw new Error(`ffmpeg_indisponivel: ${candidates.join(" | ")}`);
+  resolved = found;
+  return found;
 }
 
 /** Fonte Inter Bold do repositório (regra 11.8), lida do disco (incluída no trace pelo next.config). */

@@ -163,6 +163,16 @@ CREATE TYPE "public"."papel_usuario" AS ENUM (
 ALTER TYPE "public"."papel_usuario" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."pedido_convite_status" AS ENUM (
+    'novo',
+    'convidado',
+    'recusado'
+);
+
+
+ALTER TYPE "public"."pedido_convite_status" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."status_anuncio" AS ENUM (
     'gerando_roteiro',
     'gerando_quadros',
@@ -949,6 +959,28 @@ CREATE TABLE IF NOT EXISTS "public"."pagamentos" (
 ALTER TABLE "public"."pagamentos" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."pedidos_convite" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "nome" "text" NOT NULL,
+    "email" "text" NOT NULL,
+    "marca" "text" NOT NULL,
+    "instagram" "text",
+    "mensagem" "text",
+    "idioma" "public"."idioma" DEFAULT 'pt_br'::"public"."idioma" NOT NULL,
+    "status" "public"."pedido_convite_status" DEFAULT 'novo'::"public"."pedido_convite_status" NOT NULL,
+    "criado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "atualizado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "pedidos_convite_email_check" CHECK (((("char_length"("email") >= 3) AND ("char_length"("email") <= 254)) AND ("email" ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'::"text"))),
+    CONSTRAINT "pedidos_convite_instagram_check" CHECK (("instagram" ~ '^[A-Za-z0-9._]{1,30}$'::"text")),
+    CONSTRAINT "pedidos_convite_marca_check" CHECK ((("char_length"("marca") >= 1) AND ("char_length"("marca") <= 80))),
+    CONSTRAINT "pedidos_convite_mensagem_check" CHECK (("char_length"("mensagem") <= 500)),
+    CONSTRAINT "pedidos_convite_nome_check" CHECK ((("char_length"("nome") >= 1) AND ("char_length"("nome") <= 80)))
+);
+
+
+ALTER TABLE "public"."pedidos_convite" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."perfis" (
     "id" "uuid" NOT NULL,
     "marca_id" "uuid",
@@ -1109,6 +1141,11 @@ ALTER TABLE ONLY "public"."pagamentos"
 
 
 
+ALTER TABLE ONLY "public"."pedidos_convite"
+    ADD CONSTRAINT "pedidos_convite_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."perfis"
     ADD CONSTRAINT "perfis_email_key" UNIQUE ("email");
 
@@ -1255,6 +1292,14 @@ CREATE INDEX "pagamentos_pacote_id_idx" ON "public"."pagamentos" USING "btree" (
 
 
 
+CREATE UNIQUE INDEX "pedidos_convite_email_novo_uidx" ON "public"."pedidos_convite" USING "btree" ("lower"("email")) WHERE ("status" = 'novo'::"public"."pedido_convite_status");
+
+
+
+CREATE INDEX "pedidos_convite_status_criado_em_idx" ON "public"."pedidos_convite" USING "btree" ("status", "criado_em" DESC);
+
+
+
 CREATE INDEX "perfis_marca_id_idx" ON "public"."perfis" USING "btree" ("marca_id");
 
 
@@ -1304,6 +1349,10 @@ CREATE OR REPLACE TRIGGER "trg_pacotes_creditos_atualizado_em" BEFORE UPDATE ON 
 
 
 CREATE OR REPLACE TRIGGER "trg_pagamentos_atualizado_em" BEFORE UPDATE ON "public"."pagamentos" FOR EACH ROW EXECUTE FUNCTION "public"."definir_atualizado_em"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_pedidos_convite_atualizado_em" BEFORE UPDATE ON "public"."pedidos_convite" FOR EACH ROW EXECUTE FUNCTION "public"."definir_atualizado_em"();
 
 
 
@@ -1597,6 +1646,17 @@ ALTER TABLE "public"."pagamentos" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "pagamentos_select" ON "public"."pagamentos" FOR SELECT TO "authenticated" USING ((("marca_id" = ( SELECT "public"."minha_marca_id"() AS "minha_marca_id")) OR ( SELECT "public"."eh_admin"() AS "eh_admin")));
+
+
+
+ALTER TABLE "public"."pedidos_convite" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "pedidos_convite_select_admin" ON "public"."pedidos_convite" FOR SELECT TO "authenticated" USING (( SELECT "public"."eh_admin"() AS "eh_admin"));
+
+
+
+CREATE POLICY "pedidos_convite_update_admin" ON "public"."pedidos_convite" FOR UPDATE TO "authenticated" USING (( SELECT "public"."eh_admin"() AS "eh_admin")) WITH CHECK (( SELECT "public"."eh_admin"() AS "eh_admin"));
 
 
 
@@ -1960,6 +2020,16 @@ GRANT SELECT ON TABLE "public"."pacotes_creditos" TO "authenticated";
 
 GRANT ALL ON TABLE "public"."pagamentos" TO "service_role";
 GRANT SELECT ON TABLE "public"."pagamentos" TO "authenticated";
+
+
+
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."pedidos_convite" TO "anon";
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."pedidos_convite" TO "authenticated";
+GRANT ALL ON TABLE "public"."pedidos_convite" TO "service_role";
+
+
+
+GRANT UPDATE("status") ON TABLE "public"."pedidos_convite" TO "authenticated";
 
 
 

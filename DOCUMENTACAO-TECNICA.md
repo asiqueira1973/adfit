@@ -219,5 +219,7 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
 | MD-6 | Feedback do usuário (tabela `feedbacks`, telas `/feedback` e `/admin/feedbacks`) | Emenda do Alexandre. |
 | MD-7 | Login só com Google (GIS + `signInWithIdToken`); convite sem senha com e-mail de boas-vindas (Resend) | Emenda do Alexandre; substitui as seções 6.1/6.2. |
 | MD-8 | Eventos de produto para o Visão de Produto (`src/server/analytics/track.ts`, `POST /api/eventos`) | Emenda do Alexandre; lista de eventos em `docs/mudancas-de-escopo.md`. |
+| D-23 | Montagem do vídeo com ffmpeg (`ffmpeg-static`) numa função da Vercel, sem worker separado (`src/server/video/assemble.ts`, `ads/clips.ts`); verificação em `GET /api/admin/saude` | Decisão do Alexandre; o spec previa worker com Dockerfile (Railway/Fly). |
+| MD-9 | Pedido de convite (`/pedir-convite`, `pedidos_convite`, [Admin] Pedidos de acesso) e novo layout da tela Entrar | Emenda do Alexandre. |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
 | MD-2 | Crédito "Feito pela Dab Lab" | Emenda do Alexandre. |

@@ -4,7 +4,10 @@ import type { Database } from "@/server/db/database.types";
 import { LOCALE_COOKIE, getDictionary, isLocale, localeFromAcceptLanguage } from "@/lib/i18n";
 
 /** Rotas públicas (seção 10): acessíveis sem sessão. */
-const PUBLIC_PATHS = ["/entrar", "/definir-senha", "/redefinir-senha", "/acesso-desativado", "/auth/confirm", "/sair"];
+const PUBLIC_PATHS = ["/entrar", "/definir-senha", "/redefinir-senha", "/acesso-desativado", "/auth/confirm", "/sair", "/pedir-convite"];
+
+/** Rotas de API sem sessão (MD-9: pedido de convite da tela pública). */
+const PUBLIC_API = ["/api/pedidos-convite"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -50,6 +53,7 @@ export async function proxy(request: NextRequest) {
     if (!isLocale(request.cookies.get(LOCALE_COOKIE)?.value)) {
       response.cookies.set(LOCALE_COOKIE, localeFromAcceptLanguage(request.headers.get("accept-language")), { path: "/", sameSite: "lax" });
     }
+    if (PUBLIC_API.includes(pathname)) return response;
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ erro: "nao_autenticado", mensagem: getDictionary(request.cookies.get(LOCALE_COOKIE)?.value).erros.naoAutenticado }, { status: 401 });
     }
@@ -80,6 +84,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Tudo, exceto estáticos, imagens e webhooks (que validam token/assinatura próprios, seção 13).
-    "/((?!_next/static|_next/image|favicon.ico|images/|fixtures/|api/webhooks/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|images/|fixtures/|brand/|api/webhooks/).*)",
   ],
 };

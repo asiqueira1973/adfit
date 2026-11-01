@@ -22,7 +22,8 @@ export type EventName =
   | "adfit_convite_enviado"
   | "adfit_video_solicitado"
   | "adfit_video_pronto"
-  | "adfit_video_baixado";
+  | "adfit_video_baixado"
+  | "adfit_convite_pedido";
 
 export type ProductEvent = {
   nome: EventName;
