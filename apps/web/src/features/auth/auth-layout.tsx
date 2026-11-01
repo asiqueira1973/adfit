@@ -17,9 +17,10 @@ export function BrandMark({ size = "lg" }: { size?: "lg" | "md" }) {
 /**
  * Moldura das telas públicas (seção 16.3): vitrine do fluxo (tela Entrar) ou foto editorial à esquerda
  * no desktop, a marca do AdFit em destaque, título, conteúdo e o crédito da Dab Lab com link (MD-2).
- * Recebe: título, subtítulo, texto "Feito pela {estudio}" no idioma, conteúdo, foto e vitrine opcionais.
+ * Recebe: título, subtítulo, texto "Feito pela {estudio}" no idioma, conteúdo, foto, vitrine e troca
+ * de idioma opcionais.
  */
-export function AuthLayout({ title, subtitle, madeBy, children, image = true, showcase }: { title: string; subtitle?: ReactNode; madeBy: string; children: ReactNode; image?: boolean; showcase?: ReactNode }) {
+export function AuthLayout({ title, subtitle, madeBy, children, image = true, showcase, language }: { title: string; subtitle?: ReactNode; madeBy: string; children: ReactNode; image?: boolean; showcase?: ReactNode; language?: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
       {/* Vitrine do fluxo: metade esquerda no desktop; no celular, depois do conteúdo (order). */}
@@ -32,7 +33,10 @@ export function AuthLayout({ title, subtitle, madeBy, children, image = true, sh
       )}
       <div className="flex flex-1 items-start justify-center px-5 py-8 md:items-center md:px-12">
         <div className="flex w-full max-w-md flex-col gap-7">
-          <BrandMark />
+          <div className="flex items-center justify-between gap-4">
+            <BrandMark />
+            {language}
+          </div>
           <div>
             <h1 className="text-[30px] font-bold leading-[1.15] tracking-tight md:text-[34px]">{title}</h1>
             {subtitle && <p className="mt-3 text-[17px] leading-relaxed text-text-2">{subtitle}</p>}

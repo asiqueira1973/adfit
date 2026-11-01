@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { AuthLayout } from "@/features/auth/auth-layout";
+import { PublicLanguageSwitch } from "@/features/shell/language-switch";
 import { Showcase } from "@/features/auth/showcase";
 import { SignInForm } from "@/features/auth/auth-forms";
 import { GoogleButton } from "@/features/auth/google-button";
@@ -30,7 +31,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/entrar">["s
   const { erro } = await searchParams;
   const notice = erro === "link_invalido" ? t.auth.linkInvalido : erro === "sem_acesso" ? t.auth.semAcesso : undefined;
   return (
-    <AuthLayout title={t.auth.heroTitulo} subtitle={t.auth.heroSubtitulo} madeBy={t.copy.feitoPor} showcase={<Showcase t={t.vitrine} />}>
+    <AuthLayout title={t.auth.heroTitulo} subtitle={t.auth.heroSubtitulo} madeBy={t.copy.feitoPor} showcase={<Showcase t={t.vitrine} />} language={<PublicLanguageSwitch current={locale} label={t.nav.idioma} names={t.idiomas} />}>
       <div className="flex flex-col gap-4 rounded-[16px] border border-hairline p-5">
         {notice && <Banner tone="danger">{notice}</Banner>}
         <p className="text-[15px] font-semibold">{t.auth.entrarCom}</p>

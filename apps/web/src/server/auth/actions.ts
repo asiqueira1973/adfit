@@ -49,15 +49,14 @@ export async function signIn(_prev: AuthFormState, form: FormData): Promise<Auth
 }
 
 /**
- * Trocar o idioma da interface do próprio usuário (MD-1, menu do perfil).
- * Recebe: o idioma ("pt_br" | "en"). Grava em `perfis.idioma` só a linha do próprio usuário
- * (escrita em perfis é só servidor, seção 6.4) e atualiza o cookie da sessão.
+ * Trocar o idioma da interface (MD-1): no menu do perfil e, sem sessão, nas telas públicas (Entrar,
+ * Pedir convite). Recebe: o idioma ("pt_br" | "en"). Atualiza o cookie do idioma; com sessão, grava
+ * também `perfis.idioma` só na linha do próprio usuário (escrita em perfis é só servidor, seção 6.4).
  * Devolve: nada.
  */
 export async function setLanguage(locale: string): Promise<void> {
   if (!isLocale(locale)) return;
-  const profile = await getCurrentProfile();
-  if (!profile) return;
-  await createAdminClient().from("perfis").update({ idioma: locale }).eq("id", profile.id);
   (await cookies()).set(LOCALE_COOKIE, locale, { path: "/", sameSite: "lax" });
+  const profile = await getCurrentProfile();
+  if (profile) await createAdminClient().from("perfis").update({ idioma: locale }).eq("id", profile.id);
 }

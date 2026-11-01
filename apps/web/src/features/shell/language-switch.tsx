@@ -39,3 +39,31 @@ export function LanguageSwitch({ current, label, names }: { current: "pt_br" | "
     </div>
   );
 }
+
+/**
+ * Troca de idioma compacta das telas públicas (pedido do Alexandre, 01/11/2026): "PT | EN" no topo
+ * da tela Entrar e Pedir convite, antes do login. Grava o cookie pela mesma action `setLanguage`.
+ * Recebe: idioma atual, rótulo e nomes dos idiomas.
+ */
+export function PublicLanguageSwitch({ current, label, names }: { current: "pt_br" | "en"; label: string; names: { pt_br: string; en: string } }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <div role="group" aria-label={label} className="flex items-center rounded-[10px] bg-surface p-0.5">
+      <Languages className="mx-1.5 size-4 text-text-2" aria-hidden />
+      {(["pt_br", "en"] as const).map((l) => (
+        <button
+          key={l}
+          type="button"
+          disabled={pending}
+          aria-pressed={current === l}
+          onClick={() => start(async () => { await setLanguage(l); router.refresh(); })}
+          className={cn("min-h-9 rounded-[8px] px-2.5 text-[13px] font-semibold", current === l ? "bg-bg shadow-sm" : "text-text-2")}
+        >
+          {l === "pt_br" ? "PT" : "EN"}
+          <span className="sr-only"> {names[l]}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
