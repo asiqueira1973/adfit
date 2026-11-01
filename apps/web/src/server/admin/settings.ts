@@ -4,18 +4,28 @@ import { createAdminClient } from "../db/supabase";
 import { BusinessError } from "../api/http";
 import { getStripe, type StripeApi } from "../stripe/client";
 
-/** Corpo de POST /api/admin/pacotes (seção 13). */
-export const packageSchema = z.object({
+/** Campos de um pacote, sem padrões (base do POST e do PATCH). */
+const packageFields = z.object({
   nome: z.string().trim().min(1).max(60),
   creditos: z.number().int().positive(),
   preco_centavos: z.number().int().positive(),
   moeda: z.string().trim().toLowerCase().regex(/^[a-z]{3}$/),
   stripe_price_id: z.string().trim().regex(/^price_\w+$/),
-  ativo: z.boolean().default(true),
-  ordem: z.number().int().min(0).max(999).default(1),
+  ativo: z.boolean(),
+  ordem: z.number().int().min(0).max(999),
 });
-/** Corpo de PATCH /api/admin/pacotes/:id. */
-export const packagePatchSchema = packageSchema.partial();
+
+/** Corpo de POST /api/admin/pacotes (seção 13): `ativo` e `ordem` têm padrão só na criação. */
+export const packageSchema = packageFields.extend({
+  ativo: packageFields.shape.ativo.default(true),
+  ordem: packageFields.shape.ordem.default(1),
+});
+
+/**
+ * Corpo de PATCH /api/admin/pacotes/:id: só os campos enviados. Sem padrões — no Zod 4 um
+ * `.default()` continua valendo dentro de `.partial()` e reativaria/reordenaria o pacote.
+ */
+export const packagePatchSchema = packageFields.partial();
 
 /** Corpo de PUT /api/admin/configuracoes (seção 13: creditos ≥ 0). */
 export const settingsSchema = z.object({

@@ -7,6 +7,7 @@ import { fill } from "@/lib/copy";
 import type { Dictionary } from "@/lib/i18n";
 import { brandContext } from "@/server/brand/context";
 import { getBrandSummary } from "@/server/brand/queries";
+import { createUserClient } from "@/server/db/supabase";
 import { fulfillCheckout } from "@/server/stripe/fulfill";
 
 /**
@@ -40,7 +41,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/creditos/ob
   const sp = await searchParams;
   const sessionId = typeof sp.session_id === "string" ? sp.session_id : "";
   const attempt = Number(typeof sp.tentativa === "string" ? sp.tentativa : 0) || 0;
-  const result = /^cs_(test|live)_\w+$/.test(sessionId) ? await fulfillCheckout(sessionId).catch(() => null) : null;
+  // Validação antes de agir (seção 13): a sessão precisa ser de um pagamento da própria marca —
+  // a RLS pagamentos_select só devolve pagamentos da marca do usuário.
+  const supabase = await createUserClient();
+  const { data: own } = /^cs_(test|live)_\w+$/.test(sessionId)
+    ? await supabase.from("pagamentos").select("id").eq("stripe_checkout_session_id", sessionId).maybeSingle()
+    : { data: null };
+  // Erro passageiro ao falar com a Stripe não é "pagamento recusado": segue confirmando.
+  const result = own ? await fulfillCheckout(sessionId).catch(() => ({ status: "pendente" as const, pagamentoId: own.id, marcaId: profile.marcaId })) : null;
 
   const ownBrand = result && "marcaId" in result && result.marcaId === profile.marcaId;
   if (!result || !ownBrand || result.status === "falhou" || result.status === "expirado") {
