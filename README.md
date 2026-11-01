@@ -11,8 +11,16 @@ Plataforma de anúncios em vídeo com IA para marcas de roupa fitness. Spec: [`d
 ## Setup local
 1. Node 22+, Docker (para o Supabase local), Supabase CLI, `jq` (guardrails em `.claude/hooks`).
 2. `npm install` na raiz.
-3. `cp .env.example apps/web/.env.local` e preencher (ver tabela de variáveis na seção 18 do spec).
-4. `supabase start` e `npm run dev` → http://localhost:3000.
+3. `supabase start` (portas 553xx: API http://127.0.0.1:55321, Mailpit http://127.0.0.1:55324 para ver e-mails de convite).
+4. `cp .env.example apps/web/.env.local` e preencher com `supabase status -o env` (URL, ANON_KEY, SERVICE_ROLE_KEY, DB_URL→DATABASE_URL), `APP_URL`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_SENHA`.
+5. `npm run seed:admin` (admin local; pacotes só com `SEED_STRIPE_PRICE_*`).
+6. `npm run dev` → http://localhost:3000.
+
+## Banco
+- Migrations: `supabase/migrations/` (nunca editar uma versionada; criar nova). Local: `supabase migration up --local`.
+- Remoto (projeto compartilhado "BANCO DE TESTE"): aplicar o mesmo SQL com `apply_migration` do MCP do Supabase e rodar os advisors (security e performance). Não usar `supabase db push`.
+- Tipos: `npm run db:types`. Schema: `supabase db dump --local --schema public -f schema.sql`.
+- Admin remoto: `npx tsx --env-file=<arquivo com as variáveis do remoto> scripts/seed-admin.ts`.
 
 ## Verificação
 `npm run verify` roda typecheck, lint, testes (banco + Vitest) e build; termina com erro se qualquer um falhar.

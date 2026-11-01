@@ -1,10 +1,22 @@
+import { Suspense, type ReactNode } from "react";
 import { AdminShell } from "@/features/shell/admin-shell";
-import { fxAdmin } from "@/features/fixtures";
+import { getDictionary } from "@/lib/i18n";
+import { requireAdmin } from "@/server/auth/profile";
 
 /**
- * Layout do painel do administrador (seção 16.4). Fase de design com fixtures; no épico 8.1 o
- * proxy exige sessão de `admin_plataforma` e toda rota de admin confere `eh_admin()` (seção 13).
+ * Layout do painel do administrador (seção 16.4). Exige `admin_plataforma` ativo no servidor
+ * (seção 13: esconder o menu não é permissão).
  */
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
-  return <AdminShell userName={fxAdmin.nome}>{children}</AdminShell>;
+  return (
+    <Suspense fallback={<div className="min-h-dvh" aria-busy="true" />}>
+      <AdminFrame>{children}</AdminFrame>
+    </Suspense>
+  );
+}
+
+async function AdminFrame({ children }: { children: ReactNode }) {
+  const profile = await requireAdmin();
+  const t = getDictionary(profile.idioma);
+  return <AdminShell userName={profile.nome} locale={profile.idioma} t={t}>{children}</AdminShell>;
 }

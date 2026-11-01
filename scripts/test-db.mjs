@@ -16,5 +16,7 @@ try {
   console.log("test:db — subindo Supabase local…");
   execSync("supabase start", { stdio: "inherit" });
 }
-execSync("supabase db reset --local", { stdio: "inherit" });
+// Aplica migrations pendentes sem apagar dados de desenvolvimento; os testes pgTAP rodam em
+// transação com rollback e o teste de concorrência usa marcas próprias.
+execSync("supabase migration up --local", { stdio: "inherit" });
 execSync("supabase test db", { stdio: "inherit" });

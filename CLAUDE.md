@@ -34,4 +34,11 @@ O app terá pt-BR e inglês (emenda MD-1 em `docs/mudancas-de-escopo.md`); nenhu
 - Webhook da Stripe precisa do corpo bruto (sem parse de JSON antes de verificar a assinatura).
 - Supabase remoto é o projeto compartilhado "BANCO DE TESTE" (`jeesdmfcrmhyufwzwzwt`): há tabelas de outros apps (`livros_*`, `oc_*`) — não tocar; filtrar advisors para objetos do AdFit.
 - `typecheck` do web roda `next typegen` antes do `tsc` (tipos `LayoutProps`/`PageProps` são gerados).
+- Supabase local usa as portas **553xx** (API 55321, DB 55322, Mailpit 55324); outro projeto ocupa as 543xx.
+- Remoto é compartilhado: migrations via MCP `apply_migration` (mesmo SQL do arquivo), nunca `supabase db push`; Auth/e-mails são do projeto todo.
+- Cache Components: leitura de sessão/cookies sempre dentro de `<Suspense>`; `createUserClient()` chama `connection()` (o Supabase usa o relógio).
+- Hooks de cliente com `usePathname`/`useSearchParams` precisam de `<Suspense>` (padrão: componente `*View` puro como fallback).
+- `/sair` é POST (formulário); nunca `<Link href="/sair">`.
+- Erros de negócio do banco sobem com MESSAGE = código (`saldo_insuficiente`…); o servidor traduz.
+- Não chamar função volátil (ex.: `debitar_creditos`) dentro de WHERE em teste: roda uma vez por linha.
 - Quando o agente errar a mesma coisa duas vezes, a correção entra aqui.

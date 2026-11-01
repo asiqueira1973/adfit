@@ -1,21 +1,28 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { AuthLayout } from "@/features/auth/auth-layout";
-import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
+import { SignInForm } from "@/features/auth/auth-forms";
+import { getDictionary } from "@/lib/i18n";
+import { getRequestLocale } from "@/server/auth/profile";
 
 /**
- * Tela [Público] Entrar (seção 10): e-mail, senha e "Esqueci minha senha".
- * Fase de design: formulário sem ação; o login com Supabase Auth entra no épico 8.1 (seção 6).
+ * Tela [Público] Entrar (seção 10): e-mail, senha e "Esqueci minha senha", no idioma da sessão (MD-1).
+ * `?erro=link_invalido|sem_acesso` mostra o aviso correspondente.
  */
-export default function SignInPage() {
+export default function SignInPage({ searchParams }: PageProps<"/entrar">) {
   return (
-    <AuthLayout title="Entrar" subtitle="Anúncios em vídeo para a sua marca, sem complicação.">
-      <form className="flex flex-col gap-4">
-        <TextField label="E-mail" name="email" type="email" autoComplete="email" inputMode="email" placeholder="voce@suamarca.com" required />
-        <TextField label="Senha" name="senha" type="password" autoComplete="current-password" required />
-        <Button type="submit" className="mt-2">Entrar</Button>
-        <Link href="/redefinir-senha" className="text-center text-[15px] font-medium text-brand-text">Esqueci minha senha</Link>
-      </form>
+    <Suspense>
+      <Content searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function Content({ searchParams }: { searchParams: PageProps<"/entrar">["searchParams"] }) {
+  const t = getDictionary(await getRequestLocale());
+  const { erro } = await searchParams;
+  const notice = erro === "link_invalido" ? t.auth.linkInvalido : erro === "sem_acesso" ? t.auth.semAcesso : undefined;
+  return (
+    <AuthLayout title={t.auth.entrarTitulo} subtitle={t.auth.entrarSubtitulo} madeBy={t.copy.feitoPor}>
+      <SignInForm t={t.auth} notice={notice} />
     </AuthLayout>
   );
 }

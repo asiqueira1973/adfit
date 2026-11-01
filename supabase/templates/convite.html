@@ -1,0 +1,9 @@
+<!-- Link = RedirectTo (APP_URL/auth/confirm?next=…) + token_hash, para não depender do Site URL do projeto compartilhado. Convite (seção 6.1). Bilíngue porque o Supabase tem um único modelo por projeto (MD-1). -->
+<h2>Você foi convidado para o AdFit</h2>
+<p>Toque no botão para criar sua senha e entrar.</p>
+<p><a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=invite">Criar minha senha</a></p>
+<hr>
+<h2>You've been invited to AdFit</h2>
+<p>Tap the button to create your password and sign in.</p>
+<p><a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=invite">Create my password</a></p>
+<p style="color:#6e6e73;font-size:12px">AdFit · Feito pela Dab Lab / Made by Dab Lab</p>

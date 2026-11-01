@@ -4,28 +4,34 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/components/ui/cn";
 
+/** Rótulos do menu do admin (do dicionário, MD-1). */
+export type AdminNavLabels = {
+  adminGrupoClientes: string; adminGrupoOperacao: string; adminGrupoSistema: string;
+  adminMarcas: string; adminUsuarios: string; adminGeracoes: string; adminCustos: string; adminConfiguracoes: string;
+};
+
 /** Grupos do menu lateral do admin (seção 16.4). */
-export const ADMIN_GROUPS = [
-  { title: "Clientes", items: [{ href: "/admin/marcas", label: "Marcas" }, { href: "/admin/usuarios", label: "Usuários" }] },
-  { title: "Operação", items: [{ href: "/admin/geracoes", label: "Gerações" }, { href: "/admin/custos", label: "Custos" }] },
-  { title: "Sistema", items: [{ href: "/admin/configuracoes", label: "Configurações" }] },
-] as const;
+function groups(l: AdminNavLabels) {
+  return [
+    { title: l.adminGrupoClientes, items: [{ href: "/admin/marcas", label: l.adminMarcas }, { href: "/admin/usuarios", label: l.adminUsuarios }] },
+    { title: l.adminGrupoOperacao, items: [{ href: "/admin/geracoes", label: l.adminGeracoes }, { href: "/admin/custos", label: l.adminCustos }] },
+    { title: l.adminGrupoSistema, items: [{ href: "/admin/configuracoes", label: l.adminConfiguracoes }] },
+  ];
+}
 
 /**
- * Lista de grupos e itens do admin no estilo App Store Connect (seção 16.4): título do grupo em
- * negrito escuro, itens indentados sem marcador, hairline entre grupos, um item ativo em #5B8C00
- * com pílula clara do mesmo tom.
- * Recebe: nada (lê o caminho). Devolve: a navegação.
+ * Menu do admin estilo App Store Connect (seção 16.4): título do grupo em negrito escuro, itens
+ * indentados sem marcador, hairline entre grupos, item ativo em #5B8C00 com pílula clara.
  */
-export function AdminNavGroups() {
-  return <AdminNavGroupsView pathname={usePathname()} />;
+export function AdminNavGroups({ labels }: { labels: AdminNavLabels }) {
+  return <AdminNavGroupsView pathname={usePathname()} labels={labels} />;
 }
 
 /** Versão sem hook do menu (também usada como fallback estático do Suspense). */
-export function AdminNavGroupsView({ pathname }: { pathname: string }) {
+export function AdminNavGroupsView({ pathname, labels }: { pathname: string; labels: AdminNavLabels }) {
   return (
-    <nav aria-label="Administração" className="flex flex-col">
-      {ADMIN_GROUPS.map((group, i) => (
+    <nav aria-label="Admin" className="flex flex-col">
+      {groups(labels).map((group, i) => (
         <div key={group.title} className={cn("py-4", i > 0 && "border-t border-hairline")}>
           <div className="px-3 pb-1.5 text-[14px] font-bold text-text">{group.title}</div>
           <ul className="flex flex-col gap-0.5">
@@ -36,10 +42,7 @@ export function AdminNavGroupsView({ pathname }: { pathname: string }) {
                   <Link
                     href={item.href}
                     aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "ml-3 flex min-h-10 items-center rounded-full px-3 text-[14px]",
-                      active ? "bg-brand-pill font-semibold text-brand-text" : "text-text hover:bg-surface",
-                    )}
+                    className={cn("ml-3 flex min-h-10 items-center rounded-full px-3 text-[14px]", active ? "bg-brand-pill font-semibold text-brand-text" : "text-text hover:bg-surface")}
                   >
                     {item.label}
                   </Link>

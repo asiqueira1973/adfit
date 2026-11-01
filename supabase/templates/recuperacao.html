@@ -1,0 +1,9 @@
+<!-- Link = RedirectTo (APP_URL/auth/confirm?next=…) + token_hash, para não depender do Site URL do projeto compartilhado. Recuperação de senha (seção 6.2). Bilíngue (MD-1). -->
+<h2>Criar uma nova senha</h2>
+<p>Recebemos um pedido para trocar a senha da sua conta no AdFit. Se não foi você, ignore este e-mail.</p>
+<p><a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery">Criar nova senha</a></p>
+<hr>
+<h2>Create a new password</h2>
+<p>We received a request to change your AdFit password. If it wasn't you, just ignore this email.</p>
+<p><a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery">Create new password</a></p>
+<p style="color:#6e6e73;font-size:12px">AdFit · Feito pela Dab Lab / Made by Dab Lab</p>
