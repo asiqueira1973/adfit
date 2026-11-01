@@ -12,7 +12,8 @@ export const PROMPT_VERSIONS = {
   // v3 (01/11/2026): só a marca visível por fora; etiqueta interna/tamanho nunca vira logo (top "oxer P").
   // v4 (01/11/2026): painéis sem rótulos de texto (o Grok escreveu FRONT/BACK/CLOSE-UP na imagem).
   ficha: "ficha.v4",
-  refacao: "refacao.v1",
+  // v2 (01/11/2026): negação remove (nunca muda de lugar — caso "sem logo dentro"), atalhos fixos do código.
+  refacao: "refacao.v2",
   // v2 (aprovado em 01/11/2026): mesma modelo nas 3 cenas (campo `modelo`) e texto no idioma da marca (MD-1).
   // v3 (aprovado em 01/11/2026, depois do 1º teste real): modelo descrita por ação/postura/roupa, nunca por
   // partes do corpo — "chest slightly lifted" fez a Higgsfield barrar a cena 3 como nsfw duas vezes.

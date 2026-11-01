@@ -7,6 +7,7 @@ import { createClaudeAdjuster } from "../claude/client";
 import type { PromptAdjuster } from "../claude/types";
 import { failGeneration, generationDeps, getGeneration, submitGeneration, type GenerationDeps, type GenerationInput } from "../higgsfield/process";
 import { buildFirstSheetPrompt, buildRedoSheetPrompt, redoBasePrompt, type SheetPrompt } from "./prompt";
+import { appendShortcutLines, redoRequest, type RedoInput } from "../prompts/redo-shortcuts";
 import { track } from "../analytics/track";
 
 /** Quem pede a ação: usuário da marca (só a própria marca) ou admin (qualquer marca) — seção 13. */
@@ -48,7 +49,7 @@ async function currentBasePrompt(fichas: SheetRow[], categoria: string): Promise
 export async function requestSheet(
   actor: SheetActor,
   produtoId: string,
-  instrucao: string | undefined,
+  instrucao: RedoInput,
   deps: { generation?: GenerationDeps; adjuster?: PromptAdjuster } = {},
 ): Promise<{ fichaId: string }> {
   const db = createAdminClient();
@@ -67,7 +68,9 @@ export async function requestSheet(
 
   const isRedo = fichas.some((f) => f.imagem_path);
   const versao = Math.max(0, ...fichas.map((f) => f.versao)) + 1;
-  const pedido = isRedo ? (instrucao ?? "").trim() : "";
+  // Atalhos (linhas fixas) + texto livre; na 1ª versão não há pedido.
+  const redo = isRedo ? redoRequest("ficha", instrucao) : { pedido: "", linhas: [] as string[], registro: "" };
+  const pedido = redo.pedido;
   const fichaId = randomUUID();
 
   // 1. Débito antes de tudo (11.2.1), já referenciando a versão que vai nascer. Sem saldo ou
@@ -90,7 +93,7 @@ export async function requestSheet(
   // 2. A versão `gerando`; o índice único recusa o 2º clique simultâneo → estorno (plano 8.4).
   const { error: insErr } = await db
     .from("fichas_produto")
-    .insert({ id: fichaId, produto_id: produto.id, marca_id: produto.marca_id, versao, status: "gerando", instrucao_refacao: pedido || null });
+    .insert({ id: fichaId, produto_id: produto.id, marca_id: produto.marca_id, versao, status: "gerando", instrucao_refacao: redo.registro || null });
   if (insErr) {
     await refund("Pedido de ficha repetido: já havia uma ficha em preparo");
     throw insErr.code === "23505" ? new BusinessError("ficha_em_geracao") : insErr;
@@ -127,7 +130,7 @@ export async function requestSheet(
     if (isRedo) {
       const adjuster = deps.adjuster ?? testAdjuster ?? createClaudeAdjuster();
       const adjusted = await adjuster.adjustPrompt({ tipo: "ficha", promptAtual: await currentBasePrompt(fichas, produto.categoria), pedido });
-      prompt = buildRedoSheetPrompt(adjusted.prompt);
+      prompt = buildRedoSheetPrompt(appendShortcutLines(adjusted.prompt, redo.linhas));
       entrada.resumo_refacao = adjusted.resumo_pt;
     } else {
       prompt = buildFirstSheetPrompt(produto.categoria);

@@ -8,6 +8,7 @@ import { createAdminClient } from "../db/supabase";
 import { BusinessError } from "../api/http";
 import { readConfig } from "../config";
 import { CLAUSULA_AUDIO, CLAUSULA_VIDEO } from "../prompts/clauses";
+import { appendShortcutLines, redoRequest, type RedoInput } from "../prompts/redo-shortcuts";
 import { brandObject } from "../storage";
 import { generationDeps, submitGeneration, type GenerationDeps, type GenerationInput, type GenerationRow, type GenerationTarget } from "../higgsfield/process";
 import { assembleVideo } from "../video/assemble";
@@ -146,7 +147,7 @@ export async function startVideo(actor: Actor, anuncioId: string, deps: { genera
  * depois de uma cena falhar. Debita `refazer_clipe`; instrução opcional passa pelo Claude (C.3, tipo
  * clipe); nova versão do clipe a partir do quadro atual. Recebe: ator, cena e instrução.
  */
-export async function redoClip(actor: Actor, cenaId: string, instrucao: string | undefined, deps: { generation?: GenerationDeps; adjuster?: PromptAdjuster } = {}): Promise<void> {
+export async function redoClip(actor: Actor, cenaId: string, instrucao: RedoInput, deps: { generation?: GenerationDeps; adjuster?: PromptAdjuster } = {}): Promise<void> {
   const db = createAdminClient();
   const { data: cena } = await db.from("cenas").select("id, ordem, marca_id, anuncio_id, quadro_atual_id, prompt_movimento, clipes!clipes_cena_id_fkey(status)").eq("id", cenaId).maybeSingle();
   if (!cena) throw new BusinessError("anuncio_inexistente");
@@ -171,7 +172,8 @@ export async function redoClip(actor: Actor, cenaId: string, instrucao: string |
     throw new BusinessError("transicao_invalida");
   }
   let prompt = cena.prompt_movimento;
-  const pedido = (instrucao ?? "").trim();
+  const redo = redoRequest("clipe", instrucao);
+  const pedido = redo.pedido;
   if (pedido) {
     try {
       prompt = (await (deps.adjuster ?? aiClient()).adjustPrompt({ tipo: "clipe", promptAtual: cena.prompt_movimento, pedido })).prompt;
@@ -179,7 +181,9 @@ export async function redoClip(actor: Actor, cenaId: string, instrucao: string |
       console.error("Refação de clipe sem ajuste do Claude:", e instanceof Error ? e.message : e);
     }
   }
-  await createClip({ id: cena.id, marca_id: cena.marca_id, quadro_atual_id: cena.quadro_atual_id, prompt_movimento: cena.prompt_movimento }, cobrancaId, prompt, pedido || null, deps.generation ?? generationDeps(), clipeId);
+  // Atalhos: linhas fixas acrescentadas pelo código, mesmo se o Claude falhar.
+  prompt = appendShortcutLines(prompt, redo.linhas);
+  await createClip({ id: cena.id, marca_id: cena.marca_id, quadro_atual_id: cena.quadro_atual_id, prompt_movimento: cena.prompt_movimento }, cobrancaId, prompt, redo.registro || null, deps.generation ?? generationDeps(), clipeId);
 }
 
 /**

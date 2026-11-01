@@ -31,7 +31,7 @@ export function AdScreen({
 }: {
   ad: { id: string; status: Status; formato: string; comTexto: boolean; videoUrl: string | null; cenas: SceneView[] };
   prices: { gerarVideo: number; refazerQuadro: number; refazerClipe: number };
-  t: Pick<Dictionary, "anuncios" | "opcoes" | "copy" | "erros">;
+  t: Pick<Dictionary, "anuncios" | "opcoes" | "copy" | "erros" | "refazer">;
 }) {
   const router = useRouter();
   const a = t.anuncios;

@@ -39,7 +39,7 @@ export function buildFirstSheetPrompt(categoria: string): SheetPrompt {
 export function buildRedoSheetPrompt(adjusted: string): SheetPrompt {
   const { versao } = loadPrompt("ficha");
   const base = adjusted.replace(CLAUSULA_IMAGEM, "").trim();
-  return { base, final: withImageClause(base), versao: `${versao}+refacao.v1` };
+  return { base, final: withImageClause(base), versao: `${versao}+${loadPrompt("refacao").versao}` };
 }
 
 /**

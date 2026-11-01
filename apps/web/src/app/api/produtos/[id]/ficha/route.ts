@@ -5,12 +5,13 @@ import { isResponse, requireBrandOrAdminApi } from "@/server/api/guards";
 import { errorResponse, validationError } from "@/server/api/http";
 import { refreshStaleGenerations } from "@/server/higgsfield/stale";
 import { requestSheet, sheetStatus } from "@/server/sheets/service";
+import { redoBodySchema } from "@/server/prompts/redo-shortcuts";
 
-const bodySchema = z.object({ instrucao: z.string().max(200).optional() }).strict();
+const bodySchema = redoBodySchema("ficha");
 
 /**
  * POST /api/produtos/:id/ficha — gera (v1) ou refaz a ficha (seção 13; critérios 8.4).
- * Quem: marca/admin. Corpo: { instrucao?: string ≤ 200 }. Valida: produto da marca, não arquivado,
+ * Quem: marca/admin. Corpo: { instrucao?: string ≤ 200, atalhos?: códigos (lib/redo-shortcuts) }. Valida: produto da marca, não arquivado,
  * ≥1 foto, nenhuma ficha `gerando`. Efeito: debita `gerar_ficha`/`refazer_ficha`, cria a versão e
  * submete. Devolve: 202 { ficha_id }.
  */
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/produto
     return validationError(parsed.error ?? new z.ZodError([]), getDictionary(profile.idioma));
   }
   try {
-    const { fichaId } = await requestSheet(profile, id, parsed.data.instrucao);
+    const { fichaId } = await requestSheet(profile, id, parsed.data);
     return NextResponse.json({ ficha_id: fichaId }, { status: 202 });
   } catch (e) {
     return errorResponse(e, profile.idioma);

@@ -52,7 +52,7 @@ async function AdContent({ params }: Pick<PageProps<"/anuncios/[id]">, "params">
         key={`${view.status}:${view.versaoMontagem}:${view.cenas.map((c) => `${c.textoTela ?? ""}|${c.quadroAtualId}|${c.clipeAtualId}|${c.quadros.map((q) => q.status).join("")}${c.clipes.map((k) => k.status).join("")}`).join(";")}`}
         ad={{ id: view.id, status: view.status, formato: view.formato, comTexto: view.comTexto, videoUrl: view.videoUrl, cenas: view.cenas }}
         prices={{ gerarVideo: price("gerar_video"), refazerQuadro: price("refazer_quadro"), refazerClipe: price("refazer_clipe") }}
-        t={{ anuncios: t.anuncios, opcoes: t.opcoes, copy: t.copy, erros: t.erros }}
+        t={{ anuncios: t.anuncios, opcoes: t.opcoes, copy: t.copy, erros: t.erros, refazer: t.refazer }}
       />
     </div>
   );

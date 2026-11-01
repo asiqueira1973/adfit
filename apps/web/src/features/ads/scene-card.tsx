@@ -12,6 +12,7 @@ import { cn } from "@/components/ui/cn";
 import { fill } from "@/lib/copy";
 import type { Dictionary } from "@/lib/i18n";
 import { callApi } from "@/features/admin/api";
+import { RedoShortcuts } from "./redo-shortcuts";
 
 type ItemStatus = "gerando" | "pronto" | "descartado" | "falhou";
 export type SceneFrame = { id: string; versao: number; status: ItemStatus; url: string | null; avisoQc: boolean };
@@ -57,12 +58,13 @@ export function SceneCard({
   locked: boolean;
   comTexto: boolean;
   prices: { refazerQuadro: number; refazerClipe: number };
-  t: Pick<Dictionary, "anuncios" | "opcoes" | "copy" | "erros">;
+  t: Pick<Dictionary, "anuncios" | "opcoes" | "copy" | "erros" | "refazer">;
 }) {
   const a = t.anuncios;
   const router = useRouter();
   const [redo, setRedo] = useState(false);
   const [instrucao, setInstrucao] = useState("");
+  const [atalhos, setAtalhos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +87,7 @@ export function SceneCard({
     if (!r.ok) return setError(r.mensagem || t.erros.generico);
     setRedo(false);
     setInstrucao("");
+    setAtalhos([]);
     router.refresh();
   }
 
@@ -169,7 +172,8 @@ export function SceneCard({
 
         {redo ? (
           <div className="flex flex-col gap-3">
-            <TextArea label={t.copy.refazerQuadroCampo} rows={2} maxChars={200} value={instrucao} onChange={(e) => setInstrucao(e.target.value)} placeholder={mode === "video" ? a.refazerCenaExemplo : a.refazerImagemExemplo} />
+            <RedoShortcuts kind={mode === "video" ? "clipe" : "quadro"} value={atalhos} onChange={setAtalhos} t={t.refazer} />
+            <TextArea label={t.refazer.textoOpcional} rows={2} maxChars={200} value={instrucao} onChange={(e) => setInstrucao(e.target.value)} placeholder={mode === "video" ? a.refazerCenaExemplo : a.refazerImagemExemplo} />
             <div className="grid grid-cols-2 gap-2">
               <Button type="button" variant="ghost" onClick={() => setRedo(false)} disabled={busy}>
                 {a.cancelar}
@@ -179,7 +183,7 @@ export function SceneCard({
                 cost={mode === "video" ? prices.refazerClipe : onlyFailed ? 0 : prices.refazerQuadro}
                 balance={0}
                 disabled={busy}
-                onClick={() => call(mode === "video" ? `/api/cenas/${cena.id}/refazer-clipe` : `/api/cenas/${cena.id}/refazer-quadro`, instrucao.trim() ? { instrucao } : {})}
+                onClick={() => call(mode === "video" ? `/api/cenas/${cena.id}/refazer-clipe` : `/api/cenas/${cena.id}/refazer-quadro`, { ...(instrucao.trim() ? { instrucao } : {}), ...(atalhos.length ? { atalhos } : {}) })}
               />
             </div>
           </div>

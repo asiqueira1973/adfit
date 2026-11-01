@@ -13,6 +13,7 @@ import { cn } from "@/components/ui/cn";
 import { fill } from "@/lib/copy";
 import type { Dictionary } from "@/lib/i18n";
 import { callApi } from "@/features/admin/api";
+import { RedoShortcuts } from "@/features/ads/redo-shortcuts";
 
 export type SheetVersion = { id: string; versao: number; status: "gerando" | "aguardando_aprovacao" | "aprovada" | "descartada" | "falhou"; url: string | null };
 
@@ -36,7 +37,7 @@ export function SheetPanel({
   versions: SheetVersion[];
   prices: { gerar: number; refazer: number };
   hasPhotos: boolean;
-  t: Pick<Dictionary, "produtos" | "copy" | "erros">;
+  t: Pick<Dictionary, "produtos" | "copy" | "erros" | "refazer">;
 }) {
   const router = useRouter();
   const withImage = versions.filter((v) => v.url);
@@ -51,6 +52,7 @@ export function SheetPanel({
   const [selectedId, setSelectedId] = useState<string | null>(defaultSelected);
   const [redo, setRedo] = useState(false);
   const [instrucao, setInstrucao] = useState("");
+  const [atalhos, setAtalhos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,11 +86,13 @@ export function SheetPanel({
     if (!result.ok) return setError(result.mensagem || t.erros.generico);
     setRedo(false);
     setInstrucao("");
+    setAtalhos([]);
     setSelectedId(null);
     router.refresh();
   }
 
-  const generate = (text?: string) => run(() => callApi("POST", `/api/produtos/${produtoId}/ficha`, text ? { instrucao: text } : {}));
+  const generate = (text?: string, codes: string[] = []) =>
+    run(() => callApi("POST", `/api/produtos/${produtoId}/ficha`, { ...(text?.trim() ? { instrucao: text } : {}), ...(codes.length ? { atalhos: codes } : {}) }));
   const approve = (id: string) => run(() => callApi("POST", `/api/fichas/${id}/aprovar`, {}));
 
   return (
@@ -151,8 +155,9 @@ export function SheetPanel({
           {!generating &&
             (redo ? (
               <div className="flex flex-col gap-3">
+                <RedoShortcuts kind="ficha" value={atalhos} onChange={setAtalhos} t={t.refazer} />
                 <TextArea
-                  label={t.copy.fichaRefazerCampo}
+                  label={t.refazer.textoOpcional}
                   name="instrucao"
                   rows={3}
                   maxChars={200}
@@ -164,7 +169,7 @@ export function SheetPanel({
                   <Button type="button" variant="ghost" onClick={() => setRedo(false)} disabled={busy}>
                     {t.produtos.cancelar}
                   </Button>
-                  <CostButton label={t.produtos.refazerFicha} cost={prices.refazer} balance={0} disabled={busy} onClick={() => generate(instrucao)} />
+                  <CostButton label={t.produtos.refazerFicha} cost={prices.refazer} balance={0} disabled={busy} onClick={() => generate(instrucao, atalhos)} />
                 </div>
               </div>
             ) : (

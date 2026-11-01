@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "../db/supabase";
 import type { AiClient, FrameQc } from "../claude/types";
 import { loadPrompt } from "../prompts";
+import { appendShortcutLines, redoRequest, type RedoInput } from "../prompts/redo-shortcuts";
 import { CLAUSULA_IMAGEM } from "../prompts/clauses";
 import { claudeImage } from "../storage";
 import { AD_BUCKET } from "@/lib/storage-paths";
@@ -238,7 +239,7 @@ type FrameActor = { id: string; papel: "admin_plataforma" | "usuario_marca"; mar
  * tipo quadro), mantendo a ficha como referência; nova versão passa pelo QC (11.5).
  * Recebe: ator, cena e instrução (≤ 200). Devolve: nada.
  */
-export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: string | undefined, deps: { ai?: AiClient; generation?: GenerationDeps } = {}): Promise<void> {
+export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: RedoInput, deps: { ai?: AiClient; generation?: GenerationDeps } = {}): Promise<void> {
   const db = createAdminClient();
   const { data: cena } = await db
     .from("cenas")
@@ -266,7 +267,8 @@ export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: st
   const lastEntrada = last?.geracao_id ? ((await db.from("geracoes").select("entrada").eq("id", last.geracao_id).maybeSingle()).data?.entrada as (GenerationInput & { prompt_cena?: string; modelo?: string }) | undefined) : undefined;
   const modelo = lastEntrada?.modelo ?? (ad.roteiro as { modelo?: string } | null)?.modelo ?? "";
   let promptCena = lastEntrada?.prompt_cena ?? cena.prompt_quadro;
-  const pedido = (instrucao ?? "").trim();
+  const redo = redoRequest("quadro", instrucao);
+  const pedido = redo.pedido;
   let resumo: string | null = null;
   try {
     if (pedido || !free) {
@@ -277,6 +279,8 @@ export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: st
   } catch (e) {
     console.error("Refação de quadro sem ajuste do Claude:", e instanceof Error ? e.message : e);
   }
+  // Atalhos: linhas fixas acrescentadas pelo código, mesmo se o Claude falhar.
+  promptCena = appendShortcutLines(promptCena, redo.linhas);
   const { modelo_imagem } = await readConfig(["modelo_imagem"]);
   const fichaPath = (ad.fichas_produto as unknown as { imagem_path: string }).imagem_path;
   const entrada = {
@@ -291,7 +295,7 @@ export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: st
   };
   const { data: g, error: gErr } = await db.from("geracoes").insert({ marca_id: cena.marca_id, tipo: "quadro_chave", modelo: String(modelo_imagem), entrada: entrada as never, cobranca_id: cobrancaId }).select("id").single();
   if (gErr) throw gErr;
-  const { error: qErr } = await db.from("quadros").insert({ id: quadroId, cena_id: cena.id, marca_id: cena.marca_id, versao: (last?.versao ?? 0) + 1, status: "gerando", geracao_id: g.id, instrucao_refacao: pedido || null });
+  const { error: qErr } = await db.from("quadros").insert({ id: quadroId, cena_id: cena.id, marca_id: cena.marca_id, versao: (last?.versao ?? 0) + 1, status: "gerando", geracao_id: g.id, instrucao_refacao: redo.registro || null });
   if (qErr) throw qErr;
   await submitGeneration(g.id, deps.generation);
 }

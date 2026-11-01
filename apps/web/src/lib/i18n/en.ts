@@ -266,6 +266,14 @@ export const en: Dictionary = {
     salvo: "Saved.",
     jsonInvalido: "Invalid value (use JSON: quoted text, number or object).",
   },
+  // Redo shortcuts (01/11/2026): codes in lib/redo-shortcuts.ts.
+  refazer: {
+    titulo: "What's wrong? Tap one or more",
+    textoOpcional: "Want to explain more? (optional)",
+    ficha: { cor: "Color differs from the real one", logo: "Logo wrong or misplaced", texto_extra: "Text or label that doesn't exist", modelagem: "Different cut or straps" },
+    quadro: { roupa: "The garment looks different", logo: "Logo wrong or misplaced", texto_extra: "Text or label that doesn't exist", defeito_pessoa: "Odd hands, face or body", pose: "Bad pose or framing" },
+    clipe: { roupa_muda: "The garment changes during the video", movimento: "Unnatural movement", parado: "Too still, no energy", texto_extra: "Text or logo appeared" },
+  },
   produtos: {
     titulo: "Products",
     novo: "New",

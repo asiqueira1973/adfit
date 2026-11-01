@@ -265,6 +265,14 @@ export const ptBR = {
     salvo: "Salvo.",
     jsonInvalido: "Valor inválido (use JSON: texto entre aspas, número ou objeto).",
   },
+  // Atalhos de refação (pedido do Alexandre, 01/11/2026): códigos em lib/redo-shortcuts.ts.
+  refazer: {
+    titulo: "O que está errado? Toque em um ou mais",
+    textoOpcional: "Quer explicar melhor? (opcional)",
+    ficha: { cor: "Cor diferente da real", logo: "Logo errado ou fora do lugar", texto_extra: "Apareceu texto ou etiqueta que não existe", modelagem: "Corte ou alças diferentes" },
+    quadro: { roupa: "A roupa ficou diferente", logo: "Logo errado ou fora do lugar", texto_extra: "Apareceu texto ou etiqueta que não existe", defeito_pessoa: "Mãos, rosto ou corpo estranhos", pose: "Pose ou enquadramento ruim" },
+    clipe: { roupa_muda: "A roupa muda durante o vídeo", movimento: "Movimento estranho", parado: "Muito parado, sem energia", texto_extra: "Apareceu texto ou logo" },
+  },
   produtos: {
     titulo: "Produtos",
     novo: "Novo",

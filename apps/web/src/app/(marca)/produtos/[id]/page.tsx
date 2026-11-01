@@ -45,7 +45,7 @@ async function Content({ params }: Pick<PageProps<"/produtos/[id]">, "params">) 
         versions={product.fichas as SheetVersion[]}
         prices={{ gerar: price("gerar_ficha"), refazer: price("refazer_ficha") }}
         hasPhotos={product.fotos.length > 0}
-        t={{ produtos: t.produtos, copy: t.copy, erros: t.erros }}
+        t={{ produtos: t.produtos, copy: t.copy, erros: t.erros, refazer: t.refazer }}
       />
       {product.ficha_aprovada_id && <ButtonLink href={`/anuncios/novo?produto=${product.id}`}>{t.produtos.novoAnuncioComProduto}</ButtonLink>}
     </div>
