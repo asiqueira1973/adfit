@@ -1,5 +1,8 @@
 # Plano — I-1: catálogo pelo Google Drive + plano semanal (emenda MD-17)
 
+> **Status: ESTACIONADO para uma nova release (Alexandre, 01/11/2026).** Decisões de produto já
+> tomadas (abaixo); não implementar até ser retomado.
+
 Decisões do Alexandre (01/11/2026): **seletor do Google** (escopo `drive.file`, não sensível — sem
 verificação demorada do Google); **subpasta = produto**; o plano **sugere** e o lojista aprova cada
 item (cobra só quando cria o anúncio; o plano é grátis).

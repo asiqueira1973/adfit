@@ -3,7 +3,7 @@
 Ideias do Alexandre registradas durante a implementação. Nenhuma faz parte do spec v0.2; viram
 item de spec só depois de revisadas (seção 28 continua valendo).
 
-## I-1 — Catálogo pelo Google Drive + plano de comunicação semanal (01/11/2026)
+## I-1 — Catálogo pelo Google Drive + plano de comunicação semanal (01/11/2026) — plano pronto e estacionado para a próxima release (`plans/I-1-catalogo-drive-plano.md`)
 - **Ideia:** a marca compartilha uma pasta do Google Drive com as fotos do catálogo inteiro; a
   plataforma importa os produtos e sugere um **plano de comunicação semanal** (quais peças, em que
   cenários/modalidades, em que dias), já pronto para virar anúncios.
