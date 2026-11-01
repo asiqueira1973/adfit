@@ -24,7 +24,11 @@ export function LanguageSwitch({ current, label, names }: { current: "pt_br" | "
             type="button"
             disabled={pending}
             aria-pressed={current === l}
-            onClick={() => start(async () => { await setLanguage(l); router.refresh(); })}
+            onClick={(e) => {
+              // Fecha o menu do perfil (<details>) ao trocar o idioma (bug relatado em 01/11/2026).
+              e.currentTarget.closest("details")?.removeAttribute("open");
+              start(async () => { await setLanguage(l); router.refresh(); });
+            }}
             className={cn("rounded-[6px] px-2 py-1 text-[12px] font-semibold", current === l ? "bg-bg shadow-sm" : "text-text-2")}
           >
             {l === "pt_br" ? "PT" : "EN"}

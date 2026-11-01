@@ -32,14 +32,26 @@ async function AdContent({ params }: Pick<PageProps<"/anuncios/[id]">, "params">
     listActionPrices(),
   ]);
   if (!view) notFound();
+  const price = (acao: string) => prices.find((p) => p.acao === acao)?.creditos ?? 0;
   return (
     <div className="flex flex-col gap-6">
-      <JourneySteps current={view.status === "pronto" ? "concluido" : view.status === "gerando_clipes" || view.status === "montando" ? "video" : "cenas"} t={t.jornada} />
+      <JourneySteps
+        current={
+          view.status === "pronto"
+            ? "concluido"
+            : view.status === "montando"
+              ? "video"
+              : view.status === "gerando_clipes" || view.cenas.some((c) => c.clipes.length > 0)
+                ? "clipes"
+                : "imagens"
+        }
+        t={t.jornada}
+      />
       <PageHeader title={view.titulo} />
       <AdScreen
-        key={`${view.status}:${view.cenas.map((c) => `${c.textoTela ?? ""}|${c.quadros.map((q) => q.status).join("")}`).join(";")}`}
-        ad={{ id: view.id, status: view.status, formato: view.formato, comTexto: view.comTexto, cenas: view.cenas }}
-        videoPrice={prices.find((p) => p.acao === "gerar_video")?.creditos ?? 0}
+        key={`${view.status}:${view.versaoMontagem}:${view.cenas.map((c) => `${c.textoTela ?? ""}|${c.quadroAtualId}|${c.clipeAtualId}|${c.quadros.map((q) => q.status).join("")}${c.clipes.map((k) => k.status).join("")}`).join(";")}`}
+        ad={{ id: view.id, status: view.status, formato: view.formato, comTexto: view.comTexto, videoUrl: view.videoUrl, cenas: view.cenas }}
+        prices={{ gerarVideo: price("gerar_video"), refazerQuadro: price("refazer_quadro"), refazerClipe: price("refazer_clipe") }}
         t={{ anuncios: t.anuncios, opcoes: t.opcoes, copy: t.copy, erros: t.erros }}
       />
     </div>

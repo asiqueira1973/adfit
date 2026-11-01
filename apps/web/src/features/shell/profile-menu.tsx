@@ -13,7 +13,7 @@ import { MenuLink } from "./menu-link";
 export function ProfileMenu({ userName, brandName, locale, t }: { userName: string; brandName: string; locale: Locale; t: Dictionary }) {
   const initials = userName.split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
   return (
-    <details className="relative">
+    <details data-menu className="relative">
       <summary className="flex size-11 cursor-pointer list-none items-center justify-center rounded-full [&::-webkit-details-marker]:hidden" aria-label={t.nav.menuPerfil}>
         <span className="flex size-8 items-center justify-center rounded-full bg-surface text-[13px] font-semibold">{initials}</span>
       </summary>

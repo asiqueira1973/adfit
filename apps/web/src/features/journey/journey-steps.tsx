@@ -2,15 +2,15 @@ import { Check } from "lucide-react";
 import { cn } from "@/components/ui/cn";
 import type { Dictionary } from "@/lib/i18n";
 
-export type JourneyStep = "fotos" | "ficha" | "escolhas" | "cenas" | "video";
+export type JourneyStep = "fotos" | "ficha" | "escolhas" | "imagens" | "clipes" | "video";
 const PREPARE: JourneyStep[] = ["fotos", "ficha"];
-const AD: JourneyStep[] = ["escolhas", "cenas", "video"];
+const AD: JourneyStep[] = ["escolhas", "imagens", "clipes", "video"];
 const ORDER: JourneyStep[] = [...PREPARE, ...AD];
 
 /**
  * Trilha de etapas (pedido do Alexandre, 01/11/2026: o usuário precisa entender que é um fluxo).
  * Duas fases: "Preparar a peça" (fotos e ficha, uma vez por produto) e "Criar o anúncio" (escolhas,
- * cenas, vídeo, quantas vezes quiser). Etapas antes da atual aparecem como feitas.
+ * imagens das cenas, cenas em vídeo, vídeo final — quantas vezes quiser). Etapas antes da atual aparecem como feitas.
  * Recebe: etapa atual (ou "concluido") e textos. Devolve: a trilha.
  */
 export function JourneySteps({ current, t }: { current: JourneyStep | "concluido"; t: Dictionary["jornada"] }) {
@@ -21,7 +21,7 @@ export function JourneySteps({ current, t }: { current: JourneyStep | "concluido
         <span className="text-[13px] font-bold">{title}</span>
         <span className="truncate text-[12px] text-text-2">· {hint}</span>
       </div>
-      <ol className="flex items-center gap-1.5">
+      <ol className="flex flex-wrap items-center gap-1.5">
         {steps.map((s, i) => {
           const pos = ORDER.indexOf(s);
           const state = pos < index ? "feito" : pos === index ? "agora" : "depois";

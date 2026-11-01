@@ -51,6 +51,7 @@ export function businessError(code: string, t: Dictionary, supportContact = ""):
     geracao_inexistente: { mensagem: t.erros.geracaoInexistente, status: 404 },
     anuncio_inexistente: { mensagem: t.erros.anuncioInexistente, status: 404 },
     produto_sem_ficha: { mensagem: t.erros.produtoSemFicha, status: 422 },
+    cenas_incompletas: { mensagem: t.erros.cenasIncompletas, status: 409 },
   };
   return map[code] ?? { mensagem: t.erros.generico, status: 500 };
 }

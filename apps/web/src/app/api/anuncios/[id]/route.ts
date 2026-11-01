@@ -18,7 +18,10 @@ export async function GET(_request: NextRequest, ctx: RouteContext<"/api/anuncio
     await getAdView(profile, id);
     await refreshAd(id);
     const view = await getAdView(profile, id);
-    return NextResponse.json({ status: view.status, cenas: view.cenas.map((c) => ({ id: c.id, ordem: c.ordem, quadros: c.quadros.map((q) => ({ id: q.id, status: q.status })) })) });
+    return NextResponse.json({
+      status: view.status,
+      cenas: view.cenas.map((c) => ({ id: c.id, ordem: c.ordem, quadros: c.quadros.map((q) => ({ id: q.id, status: q.status })), clipes: c.clipes.map((k) => ({ id: k.id, status: k.status })) })),
+    });
   } catch (e) {
     return errorResponse(e, profile.idioma);
   }

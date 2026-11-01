@@ -7,6 +7,9 @@ import { claudeImage } from "../storage";
 import { AD_BUCKET } from "@/lib/storage-paths";
 import { chainGeneration, getGeneration, submitGeneration, type GenerationDeps, type GenerationInput, type GenerationRow, type GenerationTarget } from "../higgsfield/process";
 import { aiClient, runLater } from "./runtime";
+import { randomUUID as randomUUIDv4 } from "node:crypto";
+import { BusinessError } from "../api/http";
+import { readConfig } from "../config";
 import { transition } from "./stateMachine";
 import { emailOf, track } from "../analytics/track";
 
@@ -109,7 +112,7 @@ export async function runFrameQc(quadroId: string, deps: { ai?: AiClient; genera
   const db = createAdminClient();
   const { data: q } = await db
     .from("quadros")
-    .select("id, marca_id, status, imagem_path, geracao_id, qc_detalhe, cenas!quadros_cena_id_fkey(ordem, anuncio_id, anuncios(ficha_id, fichas_produto!anuncios_ficha_id_fkey(imagem_path)))")
+    .select("id, marca_id, cena_id, status, imagem_path, geracao_id, qc_detalhe, cenas!quadros_cena_id_fkey(ordem, anuncio_id, anuncios(ficha_id, fichas_produto!anuncios_ficha_id_fkey(imagem_path)))")
     .eq("id", quadroId)
     .maybeSingle();
   if (!q || q.status !== "gerando" || !q.imagem_path || !q.geracao_id) return;
@@ -123,7 +126,10 @@ export async function runFrameQc(quadroId: string, deps: { ai?: AiClient; genera
     qc = await ai.checkFrame({ system: loadPrompt("qcQuadro").texto, ficha, quadro });
   } catch (e) {
     const done = await finishFrame(q.id, q.geracao_id, { status: "pronto", qc_aprovado: null, qc_detalhe: { ...log, erro_qc: e instanceof Error ? e.message.slice(0, 200) : "qc_falhou" } });
-    if (done) await checkAdProgress(cena.anuncio_id);
+    if (done) {
+      await db.from("cenas").update({ quadro_atual_id: q.id }).eq("id", q.cena_id).is("quadro_atual_id", null);
+      await checkAdProgress(cena.anuncio_id);
+    }
     return;
   }
 
@@ -148,7 +154,11 @@ export async function runFrameQc(quadroId: string, deps: { ai?: AiClient; genera
     return;
   }
 
-  if (await finishFrame(q.id, q.geracao_id, { status: "pronto", qc_aprovado: aprovado, qc_detalhe: detalhe })) await checkAdProgress(cena.anuncio_id);
+  if (await finishFrame(q.id, q.geracao_id, { status: "pronto", qc_aprovado: aprovado, qc_detalhe: detalhe })) {
+    // Cena que estava sem imagem (falhou antes) passa a usar esta versão (D-18).
+    await db.from("cenas").update({ quadro_atual_id: q.id }).eq("id", q.cena_id).is("quadro_atual_id", null);
+    await checkAdProgress(cena.anuncio_id);
+  }
 }
 
 /** Fecha o quadro só se ele ainda segue a mesma geração e está `gerando`. Devolve: se fechou. */
@@ -217,4 +227,86 @@ export async function refundAd(anuncioId: string, observacao: string): Promise<v
   if (!consumo) return;
   const { error } = await db.rpc("estornar_creditos", { p_movimentacao_id: consumo.id, p_observacao: observacao });
   if (error && error.message !== "ja_estornado") throw error;
+}
+
+type FrameActor = { id: string; papel: "admin_plataforma" | "usuario_marca"; marcaId: string | null; email?: string };
+
+/**
+ * POST /api/cenas/:id/refazer-quadro (seção 13; critérios 8.6): anúncio em `aguardando_aprovacao`,
+ * sem outro quadro da cena em geração. Debita `refazer_quadro` — GRÁTIS quando a cena só tem quadro
+ * `falhou` (D-18, decisão do Alexandre). Instrução opcional vira ajuste do prompt pelo Claude (C.3,
+ * tipo quadro), mantendo a ficha como referência; nova versão passa pelo QC (11.5).
+ * Recebe: ator, cena e instrução (≤ 200). Devolve: nada.
+ */
+export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: string | undefined, deps: { ai?: AiClient; generation?: GenerationDeps } = {}): Promise<void> {
+  const db = createAdminClient();
+  const { data: cena } = await db
+    .from("cenas")
+    .select("id, ordem, marca_id, anuncio_id, prompt_quadro, quadros!quadros_cena_id_fkey(id, versao, status, geracao_id)")
+    .eq("id", cenaId)
+    .maybeSingle();
+  if (!cena) throw new BusinessError("anuncio_inexistente");
+  if (actor.papel !== "admin_plataforma" && actor.marcaId !== cena.marca_id) throw new BusinessError("anuncio_inexistente");
+  const { data: ad } = await db.from("anuncios").select("status, roteiro, prompt_versao, ficha_id, fichas_produto!anuncios_ficha_id_fkey(imagem_path), formato").eq("id", cena.anuncio_id).single();
+  if (ad?.status !== "aguardando_aprovacao") throw new BusinessError("transicao_invalida");
+  const quadros = [...((cena.quadros ?? []) as Array<{ id: string; versao: number; status: string; geracao_id: string | null }>)].sort((a, b) => b.versao - a.versao);
+  if (quadros.some((q) => q.status === "gerando")) throw new BusinessError("transicao_invalida");
+  const free = quadros.length > 0 && !quadros.some((q) => q.status === "pronto");
+
+  const quadroId = randomUUIDv4();
+  let cobrancaId: string | null = null;
+  if (!free) {
+    const { data, error } = await db.rpc("debitar_creditos", { p_marca_id: cena.marca_id, p_acao: "refazer_quadro", p_quantidade_itens: 1, p_referencia_tipo: "quadro", p_referencia_id: quadroId, p_criado_por: actor.id });
+    if (error) throw error;
+    cobrancaId = data as string | null;
+  }
+
+  // Prompt atual da cena = o da última geração (pode já ter sido ajustado antes).
+  const last = quadros[0];
+  const lastEntrada = last?.geracao_id ? ((await db.from("geracoes").select("entrada").eq("id", last.geracao_id).maybeSingle()).data?.entrada as (GenerationInput & { prompt_cena?: string; modelo?: string }) | undefined) : undefined;
+  const modelo = lastEntrada?.modelo ?? (ad.roteiro as { modelo?: string } | null)?.modelo ?? "";
+  let promptCena = lastEntrada?.prompt_cena ?? cena.prompt_quadro;
+  const pedido = (instrucao ?? "").trim();
+  let resumo: string | null = null;
+  try {
+    if (pedido || !free) {
+      const adjusted = await (deps.ai ?? aiClient()).adjustPrompt({ tipo: "quadro", promptAtual: promptCena, pedido });
+      promptCena = adjusted.prompt.replace(CLAUSULA_IMAGEM, "").trim();
+      resumo = adjusted.resumo_pt;
+    }
+  } catch (e) {
+    console.error("Refação de quadro sem ajuste do Claude:", e instanceof Error ? e.message : e);
+  }
+  const { modelo_imagem } = await readConfig(["modelo_imagem"]);
+  const fichaPath = (ad.fichas_produto as unknown as { imagem_path: string }).imagem_path;
+  const entrada = {
+    prompt: buildFramePrompt(promptCena, modelo),
+    prompt_base: promptCena,
+    prompt_versao: ad.prompt_versao ?? "",
+    referencias: [fichaPath],
+    aspect_ratio: ad.formato === "vertical_9_16" ? "9:16" : "16:9",
+    prompt_cena: promptCena,
+    modelo,
+    resumo_refacao: resumo,
+  };
+  const { data: g, error: gErr } = await db.from("geracoes").insert({ marca_id: cena.marca_id, tipo: "quadro_chave", modelo: String(modelo_imagem), entrada: entrada as never, cobranca_id: cobrancaId }).select("id").single();
+  if (gErr) throw gErr;
+  const { error: qErr } = await db.from("quadros").insert({ id: quadroId, cena_id: cena.id, marca_id: cena.marca_id, versao: (last?.versao ?? 0) + 1, status: "gerando", geracao_id: g.id, instrucao_refacao: pedido || null });
+  if (qErr) throw qErr;
+  await submitGeneration(g.id, deps.generation);
+}
+
+/**
+ * POST /api/cenas/:id/usar-quadro (seção 13): quadro `pronto` da mesma cena, anúncio em
+ * `aguardando_aprovacao` → `cenas.quadro_atual_id`. Recebe: ator, cena e quadro.
+ */
+export async function selectFrame(actor: FrameActor, cenaId: string, quadroId: string): Promise<void> {
+  const db = createAdminClient();
+  const { data: q } = await db.from("quadros").select("id, status, cena_id, marca_id, cenas!quadros_cena_id_fkey(anuncio_id)").eq("id", quadroId).maybeSingle();
+  if (!q || q.cena_id !== cenaId) throw new BusinessError("anuncio_inexistente");
+  if (actor.papel !== "admin_plataforma" && actor.marcaId !== q.marca_id) throw new BusinessError("anuncio_inexistente");
+  if (q.status !== "pronto") throw new BusinessError("transicao_invalida");
+  const { data: ad } = await db.from("anuncios").select("status").eq("id", (q.cenas as unknown as { anuncio_id: string }).anuncio_id).single();
+  if (ad?.status !== "aguardando_aprovacao") throw new BusinessError("transicao_invalida");
+  await db.from("cenas").update({ quadro_atual_id: quadroId }).eq("id", cenaId);
 }

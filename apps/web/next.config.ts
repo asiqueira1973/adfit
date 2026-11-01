@@ -7,7 +7,11 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   partialPrefetching: true,
   // Prompts versionados (Anexo C) são lidos do disco em tempo de execução: entram no trace das funções.
-  outputFileTracingIncludes: { "/**": ["./src/server/prompts/*.md"] },
+  // Montagem do vídeo na Vercel (D-23): binário do ffmpeg-static (instalado na raiz do monorepo) e a fonte Inter Bold.
+  outputFileTracingIncludes: {
+    "/**": ["./src/server/prompts/*.md"],
+    "/api/**": ["./src/server/video/assets/*.ttf", "../../node_modules/ffmpeg-static/ffmpeg"],
+  },
   turbopack: {
     rules: {
       "*.css": {

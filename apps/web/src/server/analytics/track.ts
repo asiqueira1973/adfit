@@ -19,7 +19,10 @@ export type EventName =
   | "adfit_compra_iniciada"
   | "adfit_compra_concluida"
   | "adfit_feedback_enviado"
-  | "adfit_convite_enviado";
+  | "adfit_convite_enviado"
+  | "adfit_video_solicitado"
+  | "adfit_video_pronto"
+  | "adfit_video_baixado";
 
 export type ProductEvent = {
   nome: EventName;

@@ -9,6 +9,7 @@ import { generationDeps, submitGeneration, type GenerationDeps, type GenerationI
 import { refreshStaleGenerations } from "../higgsfield/stale";
 import type { AiClient } from "../claude/types";
 import { buildFramePrompt, checkAdProgress, refundAd, runFrameQc } from "./frames";
+import { checkClipsProgress, downloadName, MONTAGE_STALE_MS, requestMontage, runMontage } from "./clips";
 import { aiClient, runLater } from "./runtime";
 import { buildScriptSystem, sanitizeScreenTexts } from "./script";
 import { isBusy, transition, type AdStatus } from "./stateMachine";
@@ -223,18 +224,23 @@ export async function getAdView(actor: AdActor, anuncioId: string) {
   const db = createAdminClient();
   const { data: ad } = await db
     .from("anuncios")
-    .select("id, marca_id, produto_id, titulo, status, formato, com_texto, texto_oferta, arquivado, criado_em, atualizado_em")
+    .select("id, marca_id, produto_id, titulo, status, formato, com_texto, texto_oferta, arquivado, criado_em, atualizado_em, video_final_path, versao_montagem")
     .eq("id", anuncioId)
     .maybeSingle();
   if (!ad || ad.arquivado) throw new BusinessError("anuncio_inexistente");
   assertOwner(actor, ad.marca_id);
   const { data: cenas } = await db
     .from("cenas")
-    .select("id, ordem, descricao, texto_tela, quadro_atual_id, quadros!quadros_cena_id_fkey(id, versao, status, imagem_path, qc_aprovado)")
+    .select("id, ordem, descricao, texto_tela, quadro_atual_id, clipe_atual_id, quadros!quadros_cena_id_fkey(id, versao, status, imagem_path, qc_aprovado), clipes!clipes_cena_id_fkey(id, versao, status, video_path)")
     .eq("anuncio_id", anuncioId)
     .order("ordem");
   const quadros = (cenas ?? []).flatMap((c) => (c.quadros ?? []) as Array<{ id: string; versao: number; status: string; imagem_path: string | null; qc_aprovado: boolean | null }>);
-  const urls = await signBrandPaths(ad.marca_id, quadros.flatMap((q) => (q.status === "pronto" && q.imagem_path ? [q.imagem_path] : [])));
+  const clipes = (cenas ?? []).flatMap((c) => (c.clipes ?? []) as Array<{ id: string; versao: number; status: string; video_path: string | null }>);
+  const urls = await signBrandPaths(ad.marca_id, [
+    ...quadros.flatMap((q) => (q.status === "pronto" && q.imagem_path ? [q.imagem_path] : [])),
+    ...clipes.flatMap((c) => (c.status === "pronto" && c.video_path ? [c.video_path] : [])),
+    ...(ad.video_final_path ? [ad.video_final_path] : []),
+  ]);
   return {
     id: ad.id,
     titulo: ad.titulo,
@@ -242,12 +248,18 @@ export async function getAdView(actor: AdActor, anuncioId: string) {
     formato: ad.formato,
     comTexto: ad.com_texto,
     textoOferta: ad.texto_oferta,
+    videoUrl: ad.video_final_path ? (urls[ad.video_final_path] ?? null) : null,
+    versaoMontagem: ad.versao_montagem,
     cenas: (cenas ?? []).map((c) => ({
       id: c.id,
       ordem: c.ordem as 1 | 2 | 3,
       descricao: c.descricao,
       textoTela: c.texto_tela,
       quadroAtualId: c.quadro_atual_id,
+      clipeAtualId: c.clipe_atual_id,
+      clipes: [...((c.clipes ?? []) as typeof clipes)]
+        .sort((a, b) => a.versao - b.versao)
+        .map((k) => ({ id: k.id, versao: k.versao, status: k.status as "gerando" | "pronto" | "descartado" | "falhou", url: k.status === "pronto" && k.video_path ? (urls[k.video_path] ?? null) : null })),
       quadros: [...((c.quadros ?? []) as typeof quadros)]
         .sort((a, b) => a.versao - b.versao)
         .map((q) => ({
@@ -280,11 +292,26 @@ export async function refreshAd(anuncioId: string, now = Date.now()): Promise<vo
     if (await transition(anuncioId, "gerando_roteiro", "falhou", { erro: "roteiro_orfao" })) await refundAd(anuncioId, "Falha técnica ao criar o roteiro");
     return;
   }
-  if (ad.status !== "gerando_quadros") return;
+  if (ad.status === "gerando_clipes") {
+    const { data: cs } = await db.from("cenas").select("clipes!clipes_cena_id_fkey(status, geracao_id)").eq("anuncio_id", anuncioId);
+    const gerando = (cs ?? []).flatMap((c) => (c.clipes ?? []) as Array<{ status: string; geracao_id: string | null }>).filter((k) => k.status === "gerando" && k.geracao_id);
+    await refreshStaleGenerations({ geracaoIds: gerando.map((k) => k.geracao_id!) }, now);
+    await checkClipsProgress(anuncioId);
+    return;
+  }
+  if (ad.status === "montando") {
+    // Montagem parada (função encerrada) ou com erro: tenta de novo, até 3 vezes (D-3, D-23).
+    const { data: m } = await db.from("anuncios").select("montagem_iniciada_em, tentativas_montagem").eq("id", anuncioId).single();
+    const stale = !m?.montagem_iniciada_em || now - new Date(m.montagem_iniciada_em).getTime() > MONTAGE_STALE_MS;
+    if (m && m.tentativas_montagem < 3 && stale) await runLater(() => runMontage(anuncioId));
+    return;
+  }
+  // Quadros: na geração inicial e nas refações durante a aprovação (8.6).
+  if (ad.status !== "gerando_quadros" && ad.status !== "aguardando_aprovacao") return;
 
   const { data: cenas } = await db.from("cenas").select("id, quadros!quadros_cena_id_fkey(id, status, imagem_path, geracao_id)").eq("anuncio_id", anuncioId);
   const all = (cenas ?? []).flatMap((c) => (c.quadros ?? []) as Array<{ id: string; status: string; imagem_path: string | null; geracao_id: string | null }>);
-  if (age > AD_ORPHAN_AFTER_MS) {
+  if (ad.status === "gerando_quadros" && age > AD_ORPHAN_AFTER_MS) {
     for (const c of cenas ?? []) {
       if (!(c.quadros ?? []).length) await db.from("quadros").insert({ cena_id: c.id, marca_id: ad.marca_id, versao: 1, status: "falhou" });
     }
@@ -312,8 +339,8 @@ export const patchTextsSchema = z
   .strict();
 
 /**
- * PATCH /api/anuncios/:id/textos (seção 13; critério 8.5 "texto editável aqui"): status
- * `aguardando_aprovacao` (`pronto` → `montando` entra no 8.7); cada texto em 2×32 sem emoji; a cena
+ * PATCH /api/anuncios/:id/textos (seção 13; critérios 8.5 e 8.7): status `aguardando_aprovacao`, ou
+ * `pronto` (salva e remonta de graça → `montando`); cada texto em 2×32 sem emoji; a cena
  * 3 não leva texto (11.3). Termo proibido digitado pelo usuário NÃO bloqueia: volta como aviso (11.7).
  * Recebe: ator, anúncio e corpo. Devolve: { avisos: ids das cenas com termo proibido }.
  */
@@ -322,7 +349,7 @@ export async function patchAdTexts(actor: AdActor, anuncioId: string, body: z.in
   const { data: ad } = await db.from("anuncios").select("id, marca_id, status, arquivado").eq("id", anuncioId).maybeSingle();
   if (!ad || ad.arquivado) throw new BusinessError("anuncio_inexistente");
   assertOwner(actor, ad.marca_id);
-  if (ad.status !== "aguardando_aprovacao") throw new BusinessError("transicao_invalida");
+  if (ad.status !== "aguardando_aprovacao" && ad.status !== "pronto") throw new BusinessError("transicao_invalida");
   const { data: cenas } = await db.from("cenas").select("id, ordem").eq("anuncio_id", anuncioId);
   const avisos: string[] = [];
   for (const c of body.cenas) {
@@ -337,6 +364,8 @@ export async function patchAdTexts(actor: AdActor, anuncioId: string, body: z.in
     await db.from("cenas").update({ texto_tela: texto }).eq("id", c.id).eq("anuncio_id", anuncioId);
   }
   if (body.texto_oferta !== undefined) await db.from("anuncios").update({ texto_oferta: body.texto_oferta || null }).eq("id", anuncioId);
+  // Vídeo pronto: os textos novos entram numa remontagem grátis (critério 8.7).
+  if (ad.status === "pronto") await requestMontage(anuncioId, "pronto");
   return { avisos };
 }
 
@@ -359,4 +388,24 @@ export async function listAds(marcaId: string) {
   });
   const urls = await signBrandPaths(marcaId, rows.flatMap((r) => (r.thumbPath ? [r.thumbPath] : [])));
   return rows.map((r) => ({ ...r, thumb: r.thumbPath ? (urls[r.thumbPath] ?? null) : null, busy: isBusy(r.status) }));
+}
+
+/**
+ * GET /api/anuncios/:id/download (seção 13; critério 8.7): anúncio da marca com vídeo montado →
+ * URL assinada de 60 min que baixa com o nome `<instagram-ou-marca>_<produto>_<formato>_v<n>.mp4`.
+ * Recebe: ator e anúncio. Devolve: { url, nome }.
+ */
+export async function downloadAd(actor: AdActor, anuncioId: string): Promise<{ url: string; nome: string }> {
+  const db = createAdminClient();
+  const { data: ad } = await db.from("anuncios").select("id, marca_id, formato, video_final_path, versao_montagem, arquivado, produtos(nome), marcas(nome, instagram)").eq("id", anuncioId).maybeSingle();
+  if (!ad || ad.arquivado) throw new BusinessError("anuncio_inexistente");
+  assertOwner(actor, ad.marca_id);
+  if (!ad.video_final_path) throw new BusinessError("transicao_invalida");
+  const nome = downloadName(ad.marcas as unknown as { nome: string; instagram: string | null }, (ad.produtos as unknown as { nome: string }).nome, ad.formato, ad.versao_montagem);
+  const object = ad.video_final_path.replace(/^anuncios\//, "");
+  if (!object.startsWith(`${ad.marca_id}/`)) throw new Error("caminho_fora_da_marca");
+  const { data, error } = await db.storage.from("anuncios").createSignedUrl(object, 3600, { download: nome });
+  if (error || !data) throw error ?? new Error("assinatura_falhou");
+  await track({ nome: "adfit_video_baixado", distinctId: actor.email ?? "", tela: "Anúncio", descricao: "baixou o vídeo do anúncio", propriedades: { anuncio_id: anuncioId, versao_montagem: ad.versao_montagem } });
+  return { url: data.signedUrl, nome };
 }

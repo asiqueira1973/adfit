@@ -24,3 +24,6 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/anunci
     return errorResponse(e, profile.idioma);
   }
 }
+
+/** Duração máxima da função na Vercel: a remontagem (texto editado no vídeo pronto) segue depois da resposta. */
+export const maxDuration = 300;

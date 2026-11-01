@@ -5,9 +5,10 @@ import { readConfig } from "../config";
 import { PHOTO_BUCKET } from "@/lib/storage-paths";
 import { createHiggsfieldClient, downloadResult } from "./client";
 import { referenceUrls } from "./inputs";
-import { buildImageBody, type ImageRequest } from "./models";
+import { buildImageBody, buildVideoBody, type ImageRequest } from "./models";
 import type { Downloader, GenerationClient, HfResult } from "./types";
 import { buildFramePrompt, frameTarget } from "../ads/frames";
+import { clipTarget } from "../ads/clips";
 
 /** Dependências externas da geração (seção 22: dublês nos testes). */
 export type GenerationDeps = { hf: GenerationClient; download: Downloader };
@@ -84,7 +85,10 @@ export async function submitGeneration(geracaoId: string, deps = generationDeps(
   try {
     const entrada = g.entrada as GenerationInput;
     const imageUrls = await referenceUrls(g.marca_id, entrada.referencias, deps.hf);
-    const body = buildImageBody(g.modelo, { prompt: entrada.prompt, imageUrls, aspectRatio: entrada.aspect_ratio });
+    const body =
+      g.tipo === "clipe_video"
+        ? buildVideoBody(g.modelo, { prompt: entrada.prompt, imageUrl: imageUrls[0], seconds: 5 })
+        : buildImageBody(g.modelo, { prompt: entrada.prompt, imageUrls, aspectRatio: entrada.aspect_ratio });
     const { request_id } = await deps.hf.submit(g.modelo, body, webhookUrl());
     await db.from("geracoes").update({ request_id, status: "processando" }).eq("id", g.id).eq("status", "na_fila");
   } catch (e) {
@@ -93,7 +97,8 @@ export async function submitGeneration(geracaoId: string, deps = generationDeps(
 }
 
 /** Extensão e tipo aceitos pelo bucket `produtos` a partir do content-type devolvido. */
-function imageType(contentType: string): { ext: string; mime: string } {
+function mediaType(contentType: string, tipo: GenerationRow["tipo"]): { ext: string; mime: string } {
+  if (tipo === "clipe_video" || contentType.includes("video")) return { ext: "mp4", mime: "video/mp4" };
   if (contentType.includes("jpeg") || contentType.includes("jpg")) return { ext: "jpg", mime: "image/jpeg" };
   if (contentType.includes("webp")) return { ext: "webp", mime: "image/webp" };
   return { ext: "png", mime: "image/png" };
@@ -105,7 +110,7 @@ function imageType(contentType: string): { ext: string; mime: string } {
  * acontece depois de gravar ou da falha definitiva.
  */
 export type GenerationTarget = {
-  table: "fichas_produto" | "quadros";
+  table: "fichas_produto" | "quadros" | "clipes";
   id: string;
   /** Caminho completo (com bucket) do arquivo do resultado. */
   path(ext: string): string;
@@ -119,6 +124,7 @@ export type GenerationTarget = {
 async function findTarget(g: GenerationRow): Promise<GenerationTarget | null> {
   if (g.tipo === "ficha_produto") return sheetTarget(g);
   if (g.tipo === "quadro_chave") return frameTarget(g);
+  if (g.tipo === "clipe_video") return clipTarget(g);
   throw new Error(`tipo_nao_suportado:${g.tipo}`);
 }
 
@@ -152,10 +158,11 @@ async function sheetTarget(g: GenerationRow): Promise<GenerationTarget | null> {
   };
 }
 
-/** Custo USD de uma geração concluída (seção 7.3): imagem = `preco_usd_por_imagem`. */
+/** Custo USD de uma geração concluída (seção 7.3): imagem = `preco_usd_por_imagem`; clipe = 5 s × preço/s. */
 async function generationCost(g: GenerationRow): Promise<number> {
-  const { preco_usd_por_imagem } = await readConfig(["preco_usd_por_imagem"]);
-  if (g.tipo === "clipe_video") throw new Error("custo_de_video_no_8_6");
+  const { preco_usd_por_imagem, preco_usd_por_segundo_video } = await readConfig(["preco_usd_por_imagem", "preco_usd_por_segundo_video"]);
+  // Clipe: 5 s × preço por segundo (11.6; MD-4: Seedance 2.5 1080p).
+  if (g.tipo === "clipe_video") return Math.round(Number(preco_usd_por_segundo_video) * 5 * 10000) / 10000;
   return Number(preco_usd_por_imagem);
 }
 
@@ -195,7 +202,7 @@ export async function applyResult(g: GenerationRow, result: HfResult, deps = gen
 
   // 1. Copia para o Storage (nunca guardamos só a URL externa — seção 4.3).
   const file = await deps.download(url);
-  const { ext, mime } = imageType(file.contentType);
+  const { ext, mime } = mediaType(file.contentType, g.tipo);
   const path = target.path(ext);
   const [bucket, ...rest] = path.split("/");
   const { error: upErr } = await db.storage.from(bucket).upload(rest.join("/"), file.bytes, { contentType: mime, upsert: true });
