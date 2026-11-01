@@ -90,5 +90,8 @@ Geração e pagamento: entram nos épicos 8.4–8.9.
 | D-5 | GRANTs de coluna em `produtos` (cliente não grava `ficha_aprovada_id`) | Aprovar ficha é rota de servidor (seção 13); a 6.4 só dizia "insert/update na própria marca". |
 | D-6 | Projeto Supabase compartilhado "BANCO DE TESTE" (us-east-2) | Decisão do Alexandre (31/10/2026); a seção 20 preferia São Paulo. Migrations no remoto via `apply_migration`, não `db push`, para não misturar com o histórico de outros apps. |
 | D-7 | Modelos de e-mail usam `{{ .RedirectTo }}` em vez de `{{ .SiteURL }}` e são bilíngues | O Site URL do projeto compartilhado é de outro app; MD-1. |
+| D-8 | Admin altera `marcas` (kit, pausar) só por rota de servidor (`PATCH /api/admin/marcas/:id`) | O GRANT de coluna vale para todo `authenticated`; a 6.4 permitia ao admin escrever direto. Mais restritivo, mesmo resultado na interface. |
+| D-9 | Pacotes de créditos entram por `scripts/seed-admin.ts`, não por `seed.sql` | Dependem dos Price IDs da Stripe em variáveis de ambiente (seção 7.6). |
+| D-10 | GRANT de coluna esconde `anuncios.roteiro/prompt_versao/erro/montagem_*`, `cenas.prompt_*` e `quadros.qc_detalhe` do cliente | A RLS da 6.4 liberava as linhas inteiras e a API REST devolveria prompts à própria marca, contra a seção 5 e o princípio 5. Admin lê pelo servidor. Teste `04_colunas_ocultas.test.sql`. |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
 | MD-2 | Crédito "Feito pela Dab Lab" | Emenda do Alexandre. |

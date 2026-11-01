@@ -1564,20 +1564,130 @@ GRANT ALL ON FUNCTION "public"."proteger_saldo_marca"() TO "service_role";
 
 
 GRANT ALL ON TABLE "public"."anuncios" TO "service_role";
-GRANT SELECT ON TABLE "public"."anuncios" TO "authenticated";
 
 
 
-GRANT UPDATE("titulo") ON TABLE "public"."anuncios" TO "authenticated";
+GRANT SELECT("id") ON TABLE "public"."anuncios" TO "authenticated";
 
 
 
-GRANT UPDATE("arquivado") ON TABLE "public"."anuncios" TO "authenticated";
+GRANT SELECT("marca_id") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("produto_id") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("ficha_id") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("criado_por") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("titulo"),UPDATE("titulo") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("cenario") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("modalidade") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("genero_modelo") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("faixa_etaria") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("estilo") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("formato") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("com_texto") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("texto_oferta") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("observacoes") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("status") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("video_final_path") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("versao_montagem") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("arquivado"),UPDATE("arquivado") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("criado_em") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
+GRANT SELECT("atualizado_em") ON TABLE "public"."anuncios" TO "authenticated";
 
 
 
 GRANT ALL ON TABLE "public"."cenas" TO "service_role";
-GRANT SELECT ON TABLE "public"."cenas" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."cenas" TO "authenticated";
+
+
+
+GRANT SELECT("anuncio_id") ON TABLE "public"."cenas" TO "authenticated";
+
+
+
+GRANT SELECT("marca_id") ON TABLE "public"."cenas" TO "authenticated";
+
+
+
+GRANT SELECT("ordem") ON TABLE "public"."cenas" TO "authenticated";
+
+
+
+GRANT SELECT("descricao") ON TABLE "public"."cenas" TO "authenticated";
+
+
+
+GRANT SELECT("texto_tela") ON TABLE "public"."cenas" TO "authenticated";
+
+
+
+GRANT SELECT("quadro_atual_id") ON TABLE "public"."cenas" TO "authenticated";
+
+
+
+GRANT SELECT("clipe_atual_id") ON TABLE "public"."cenas" TO "authenticated";
+
+
+
+GRANT SELECT("criado_em") ON TABLE "public"."cenas" TO "authenticated";
 
 
 
@@ -1710,7 +1820,46 @@ GRANT UPDATE("arquivado") ON TABLE "public"."produtos" TO "authenticated";
 
 
 GRANT ALL ON TABLE "public"."quadros" TO "service_role";
-GRANT SELECT ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("cena_id") ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("marca_id") ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("versao") ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("status") ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("imagem_path") ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("geracao_id") ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("instrucao_refacao") ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("qc_aprovado") ON TABLE "public"."quadros" TO "authenticated";
+
+
+
+GRANT SELECT("criado_em") ON TABLE "public"."quadros" TO "authenticated";
 
 
 

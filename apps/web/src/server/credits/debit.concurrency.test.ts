@@ -9,6 +9,11 @@ import { Client } from "pg";
  * `saldo_insuficiente`.
  */
 const DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:55322/postgres";
+// Este teste grava (o livro-razão é imutável): só roda contra o Supabase local, nunca no remoto compartilhado.
+const host = new URL(DATABASE_URL).hostname;
+if (!["127.0.0.1", "localhost"].includes(host)) {
+  throw new Error(`debit.concurrency.test só roda no banco local (DATABASE_URL aponta para ${host}).`);
+}
 
 describe("debitar_creditos concorrente (seção 22)", () => {
   const a = new Client({ connectionString: DATABASE_URL });
