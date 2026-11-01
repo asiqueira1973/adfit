@@ -143,5 +143,6 @@ Entra nos épicos 8.4–8.7.
 | D-12 | `estornar_pagamento` acrescenta a nota em `observacao` (migration 20261101000800) | A versão original sobrescrevia a nota de um reembolso parcial anterior (bug achado por teste). |
 | D-13 | Checkout envia `customer_email` e `locale` do usuário | E-mail pré-preenchido e página da Stripe no idioma do usuário (MD-1). |
 | D-14 | Conversão HEIC → JPG por `POST /api/fotos/:id/converter` depois do envio direto ao Storage | A Vercel limita o corpo das funções a 4,5 MB; fotos vão até 10 MB. A rota não está na seção 13. |
+| MD-3 | Modelos Claude: `claude-sonnet-5` (roteiro, refação, QC de imagem) e `claude-haiku-4-5` (QC de texto, nova chave `modelo_claude_qc_texto`) | O spec citava `claude-sonnet-5-5`/`claude-haiku-5-5`, que não existem; decisão do Alexandre. |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
 | MD-2 | Crédito "Feito pela Dab Lab" | Emenda do Alexandre. |

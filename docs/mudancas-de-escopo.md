@@ -28,3 +28,7 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 - **25.1 Pacotes:** USD como proposto na regra 11.2.9 — Pacote 50 = 50 créditos por US$ 30; Pacote 120 = 120 créditos por US$ 65. **Sem cortesia**: a Kore Active compra o primeiro pacote pela Stripe.
 - **25.6 Conta Stripe:** Dab Lab (CNPJ), Brasil. Atenção ao risco da seção 23 (repasse mais lento e taxa maior para cartão internacional); a taxa entra no preço dos pacotes.
 - **E-mails do Auth no projeto compartilhado "BANCO DE TESTE":** aplicar os modelos do AdFit (convite e recuperação, bilíngues, com `{{ .RedirectTo }}`) no projeto compartilhado, ciente de que os outros apps passam a usar esses modelos.
+
+## MD-3 — Modelos Claude (01/11/2026, Alexandre)
+- O spec cita `claude-sonnet-5-5` e `claude-haiku-5-5`, que não existem. Decidido: **`claude-sonnet-5`** (Claude Sonnet 5, US$ 2 / US$ 10 por milhão de tokens — o preço que o spec atribuía ao "Sonnet 5.5") para roteiro, refação e QC das imagens; **`claude-haiku-4-5`** para a revisão de texto da tela (Anexo C.6).
+- Nova chave em `configuracoes`: `modelo_claude_qc_texto` (a regra 11.6 só tinha `modelo_claude_qc`; a seção 4.2 já previa um modelo mais barato para o QC de texto).

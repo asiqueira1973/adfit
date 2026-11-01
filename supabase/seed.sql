@@ -15,7 +15,7 @@ insert into public.precos_acoes (acao, creditos, descricao) values
 on conflict (acao) do nothing;
 
 -- Configurações (regra 11.6). Endpoints da Higgsfield ficam "a_confirmar" até a pergunta 25.5;
--- o ID do modelo Claude e o contato de suporte estão pendentes de confirmação do Alexandre.
+-- modelos Claude confirmados pelo Alexandre em 01/11/2026 (MD-3).
 insert into public.configuracoes (chave, valor, descricao) values
   ('modelo_imagem', '"a_confirmar"', 'Endpoint ID do modelo de edição de imagem (ficha e quadros) — pergunta 25.5'),
   ('modelo_video', '"a_confirmar"', 'Endpoint ID do Kling 3.0 image-to-video (clipes) — pergunta 25.5'),
@@ -24,8 +24,9 @@ insert into public.configuracoes (chave, valor, descricao) values
   ('preco_usd_por_imagem', '0.08', 'Custo USD por imagem (confirmar no console)'),
   ('cotacao_usd_brl', '5.50', 'Cotação USD→BRL do painel de custos'),
   ('cotacoes_para_brl', '{"usd": 5.50, "eur": 6.00}', 'Cotações para converter receita de pagamentos em BRL'),
-  ('modelo_claude_roteiro', '"claude-sonnet-5-5"', 'Modelo Claude do roteiro e da refação'),
-  ('modelo_claude_qc', '"claude-sonnet-5-5"', 'Modelo Claude do controle de qualidade'),
+  ('modelo_claude_roteiro', '"claude-sonnet-5"', 'Modelo Claude do roteiro e da refação'),
+  ('modelo_claude_qc', '"claude-sonnet-5"', 'Modelo Claude do controle de qualidade das imagens (Anexo C.4)'),
+  ('modelo_claude_qc_texto', '"claude-haiku-4-5"', 'Modelo Claude da revisão de texto da tela (Anexo C.6)'),
   ('contato_suporte', '"alexandre@dablab.com.br"', 'WhatsApp/e-mail do admin exibido em "Conta pausada" e suporte')
 on conflict (chave) do nothing;
 
