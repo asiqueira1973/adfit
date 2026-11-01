@@ -44,3 +44,8 @@ Produção: chaves live e o endpoint `https://<app>/api/webhooks/stripe` (evento
 - Modelos e preços ficam em `configuracoes` (`modelo_imagem`, `modelo_video`, `preco_usd_*`): trocar sem deploy. Valores jsonb são strings simples (`"xai/grok-imagine-image-2.0"`), nunca `JSON.stringify` de novo.
 
 _A seção sobre o worker entra no épico 8.6._
+
+## Login e convites (MD-7)
+- Em produção o login é só com Google. Variáveis: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (web) e o provedor Google ligado no Supabase com o mesmo client ID. As origens JavaScript autorizadas no Google Cloud precisam incluir cada domínio do app.
+- Localmente, a tela Entrar mostra também "Entrada de desenvolvimento" (e-mail e senha), usada pelos testes e capturas.
+- E-mail de boas-vindas do convite: `RESEND_API_KEY` e `MAIL_FROM` (ex.: `AdFit <ola@adfit.com.br>`, com o domínio verificado no Resend). Sem elas, o admin recebe o link para mandar manualmente.

@@ -217,5 +217,6 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
 | MD-4 | Imagem: Grok Imagine 2.0 (`xai/grok-imagine-image-2.0`); vídeo: Seedance 2.5 1080p (`bytedance/seedance-2.5/image-to-video`); `gerar_video` = 51, `refazer_clipe` = 17; pacotes de 60 por US$ 36 e de 150 por US$ 81 | Nano Banana não existe na Higgsfield API; o Seedance foi escolhido pela qualidade e custa ~US$ 17 por vídeo, então os preços foram revistos para margem ≥ 30% (decisão do Alexandre, 25.5 e 25.1). |
 | MD-5 | Login com Google (só e-mails já convidados) | Emenda do Alexandre; o OAuth volta por `/auth/confirm`. |
 | MD-6 | Feedback do usuário (tabela `feedbacks`, telas `/feedback` e `/admin/feedbacks`) | Emenda do Alexandre. |
+| MD-7 | Login só com Google (GIS + `signInWithIdToken`); convite sem senha com e-mail de boas-vindas (Resend) | Emenda do Alexandre; substitui as seções 6.1/6.2. |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
 | MD-2 | Crédito "Feito pela Dab Lab" | Emenda do Alexandre. |

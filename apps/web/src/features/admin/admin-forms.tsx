@@ -168,17 +168,34 @@ export function ToggleUserButton({ t, id, ativo, disabled }: { t: T; id: string;
 export function InviteUserForm({ t, brands, fixedBrandId, closeHref }: { t: T; brands?: Array<{ id: string; nome: string }>; fixedBrandId?: string; closeHref: string }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
+  const [manualLink, setManualLink] = useState<string>();
+  const [copied, setCopied] = useState(false);
   const [pending, start] = useTransition();
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     start(async () => {
-      const r = await callApi("POST", "/api/admin/usuarios", { nome: f.get("nome"), email: f.get("email"), marca_id: fixedBrandId ?? f.get("marca_id") });
-      if (r.ok) {
-        router.push(closeHref);
-        router.refresh();
-      } else setError(errorText(t, r.mensagem));
+      const r = await callApi<{ email_enviado: boolean; link: string }>("POST", "/api/admin/usuarios", { nome: f.get("nome"), email: f.get("email"), marca_id: fixedBrandId ?? f.get("marca_id") });
+      if (!r.ok) return setError(errorText(t, r.mensagem));
+      router.refresh();
+      // Sem e-mail automático (MD-7): mostra o link para o admin mandar por conta própria.
+      if (!r.data.email_enviado) return setManualLink(r.data.link);
+      router.push(closeHref);
     });
+  }
+  if (manualLink) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Banner tone="success">{t.admin.conviteSemEmail}</Banner>
+        <code className="break-all rounded-[10px] bg-surface px-3 py-2 text-[14px]">{manualLink}</code>
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="button" variant="secondary" onClick={async () => { await navigator.clipboard.writeText(manualLink).catch(() => undefined); setCopied(true); }}>
+            {copied ? t.admin.linkCopiado : t.admin.copiarLink}
+          </Button>
+          <Button type="button" onClick={() => router.push(closeHref)}>{t.admin.fechar}</Button>
+        </div>
+      </div>
+    );
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">

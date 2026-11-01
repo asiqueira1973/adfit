@@ -6,9 +6,10 @@ import { inviteUser } from "@/server/admin/users";
 import { inviteUserSchema } from "@/server/admin/schemas";
 
 /**
- * POST /api/admin/usuarios — convida usuário de marca (seções 6.1 e 13).
- * Recebe: { email, nome, marca_id }. Valida: e-mail não existe. Faz: convite + perfil.
- * Devolve: 201 { id } ou { erro, mensagem } (409 `email_existente`).
+ * POST /api/admin/usuarios — convida usuário de marca (seções 6.1 e 13; MD-7: login só com Google).
+ * Recebe: { email, nome, marca_id }. Valida: e-mail sem perfil no AdFit. Faz: acesso sem senha +
+ * perfil + e-mail de boas-vindas no idioma do admin. Devolve: 201 { id, email_enviado, link } ou
+ * { erro, mensagem } (409 `email_existente`).
  */
 export async function POST(request: NextRequest) {
   const actor = await requireAdminApi();
@@ -16,7 +17,8 @@ export async function POST(request: NextRequest) {
   const parsed = inviteUserSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return validationError(parsed.error, getDictionary(actor.idioma));
   try {
-    return NextResponse.json({ id: await inviteUser(parsed.data) }, { status: 201 });
+    const r = await inviteUser(parsed.data, actor.idioma);
+    return NextResponse.json({ id: r.id, email_enviado: r.emailEnviado, link: r.link }, { status: 201 });
   } catch (e) {
     return errorResponse(e, actor.idioma);
   }

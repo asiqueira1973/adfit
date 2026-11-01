@@ -3,6 +3,8 @@ import { createAdminClient, createUserClient } from "../db/supabase";
 import { BusinessError } from "../api/http";
 import { publicServerEnv } from "../env";
 import type { InviteUserInput } from "./schemas";
+import { mailer } from "../mail/mailer";
+import type { Locale } from "@/lib/i18n";
 
 export type AdminUserRow = { id: string; nome: string; email: string; marcaId: string | null; marcaNome: string | null; papel: string; ativo: boolean };
 
@@ -27,34 +29,51 @@ export async function listUsers(marcaId?: string): Promise<AdminUserRow[]> {
   }));
 }
 
-/**
- * Convida um usuário de marca (POST /api/admin/usuarios; seções 6.1 e 8.2).
- * Recebe: e-mail, nome e marca. Faz: recusa e-mail já cadastrado (`email_existente`) — inclusive no
- *   Auth compartilhado —, chama `auth.admin.inviteUserByEmail` com retorno em /auth/confirm →
- *   /definir-senha e cria `perfis` com papel usuario_marca e a marca informada. Se o perfil falhar,
- *   remove o usuário recém-criado no Auth para não deixar convite órfão.
- * Devolve: id do usuário.
- */
-export async function inviteUser(input: InviteUserInput): Promise<string> {
+/** Acha o usuário do Auth compartilhado pelo e-mail (pode ser de outro app do projeto). */
+async function findAuthUserId(email: string): Promise<string | null> {
   const admin = createAdminClient();
-  const { data: marca } = await admin.from("marcas").select("id").eq("id", input.marca_id).maybeSingle();
+  for (let page = 1; page < 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw error;
+    const found = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    if (found) return found.id;
+    if (data.users.length < 200) return null;
+  }
+  return null;
+}
+
+/**
+ * Convida um usuário de marca (POST /api/admin/usuarios; seções 6.1 e 8.2; emenda MD-7: login só
+ * com Google). Recebe: e-mail, nome, marca e o idioma do e-mail. Faz: recusa e-mail que já tem perfil
+ * no AdFit (`email_existente`); cria o usuário no Auth sem senha e com e-mail confirmado — ou
+ * reaproveita o que já existe no Auth compartilhado (outro app) —; cria `perfis` (usuario_marca);
+ * manda o e-mail de boas-vindas com o link de entrar. Se o perfil falhar, remove o usuário recém-criado.
+ * Devolve: { id, emailEnviado, link } — sem e-mail, o admin manda o link por conta própria.
+ */
+export async function inviteUser(input: InviteUserInput, idioma: Locale): Promise<{ id: string; emailEnviado: boolean; link: string }> {
+  const admin = createAdminClient();
+  const { data: marca } = await admin.from("marcas").select("id, nome").eq("id", input.marca_id).maybeSingle();
   if (!marca) throw new BusinessError("marca_inexistente");
-  const { data: existing } = await admin.from("perfis").select("id").eq("email", input.email).maybeSingle();
+  const { data: existing } = await admin.from("perfis").select("id").ilike("email", input.email).maybeSingle();
   if (existing) throw new BusinessError("email_existente");
 
-  const redirectTo = `${publicServerEnv().APP_URL}/auth/confirm?next=${encodeURIComponent("/definir-senha")}`;
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(input.email, { redirectTo, data: { nome: input.nome } });
-  if (error) {
-    if (/already|registered|exists/i.test(error.message)) throw new BusinessError("email_existente");
-    throw error;
+  let userId = await findAuthUserId(input.email);
+  const createdNow = !userId;
+  if (!userId) {
+    const { data, error } = await admin.auth.admin.createUser({ email: input.email, email_confirm: true, user_metadata: { nome: input.nome } });
+    if (error) throw error;
+    userId = data.user.id;
   }
-  const userId = data.user.id;
-  const { error: perfilError } = await admin.from("perfis").insert({ id: userId, email: input.email, nome: input.nome, marca_id: input.marca_id, papel: "usuario_marca" });
+  const { data: perfilExistente } = await admin.from("perfis").select("id").eq("id", userId).maybeSingle();
+  if (perfilExistente) throw new BusinessError("email_existente");
+  const { error: perfilError } = await admin.from("perfis").insert({ id: userId, email: input.email, nome: input.nome, marca_id: input.marca_id, papel: "usuario_marca", idioma });
   if (perfilError) {
-    await admin.auth.admin.deleteUser(userId);
+    if (createdNow) await admin.auth.admin.deleteUser(userId);
     throw perfilError;
   }
-  return userId;
+  const link = `${publicServerEnv().APP_URL}/entrar`;
+  const emailEnviado = await mailer().sendWelcome({ to: input.email, nome: input.nome, marca: marca.nome, idioma, link });
+  return { id: userId, emailEnviado, link };
 }
 
 /**

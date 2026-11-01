@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
+import { getDictionary } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Banner } from "@/components/ui/feedback";
 import { TextField } from "@/components/ui/field";
@@ -94,7 +95,7 @@ export function BrandKitForm({ kit, logoUrl, t }: { kit: BrandKit; logoUrl: stri
       </form>
       <div className="flex flex-col gap-2 md:sticky md:top-20 md:self-start">
         <span className="text-[13px] font-medium text-text-2">{t.marca.fimDoVideo}</span>
-        <div className="mx-auto w-[220px] md:w-full"><ClosingPreview name={name} logoUrl={logoUrl} color={color} cta={cta} offer={t.marca.ofertaExemplo} logoAlt={t.admin.kitLogo} /></div>
+        <div className="mx-auto w-[220px] md:w-full"><ClosingPreview name={name} logoUrl={logoUrl} color={color} cta={cta} offer={getDictionary(idioma).marca.ofertaExemplo} logoAlt={t.admin.kitLogo} /></div>
       </div>
     </div>
   );

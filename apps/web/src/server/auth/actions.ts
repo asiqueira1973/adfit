@@ -17,13 +17,15 @@ function homeFor(papel: string): string {
 }
 
 /**
- * Entrar com e-mail e senha (seções 6.1 e 10, tela [Público] Entrar).
+ * Entrar com e-mail e senha — só em desenvolvimento (MD-7; seções 6.1 e 10).
  * Recebe: estado anterior e o formulário (email, senha). Devolve: erro traduzido, ou redireciona
  * para a página inicial do perfil. Quem não tem perfil (outro app no Auth compartilhado) ou está
  * desativado é deslogado na hora (seção 6.3).
  */
 export async function signIn(_prev: AuthFormState, form: FormData): Promise<AuthFormState> {
   const t = getDictionary(await getRequestLocale());
+  // MD-7: em produção o login é só com Google; e-mail e senha ficam para testes locais.
+  if (process.env.NODE_ENV !== "development") return { error: t.auth.erroGenerico };
   const parsed = z.object({ email: z.string().email(), senha: z.string().min(1) }).safeParse({
     email: String(form.get("email") ?? "").trim(),
     senha: String(form.get("senha") ?? ""),
@@ -44,56 +46,6 @@ export async function signIn(_prev: AuthFormState, form: FormData): Promise<Auth
     redirect("/acesso-desativado");
   }
   (await cookies()).set(LOCALE_COOKIE, profile.idioma, { path: "/", sameSite: "lax" });
-  redirect(homeFor(profile.papel));
-}
-
-/**
- * Pedir link de recuperação de senha (seção 6.2, fluxo padrão do Supabase).
- * Recebe: estado anterior e o formulário (email). Devolve: sempre a mesma mensagem de sucesso,
- * para não revelar quais e-mails têm conta.
- */
-export async function requestPasswordReset(_prev: AuthFormState, form: FormData): Promise<AuthFormState> {
-  const t = getDictionary(await getRequestLocale());
-  const email = String(form.get("email") ?? "").trim();
-  if (z.string().email().safeParse(email).success) {
-    const supabase = await createUserClient();
-    await supabase.auth.resetPasswordForEmail(email, {
-      // O modelo de e-mail acrescenta &token_hash=…&type=recovery a esta URL (supabase/templates).
-      redirectTo: `${publicServerEnv().APP_URL}/auth/confirm?next=${encodeURIComponent("/redefinir-senha?etapa=nova")}`,
-    });
-  }
-  return { ok: t.auth.linkEnviado };
-}
-
-/**
- * Definir a senha no primeiro acesso (convite) ou redefinir pelo link do e-mail (seção 6.2).
- * Recebe: estado anterior e o formulário (senha, confirmacao, primeiroAcesso). Valida mínimo de
- * 8 caracteres e confirmação. No primeiro acesso ajusta `perfis.idioma` ao idioma do navegador (MD-1).
- * Devolve: erro traduzido, ou redireciona para a página inicial do perfil.
- */
-export async function setPassword(_prev: AuthFormState, form: FormData): Promise<AuthFormState> {
-  const t = getDictionary(await getRequestLocale());
-  const senha = String(form.get("senha") ?? "");
-  const confirmacao = String(form.get("confirmacao") ?? "");
-  if (senha.length < 8) return { error: t.auth.senhaCurta };
-  if (senha !== confirmacao) return { error: t.auth.senhasDiferentes };
-
-  const supabase = await createUserClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { error: t.auth.linkInvalido };
-  const { error } = await supabase.auth.updateUser({ password: senha });
-  if (error) return { error: t.auth.erroGenerico };
-
-  const profile = await getCurrentProfile();
-  if (!profile) {
-    await supabase.auth.signOut();
-    return { error: t.auth.semAcesso };
-  }
-  if (form.get("primeiroAcesso") === "1") {
-    const locale = localeFromAcceptLanguage((await headers()).get("accept-language"));
-    await createAdminClient().from("perfis").update({ idioma: locale }).eq("id", profile.id);
-    (await cookies()).set(LOCALE_COOKIE, locale, { path: "/", sameSite: "lax" });
-  }
   redirect(homeFor(profile.papel));
 }
 

@@ -1,45 +1,88 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
+import { PUBLIC_ENV } from "@/lib/public-env";
+
+type GoogleId = {
+  initialize(config: { client_id: string; callback: (r: { credential: string }) => void; nonce: string; use_fedcm_for_prompt?: boolean; ux_mode?: "popup" }): void;
+  renderButton(el: HTMLElement, options: Record<string, unknown>): void;
+};
+declare global {
+  interface Window {
+    google?: { accounts: { id: GoogleId } };
+  }
+}
+
+/** Nonce aleatório e seu SHA-256 em hex (o Google recebe o hash; o Supabase confere o original). */
+async function makeNonce(): Promise<{ raw: string; hashed: string }> {
+  const raw = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  return { raw, hashed: Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("") };
+}
+
+/** Carrega o script do Google Identity Services uma vez. */
+function loadGis(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) return resolve();
+    const existing = document.querySelector<HTMLScriptElement>("script[data-gis]");
+    const s = existing ?? Object.assign(document.createElement("script"), { src: "https://accounts.google.com/gsi/client", async: true });
+    s.dataset.gis = "1";
+    s.addEventListener("load", () => resolve());
+    s.addEventListener("error", () => reject(new Error("gis")));
+    if (!existing) document.head.appendChild(s);
+  });
+}
 
 /**
- * "Entrar com Google" (emenda MD-5). Abre o OAuth do Google pelo Supabase (fluxo PKCE); a volta
- * cai em `/auth/confirm`, que troca o código pela sessão. Só entra quem já foi convidado: o
- * Supabase não cria usuário novo (cadastro desligado) e o proxy recusa quem não tem perfil.
- * Recebe: textos. Devolve: o botão.
+ * "Entrar com Google" (emendas MD-5 e MD-7). Usa o Google Identity Services NA PÁGINA do AdFit
+ * (o Google mostra o nosso domínio, não o do Supabase) e troca o token do Google pela sessão com
+ * `signInWithIdToken`. Só entra quem tem perfil: sem convite, o Supabase não cria a conta (cadastro
+ * desligado) ou o proxy recusa quem não tem perfil. Recebe: idioma do botão e textos de erro.
+ * Devolve: o botão oficial do Google.
  */
-export function GoogleButton({ label, loadingLabel, errorLabel }: { label: string; loadingLabel: string; errorLabel: string }) {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState(false);
+export function GoogleButton({ locale, errorLabel, noAccessLabel }: { locale: string; errorLabel: string; noAccessLabel: string }) {
+  const router = useRouter();
+  const ref = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [nonce] = await Promise.all([makeNonce(), loadGis()]);
+        if (cancelled || !ref.current || !window.google) return;
+        window.google.accounts.id.initialize({
+          client_id: PUBLIC_ENV.googleClientId,
+          nonce: nonce.hashed,
+          use_fedcm_for_prompt: true,
+          callback: async ({ credential }) => {
+            setError(undefined);
+            const { error: e } = await createBrowserSupabase().auth.signInWithIdToken({ provider: "google", token: credential, nonce: nonce.raw });
+            if (e) {
+              setError(/signup|not allowed|disabled/i.test(e.message) ? noAccessLabel : errorLabel);
+              return;
+            }
+            // O proxy manda cada perfil para a sua página inicial (ou recusa quem não tem perfil).
+            router.replace("/");
+            router.refresh();
+          },
+        });
+        window.google.accounts.id.renderButton(ref.current, { type: "standard", theme: "outline", size: "large", text: "signin_with", shape: "rectangular", width: 320, locale });
+      } catch {
+        if (!cancelled) setError(errorLabel);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, errorLabel, noAccessLabel, router]);
+
   return (
-    <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        disabled={pending}
-        onClick={async () => {
-          setPending(true);
-          setError(false);
-          const { error: e } = await createBrowserSupabase().auth.signInWithOAuth({
-            provider: "google",
-            options: { redirectTo: `${window.location.origin}/auth/confirm` },
-          });
-          if (e) {
-            setPending(false);
-            setError(true);
-          }
-        }}
-        className="flex min-h-12 w-full items-center justify-center gap-3 rounded-[12px] border border-hairline bg-bg px-4 text-[16px] font-semibold text-text transition-colors hover:bg-surface disabled:opacity-60"
-      >
-        <svg aria-hidden="true" viewBox="0 0 48 48" className="size-5">
-          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
-          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
-          <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
-          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
-        </svg>
-        {pending ? loadingLabel : label}
-      </button>
-      {error && <p className="text-center text-[14px] text-danger">{errorLabel}</p>}
+    <div className="flex flex-col items-center gap-3">
+      <div ref={ref} className="flex min-h-11 justify-center" />
+      {error && <p className="text-center text-[14px] text-danger">{error}</p>}
     </div>
   );
 }

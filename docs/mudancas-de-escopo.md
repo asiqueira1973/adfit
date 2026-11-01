@@ -91,3 +91,16 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 - Acessos de teste em produção, ambos sem senha e com login pelo Google (MD-5):
   - `alexandre@dablab.com.br`: admin.
   - `alexandre.silva.siqueira@gmail.com`: lojista da Marca Teste, com 120 créditos de bônus de teste interno.
+
+## MD-7 — Login só com Google e convite sem senha (01/11/2026, Alexandre)
+- **Login:** a tela Entrar tem só "Entrar com Google" (Google Identity Services na página do AdFit + `signInWithIdToken`). Assim o Google mostra o domínio do AdFit, não o do Supabase.
+  - Deixaram de existir: e-mail e senha, "Esqueci minha senha", `/definir-senha` e `/redefinir-senha` (que agora redirecionam para `/entrar`).
+  - E-mail e senha continuam só em desenvolvimento (testes e capturas locais).
+- **Convite:** continua só por convite (seção 28 mantida; o autocadastro segue fora).
+  - Em "Convidar usuário", o admin informa o e-mail da **conta Google** da pessoa. O AdFit cria o acesso sem senha, com o e-mail confirmado, ou reaproveita o usuário que já existe no Auth compartilhado.
+  - Depois manda o **e-mail de boas-vindas do AdFit** (pt/en) com o link de entrar.
+  - O envio usa o Resend (`RESEND_API_KEY` + `MAIL_FROM`). Sem essas variáveis, o admin vê o link para mandar por conta própria.
+- **Consequências:**
+  - Os modelos de e-mail do Supabase (convite/recuperação) deixam de ser usados pelo AdFit.
+  - Quem não tem conta Google não entra. Se acontecer, dá para acrescentar o link de acesso por e-mail.
+  - **Conflita com:** seção 6.1 (e-mail e senha) e 6.2 (redefinir senha).
