@@ -440,6 +440,7 @@ declare
   v_saldo integer;
   v_debito integer;
   v_id uuid;
+  v_nota text;
 begin
   select * into v_pag from public.pagamentos where id = p_pagamento_id for update;
   if not found then
@@ -466,14 +467,14 @@ begin
     returning id into v_id;
   end if;
 
+  if v_debito < v_pag.creditos then
+    v_nota := format('Reembolso de %s créditos: só %s debitados por falta de saldo; diferença de %s créditos já usados.',
+                     v_pag.creditos, v_debito, v_pag.creditos - v_debito);
+  end if;
+
   update public.pagamentos
   set status = 'reembolsado',
-      observacao = case
-        when v_debito < v_pag.creditos then
-          format('Reembolso de %s créditos: só %s debitados por falta de saldo; diferença de %s créditos já usados.',
-                 v_pag.creditos, v_debito, v_pag.creditos - v_debito)
-        else observacao
-      end
+      observacao = nullif(concat_ws(' ', observacao, v_nota), '')
   where id = p_pagamento_id;
 
   return v_id;
