@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from "react";
+import { MadeBy } from "@/components/made-by";
 import { LogOut, Menu } from "lucide-react";
 import { APP_NAME, MADE_BY } from "@/lib/constants";
 import { fill } from "@/lib/copy";
@@ -21,7 +22,7 @@ function SidebarFooter({ userName, locale, t }: { userName: string; locale: Loca
           <div className="truncate text-[13px] font-semibold">{userName}</div>
           <div className="mt-0.5 flex items-center gap-2 text-[11px] text-text-2">
             <span className="rounded-[6px] border border-hairline px-1.5 font-medium uppercase tracking-wide">{environmentLabel()}</span>
-            {fill(t.copy.feitoPor, { estudio: MADE_BY })}
+            <MadeBy text={t.copy.feitoPor} />
           </div>
         </div>
         <form action="/sair" method="post">

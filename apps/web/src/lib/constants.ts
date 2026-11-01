@@ -9,3 +9,6 @@ export const APP_NAME = "AdFit";
  * telas públicas, menu do perfil e rodapé do admin. Nunca entra nos vídeos (princípio 3).
  */
 export const MADE_BY = "Dab Lab";
+
+/** Site da Dab Lab (link do crédito, MD-2). */
+export const MADE_BY_URL = "https://dablab.com.br";

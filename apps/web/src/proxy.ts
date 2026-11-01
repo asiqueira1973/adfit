@@ -83,7 +83,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Tudo, exceto estáticos, imagens e webhooks (que validam token/assinatura próprios, seção 13).
-    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|images/|fixtures/|brand/|api/webhooks/).*)",
+    // Tudo, exceto estáticos, imagens, webhooks e varreduras (que validam token/assinatura/segredo próprios, seção 13).
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|images/|fixtures/|brand/|api/webhooks/|api/cron/).*)",
   ],
 };

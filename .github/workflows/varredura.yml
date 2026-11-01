@@ -1,0 +1,13 @@
+# Varredura dos anúncios em andamento a cada 5 min (montagem e retentativas sem depender da tela
+# aberta). O plano Hobby da Vercel só permite cron diário; o GitHub Actions cobre o intervalo curto.
+name: varredura
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+jobs:
+  varredura:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: curl -fsS -m 60 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://adfit-roan.vercel.app/api/cron/varredura

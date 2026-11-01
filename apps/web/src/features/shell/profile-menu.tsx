@@ -1,4 +1,5 @@
 import { CircleHelp, LogOut, MessageSquare, Store } from "lucide-react";
+import { MadeBy } from "@/components/made-by";
 import { MADE_BY } from "@/lib/constants";
 import { fill } from "@/lib/copy";
 import type { Dictionary, Locale } from "@/lib/i18n";
@@ -38,7 +39,7 @@ export function ProfileMenu({ userName, brandName, locale, t }: { userName: stri
             <LogOut className="size-4.5" /> {t.nav.sair}
           </button>
         </form>
-        <div className="border-t border-hairline px-4 py-2.5 text-[12px] text-text-2">{fill(t.copy.feitoPor, { estudio: MADE_BY })}</div>
+        <div className="border-t border-hairline px-4 py-2.5 text-[12px] text-text-2"><MadeBy text={t.copy.feitoPor} /></div>
       </div>
     </details>
   );

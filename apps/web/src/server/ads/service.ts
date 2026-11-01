@@ -391,6 +391,25 @@ export async function listAds(marcaId: string) {
 }
 
 /**
+ * Varredura periódica (pedido do Alexandre, 01/11/2026): a montagem, suas retentativas e as
+ * varreduras de órfãos não podem depender da tela do anúncio aberta. Roda `refreshAd` em todos os
+ * anúncios em andamento (gerando_*, montando) de todas as marcas; cada um é idempotente.
+ * Recebe: nada. Devolve: quantos anúncios foram verificados.
+ */
+export async function sweepActiveAds(): Promise<number> {
+  const db = createAdminClient();
+  const { data } = await db.from("anuncios").select("id").in("status", ["gerando_roteiro", "gerando_quadros", "gerando_clipes", "montando"]).eq("arquivado", false).limit(50);
+  for (const ad of data ?? []) {
+    try {
+      await refreshAd(ad.id);
+    } catch (e) {
+      console.error("Varredura do anúncio falhou:", ad.id, e instanceof Error ? e.message : e);
+    }
+  }
+  return data?.length ?? 0;
+}
+
+/**
  * GET /api/anuncios/:id/download (seção 13; critério 8.7): anúncio da marca com vídeo montado →
  * URL assinada de 60 min que baixa com o nome `<instagram-ou-marca>_<produto>_<formato>_v<n>.mp4`.
  * Recebe: ator e anúncio. Devolve: { url, nome }.

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { APP_NAME, MADE_BY } from "@/lib/constants";
-import { fill } from "@/lib/copy";
+import { APP_NAME } from "@/lib/constants";
+import { MadeBy } from "@/components/made-by";
 
 /** Marca do AdFit: ícone + nome grande (pedido do Alexandre: o nome estava menor que "Entrar"). */
 export function BrandMark({ size = "lg" }: { size?: "lg" | "md" }) {
@@ -15,14 +15,16 @@ export function BrandMark({ size = "lg" }: { size?: "lg" | "md" }) {
 }
 
 /**
- * Moldura das telas públicas (seção 16.3): foto editorial no topo (celular) ou metade esquerda
- * (desktop), a marca do AdFit em destaque, título, conteúdo e o crédito da Dab Lab (MD-2).
- * Recebe: título, subtítulo, texto "Feito pela {estudio}" no idioma, conteúdo e se mostra a foto.
+ * Moldura das telas públicas (seção 16.3): vitrine do fluxo (tela Entrar) ou foto editorial à esquerda
+ * no desktop, a marca do AdFit em destaque, título, conteúdo e o crédito da Dab Lab com link (MD-2).
+ * Recebe: título, subtítulo, texto "Feito pela {estudio}" no idioma, conteúdo, foto e vitrine opcionais.
  */
-export function AuthLayout({ title, subtitle, madeBy, children, image = true }: { title: string; subtitle?: ReactNode; madeBy: string; children: ReactNode; image?: boolean }) {
+export function AuthLayout({ title, subtitle, madeBy, children, image = true, showcase }: { title: string; subtitle?: ReactNode; madeBy: string; children: ReactNode; image?: boolean; showcase?: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
-      {image && (
+      {/* Vitrine do fluxo: metade esquerda no desktop; no celular, depois do conteúdo (order). */}
+      {showcase && <div className="order-2 w-full md:order-none md:w-1/2">{showcase}</div>}
+      {!showcase && image && (
         <div className="relative h-[30dvh] w-full md:h-auto md:w-1/2">
           <Image src="/images/entrar.jpg" alt="" fill priority sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-[50%_30%]" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 md:bg-none" />
@@ -36,7 +38,7 @@ export function AuthLayout({ title, subtitle, madeBy, children, image = true }: 
             {subtitle && <p className="mt-3 text-[17px] leading-relaxed text-text-2">{subtitle}</p>}
           </div>
           {children}
-          <p className="pt-2 text-center text-[12px] text-text-2">{fill(madeBy, { estudio: MADE_BY })}</p>
+          <p className="pt-2 text-center text-[12px] text-text-2"><MadeBy text={madeBy} /></p>
         </div>
       </div>
     </div>

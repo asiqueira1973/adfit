@@ -223,3 +223,6 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
 | MD-9 | Pedido de convite (`/pedir-convite`, `pedidos_convite`, [Admin] Pedidos de acesso) e novo layout da tela Entrar | Emenda do Alexandre. |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
 | MD-2 | Crédito "Feito pela Dab Lab" | Emenda do Alexandre. |
+
+### Varredura periódica (01/11/2026)
+`GET /api/cron/varredura` (Bearer `CRON_SECRET`, fora do proxy) roda `refreshAd` em todos os anúncios em `gerando_*`/`montando`: a montagem e suas retentativas não dependem mais da tela do anúncio aberta. Disparo a cada 5 min por `.github/workflows/varredura.yml` (o plano Hobby da Vercel só aceita cron diário, que fica como reserva em `apps/web/vercel.json`). `CRON_SECRET` precisa existir na Vercel (Production) e nos secrets do repositório GitHub.
