@@ -95,4 +95,4 @@ Fala para câmera, narração, trilha, 30 s, Pix, assinatura mensal, autocadastr
 - Deploy: `curl -I https://<app>.vercel.app/entrar` = 200.
 
 ## Idiomas (MD-1, registrado em 31/10/2026)
-O app precisa existir em português **e inglês** (ver `docs/mudancas-de-escopo.md`). Diverge da seção 17. Escopo, momento e forma de escolher o idioma: a definir com o Alexandre antes do épico 8.1.
+O app precisa existir em português **e inglês** (ver `docs/mudancas-de-escopo.md`). Diverge da seção 17. Decidido em 31/10/2026: desde o 8.1; idioma da interface por usuário (`perfis.idioma`); idioma do texto do vídeo por marca (`marcas.idioma_anuncios`); enum `idioma` (`pt_br`, `en`). Detalhes e efeitos por épico em `docs/mudancas-de-escopo.md`.
