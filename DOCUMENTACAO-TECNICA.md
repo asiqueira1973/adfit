@@ -77,6 +77,8 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 - **Convite**: link do e-mail → `/auth/confirm` (verifyOtp) → `/definir-senha` (mín. 8 caracteres + confirmação) → Início.
 - **Sair**: `POST /sair` (POST para o prefetch de links nunca deslogar ninguém).
 - **Rotas de admin (`src/app/api/admin/*`)**: `requireAdminApi()` (401 sem sessão, 403 se não for admin ativo), corpo validado com Zod (`src/server/admin/schemas.ts`), lógica em `src/server/admin/*` com service_role. Erros do banco viram `{ erro, mensagem }` (`src/server/api/http.ts`): `saldo_negativo` → "O ajuste deixaria o saldo negativo." (422), `compra_exige_valor`, `observacao_obrigatoria`, `email_existente` (409)…
+- **Logo do kit**: `LogoUploader` (PNG/SVG/JPG ≤ 5 MB) envia direto do navegador ao bucket `marcas` em `<marca>/logo/<timestamp>.<ext>` (política `storage_adfit_insert`) e grava `logo_path` via `PATCH` (só aceita caminho da própria marca); prévia por URL assinada de 60 min. Reaproveitado na tela Marca do usuário (8.3).
+- **Erros de marca pausada**: `marca_inativa` → 423 "Conta pausada. Fale com o suporte: {contato_suporte}".
 - **Lançar créditos**: valor pago digitado em qualquer formato ("1.234,56", "US$ 65.00") → centavos (`src/lib/money.ts`); moeda BRL/USD/EUR.
 - **Convidar**: recusa e-mail já em `perfis` ou no Auth; `inviteUserByEmail` com `redirectTo` para `/auth/confirm?next=/definir-senha`; se o perfil falhar, o usuário do Auth é removido.
 - **Pausar marca**: `marcas.ativa = false` → faixa "Conta pausada" em todas as telas da marca, botões cobrados desabilitados (contexto `BrandStatusProvider` com saldo e pausa reais) e `debitar_creditos` recusa (`marca_inativa`).

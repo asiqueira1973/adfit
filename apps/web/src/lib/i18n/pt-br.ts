@@ -132,6 +132,11 @@ export const ptBR = {
     kitLogo: "Logo",
     kitLogoNaoEnviado: "Não enviado",
     kitLogoEnviado: "Enviado",
+    kitEnviarLogo: "Enviar logo",
+    kitTrocarLogo: "Trocar logo",
+    kitLogoDica: "PNG, SVG ou JPG até 5 MB. Fundo transparente fica melhor.",
+    kitLogoErro: "Use PNG, SVG ou JPG de até 5 MB.",
+    kitEnviando: "Enviando…",
     kitCor: "Cor de destaque",
     kitCta: "CTA padrão",
     kitTom: "Tom de voz",
@@ -182,6 +187,7 @@ export const ptBR = {
     textoLongo: "Texto acima do limite de caracteres.",
     generico: "Não deu certo agora. Tente de novo em instantes.",
   },
+  custo: { credito: "crédito", creditos: "créditos", gratis: "grátis", comprarCreditos: "Comprar créditos" },
   idiomas: { pt_br: "Português", en: "English" },
 } as const;
 

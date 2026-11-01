@@ -14,7 +14,7 @@ import { BrandStatusProvider } from "./brand-status";
  */
 export function BrandShell({ balance, paused, userName, brandName, locale, t, banner, children }: { balance: number; paused: boolean; userName: string; brandName: string; locale: Locale; t: Dictionary; banner?: ReactNode; children: ReactNode }) {
   return (
-    <BrandStatusProvider value={{ balance, paused }}>
+    <BrandStatusProvider value={{ balance, paused, labels: { ...t.custo, saldoInsuficiente: t.copy.saldoInsuficiente } }}>
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-hairline bg-bg/85 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">

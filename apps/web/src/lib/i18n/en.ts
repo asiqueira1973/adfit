@@ -133,6 +133,11 @@ export const en: Dictionary = {
     kitLogo: "Logo",
     kitLogoNaoEnviado: "Not uploaded",
     kitLogoEnviado: "Uploaded",
+    kitEnviarLogo: "Upload logo",
+    kitTrocarLogo: "Replace logo",
+    kitLogoDica: "PNG, SVG or JPG up to 5 MB. A transparent background works best.",
+    kitLogoErro: "Use a PNG, SVG or JPG up to 5 MB.",
+    kitEnviando: "Uploading…",
     kitCor: "Accent color",
     kitCta: "Default call to action",
     kitTom: "Tone of voice",
@@ -183,5 +188,6 @@ export const en: Dictionary = {
     textoLongo: "Text is over the character limit.",
     generico: "That didn't work. Please try again in a moment.",
   },
+  custo: { credito: "credit", creditos: "credits", gratis: "free", comprarCreditos: "Buy credits" },
   idiomas: { pt_br: "Português", en: "English" },
 };

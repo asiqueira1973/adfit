@@ -37,6 +37,24 @@ describe("8.2 — marcas", () => {
   });
 });
 
+describe("8.2 — logo do kit", () => {
+  it("grava logo_path da pasta da própria marca e recusa caminho de outra marca", async () => {
+    const path = `${marcaId}/logo/teste.png`;
+    const png = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000000", "hex");
+    const { error: upErr } = await db.storage.from("marcas").upload(path, png, { contentType: "image/png", upsert: true });
+    expect(upErr).toBeNull();
+    await updateBrand(marcaId, { logo_path: path });
+    expect((await db.from("marcas").select("logo_path").eq("id", marcaId).single()).data!.logo_path).toBe(path);
+    const err = await updateBrand(marcaId, { logo_path: "00000000-0000-0000-0000-000000000000/logo/x.png" }).catch((e) => e);
+    expect(businessCodeOf(err)).toBe("validacao");
+  });
+
+  it("PATCH sem nenhum campo válido é erro de validação, não 'marca não encontrada'", async () => {
+    const err = await updateBrand(marcaId, {}).catch((e) => e);
+    expect(businessCodeOf(err)).toBe("validacao");
+  });
+});
+
 describe("8.2 — créditos", () => {
   it("lançar compra exige valor pago > 0 (schema e banco)", async () => {
     expect(launchCreditsSchema.safeParse({ marca_id: marcaId, tipo: "compra", quantidade: 100, valor_pago_centavos: 0 }).success).toBe(false);

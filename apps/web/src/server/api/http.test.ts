@@ -12,6 +12,9 @@ describe("erros de negócio (seção 13)", () => {
     expect(businessCodeOf(new BusinessError("email_existente"))).toBe("email_existente");
     expect(businessCodeOf({ message: "duplicate key value violates unique constraint" })).toBeNull();
   });
+  it("marca pausada responde com a copy da seção 15 e o contato de suporte", () => {
+    expect(businessError("marca_inativa", getDictionary("pt_br"), "WhatsApp 1")).toEqual({ mensagem: "Conta pausada. Fale com o suporte: WhatsApp 1", status: 423 });
+  });
   it("código desconhecido vira erro genérico 500", () => {
     expect(businessError("xyz", getDictionary("pt_br")).status).toBe(500);
   });

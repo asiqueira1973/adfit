@@ -2,6 +2,8 @@ import "server-only";
 import { NextResponse } from "next/server";
 import type { ZodError } from "zod";
 import { getDictionary, type Dictionary, type Locale } from "@/lib/i18n";
+import { fill } from "@/lib/copy";
+import { getSupportContact } from "../brand/queries";
 
 /**
  * Resposta de erro no formato da seção 13: `{ "erro": "<codigo>", "mensagem": "<texto para o usuário>" }`.
@@ -23,8 +25,11 @@ export function validationError(error: ZodError, t: Dictionary): NextResponse {
  * Códigos de erro de negócio levantados pelas funções do banco (MESSAGE = código, seção 7.5)
  * e a mensagem/status que a API devolve. Recebe: código e dicionário. Devolve: { mensagem, status }.
  */
-export function businessError(code: string, t: Dictionary): { mensagem: string; status: number } {
+export function businessError(code: string, t: Dictionary, supportContact = ""): { mensagem: string; status: number } {
   const map: Record<string, { mensagem: string; status: number }> = {
+    validacao: { mensagem: t.erros.validacao, status: 400 },
+    marca_inativa: { mensagem: fill(t.copy.contaPausada, { contato_suporte: supportContact }), status: 423 },
+    nao_autorizado: { mensagem: t.erros.naoAutorizado, status: 403 },
     saldo_negativo: { mensagem: t.copy.ajusteNegativoInvalido, status: 422 },
     compra_exige_valor: { mensagem: t.erros.compraExigeValor, status: 422 },
     observacao_obrigatoria: { mensagem: t.erros.observacaoObrigatoria, status: 422 },
@@ -55,12 +60,16 @@ export function businessCodeOf(error: unknown): string | null {
   return /^[a-z_]+$/.test(message) ? message : null;
 }
 
-/** Converte qualquer erro de serviço em resposta JSON da seção 13. */
-export function errorResponse(error: unknown, locale: Locale): NextResponse {
+/**
+ * Converte qualquer erro de serviço em resposta JSON da seção 13. Marca pausada (`marca_inativa`)
+ * responde "Conta pausada. Fale com o suporte: {contato}" (seções 6.3 e 15).
+ */
+export async function errorResponse(error: unknown, locale: Locale): Promise<NextResponse> {
   const t = getDictionary(locale);
   const code = businessCodeOf(error);
   if (code) {
-    const { mensagem, status } = businessError(code, t);
+    const contact = code === "marca_inativa" ? await getSupportContact() : "";
+    const { mensagem, status } = businessError(code, t, contact);
     if (status !== 500) return jsonError(code, mensagem, status);
   }
   console.error("Erro inesperado na API:", error instanceof Error ? error.message : error);

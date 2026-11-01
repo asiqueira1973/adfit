@@ -115,15 +115,23 @@ export function BrandKitSection({ t, kit, children }: { t: T; kit: BrandKit; chi
  */
 export function ToggleBrandButton({ t, id, ativa }: { t: T; id: string; ativa: boolean }) {
   const router = useRouter();
+  const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
   return (
-    <Button
-      variant="secondary"
-      disabled={pending}
-      onClick={() => start(async () => { await callApi("PATCH", `/api/admin/marcas/${id}`, { ativa: !ativa }); router.refresh(); })}
-    >
-      {ativa ? t.admin.pausarMarca : t.admin.reativarMarca}
-    </Button>
+    <span className="flex flex-col gap-1">
+      <Button
+        variant="secondary"
+        disabled={pending}
+        onClick={() => start(async () => {
+          const r = await callApi("PATCH", `/api/admin/marcas/${id}`, { ativa: !ativa });
+          if (r.ok) router.refresh();
+          else setError(errorText(t, r.mensagem));
+        })}
+      >
+        {ativa ? t.admin.pausarMarca : t.admin.reativarMarca}
+      </Button>
+      {error && <span role="alert" className="text-[12px] text-danger">{error}</span>}
+    </span>
   );
 }
 
@@ -132,16 +140,24 @@ export function ToggleBrandButton({ t, id, ativa }: { t: T; id: string; ativa: b
  */
 export function ToggleUserButton({ t, id, ativo, disabled }: { t: T; id: string; ativo: boolean; disabled?: boolean }) {
   const router = useRouter();
+  const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
   return (
-    <Button
-      variant="ghost"
-      className="min-h-9 text-[13px]"
-      disabled={pending || disabled}
-      onClick={() => start(async () => { await callApi("PATCH", `/api/admin/usuarios/${id}`, { ativo: !ativo }); router.refresh(); })}
-    >
-      {ativo ? t.admin.desativar : t.admin.reativar}
-    </Button>
+    <span className="flex flex-col items-start gap-1">
+      <Button
+        variant="ghost"
+        className="min-h-9 text-[13px]"
+        disabled={pending || disabled}
+        onClick={() => start(async () => {
+          const r = await callApi("PATCH", `/api/admin/usuarios/${id}`, { ativo: !ativo });
+          if (r.ok) router.refresh();
+          else setError(errorText(t, r.mensagem));
+        })}
+      >
+        {ativo ? t.admin.desativar : t.admin.reativar}
+      </Button>
+      {error && <span role="alert" className="text-[12px] text-danger">{error}</span>}
+    </span>
   );
 }
 

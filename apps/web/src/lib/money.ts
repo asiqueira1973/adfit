@@ -10,7 +10,11 @@ export function parseMoneyToCents(input: string): number | null {
   const lastDot = raw.lastIndexOf(".");
   const decimalSep = lastComma > lastDot ? "," : lastDot > lastComma ? "." : null;
   let normalized = raw;
-  if (decimalSep) {
+  // O mesmo separador repetido ("1.234.567", "1,234,567") só pode ser de milhar.
+  const repeated = decimalSep && raw.split(decimalSep).length > 2;
+  if (repeated) {
+    normalized = raw.replace(/[.,]/g, "");
+  } else if (decimalSep) {
     const [intPart, decPart] = [raw.slice(0, raw.lastIndexOf(decimalSep)), raw.slice(raw.lastIndexOf(decimalSep) + 1)];
     // Separador com 3 dígitos depois e sem outro separador: é milhar ("1.234" = mil e duzentos).
     if (decPart.length === 3 && !/[.,]/.test(intPart)) normalized = intPart + decPart;

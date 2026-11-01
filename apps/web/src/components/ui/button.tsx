@@ -76,11 +76,11 @@ export function CostButton({
     <div className={cn("flex flex-col items-stretch gap-1.5", className)}>
       <button {...props} disabled={disabled} className={buttonClass(variant, "w-full")}>
         {icon}
-        {insufficient ? COPY.saldoInsuficiente : `${label} · ${costSuffix(cost)}`}
+        {insufficient ? (status?.labels.saldoInsuficiente ?? COPY.saldoInsuficiente) : `${label} · ${costSuffix(cost, status?.labels)}`}
       </button>
       {insufficient && !effectivePaused && (
         <Link href="/creditos/comprar" className="text-center text-[13px] font-medium text-brand-text underline-offset-2 hover:underline">
-          Comprar créditos
+          {status?.labels.comprarCreditos ?? "Comprar créditos"}
         </Link>
       )}
     </div>

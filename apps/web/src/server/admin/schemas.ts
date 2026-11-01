@@ -28,7 +28,11 @@ export const brandKitSchema = z.object({
 export const createBrandSchema = brandKitSchema;
 
 /** PATCH /api/admin/marcas/:id — editar kit e/ou pausar/reativar (seção 6.3). */
-export const updateBrandSchema = brandKitSchema.partial().extend({ ativa: z.boolean().optional() });
+export const updateBrandSchema = brandKitSchema.partial().extend({
+  ativa: z.boolean().optional(),
+  // Caminho do logo já enviado ao bucket `marcas` (seção 6.4: `<marca_id>/logo/<arquivo>`).
+  logo_path: z.string().regex(/^[0-9a-f-]{36}\/logo\/[^/]+$/).nullable().optional(),
+});
 
 /** POST /api/admin/usuarios — { email, nome, marca_id } (seção 13). */
 export const inviteUserSchema = z.object({

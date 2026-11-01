@@ -3,7 +3,12 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 /** Saldo e situação da marca do usuário logado, para os botões cobrados (princípio 4, seção 6.3). */
-export type BrandStatus = { balance: number; paused: boolean };
+export type BrandStatus = {
+  balance: number;
+  paused: boolean;
+  /** Rótulos de custo no idioma do usuário (MD-1). */
+  labels: { credito: string; creditos: string; gratis: string; comprarCreditos: string; saldoInsuficiente: string };
+};
 
 const BrandStatusContext = createContext<BrandStatus | null>(null);
 

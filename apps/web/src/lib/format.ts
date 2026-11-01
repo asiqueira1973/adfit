@@ -14,9 +14,12 @@ export function formatMoney(cents: number, currency: string, locale = "pt-BR"): 
  * Rótulo de custo de um botão cobrado (princípio 4): "· 2 créditos", "· 1 crédito" ou "· grátis".
  * Recebe: quantidade de créditos. Devolve: o sufixo do rótulo.
  */
-export function costSuffix(credits: number): string {
-  if (credits === 0) return "grátis";
-  return `${credits} ${credits === 1 ? "crédito" : "créditos"}`;
+export function costSuffix(
+  credits: number,
+  labels: { credito: string; creditos: string; gratis: string } = { credito: "crédito", creditos: "créditos", gratis: "grátis" },
+): string {
+  if (credits === 0) return labels.gratis;
+  return `${credits} ${credits === 1 ? labels.credito : labels.creditos}`;
 }
 
 /** Créditos com sinal para o extrato: "+100", "−2". */

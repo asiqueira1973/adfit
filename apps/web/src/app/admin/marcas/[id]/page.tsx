@@ -12,7 +12,8 @@ import { cn } from "@/components/ui/cn";
 import { BrandKitSection, InviteUserForm, LaunchCreditsForm, ToggleBrandButton, ToggleUserButton } from "@/features/admin/admin-forms";
 import { formatDate, formatMoney, signedCredits } from "@/lib/format";
 import type { Dictionary } from "@/lib/i18n";
-import { getBrandForAdmin, listBrandAds } from "@/server/admin/brands";
+import { getBrandForAdmin, listBrandAds, signedLogoUrl } from "@/server/admin/brands";
+import { LogoUploader } from "@/features/brand/logo-uploader";
 import { adminContext } from "@/server/admin/context";
 import { listLedger, listPayments, type LedgerRow } from "@/server/admin/credits";
 import { listUsers } from "@/server/admin/users";
@@ -79,6 +80,12 @@ async function Content({ params, searchParams }: Pick<PageProps<"/admin/marcas/[
 
       {tab === "kit" && (
         <BrandKitSection t={t} kit={{ id: brand.id, nome: brand.nome, instagram: brand.instagram, cor_destaque: brand.cor_destaque, cta_padrao: brand.cta_padrao, tom_de_voz: brand.tom_de_voz, idioma_anuncios: brand.idioma_anuncios }}>
+          <LogoUploader
+            marcaId={brand.id}
+            currentUrl={await signedLogoUrl(brand.logo_path)}
+            saveUrl={`/api/admin/marcas/${brand.id}`}
+            labels={{ enviar: t.admin.kitEnviarLogo, trocar: t.admin.kitTrocarLogo, dica: t.admin.kitLogoDica, erro: t.admin.kitLogoErro, enviando: t.admin.kitEnviando, semLogo: t.admin.kitLogoNaoEnviado, erroGenerico: t.erros.generico }}
+          />
           <ListGroup>
             <ListRow label={t.admin.kitNome} value={brand.nome} />
             <ListRow label={t.admin.kitInstagram} value={brand.instagram ? `@${brand.instagram}` : t.admin.vazio} />

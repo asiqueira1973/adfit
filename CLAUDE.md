@@ -40,6 +40,7 @@ O app terá pt-BR e inglês (emenda MD-1 em `docs/mudancas-de-escopo.md`); nenhu
 - Hooks de cliente com `usePathname`/`useSearchParams` precisam de `<Suspense>` (padrão: componente `*View` puro como fallback).
 - `/sair` é POST (formulário); nunca `<Link href="/sair">`.
 - No `config.toml`, `[auth] enable_signup = false` bloqueia autocadastro; `[auth.email] enable_signup` precisa ficar `true` (senão desliga o login por e-mail). Mudou o config → `supabase stop && supabase start`.
+- Colunas técnicas (`anuncios.roteiro`, `cenas.prompt_*`, `quadros.qc_detalhe`…) não têm GRANT para o cliente: nunca `select("*")` nessas tabelas com o cliente do usuário; liste as colunas (D-10).
 - Botões cobrados (`CostButton`) leem saldo e pausa reais do `BrandStatusProvider` da casca; não passar saldo de fixture achando que vale.
 - Erros de negócio do banco sobem com MESSAGE = código (`saldo_insuficiente`…); o servidor traduz.
 - Não chamar função volátil (ex.: `debitar_creditos`) dentro de WHERE em teste: roda uma vez por linha.

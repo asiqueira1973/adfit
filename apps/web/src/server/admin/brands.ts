@@ -79,10 +79,24 @@ export async function updateBrand(id: string, input: UpdateBrandInput): Promise<
     tom_de_voz: input.tom_de_voz,
     idioma_anuncios: input.idioma_anuncios,
     ativa: input.ativa,
+    logo_path: input.logo_path,
   };
+  if (Object.values(patch).every((v) => v === undefined)) throw new BusinessError("validacao");
+  // O logo precisa estar na pasta da própria marca (seção 6.4).
+  if (input.logo_path && !input.logo_path.startsWith(`${id}/logo/`)) throw new BusinessError("validacao");
   const { data, error } = await createAdminClient().from("marcas").update(patch).eq("id", id).select("id");
   if (error) throw error;
   if (!data?.length) throw new BusinessError("marca_inexistente");
+}
+
+/**
+ * URL assinada (60 min, seção 6.4) do logo da marca para prévia. Recebe: caminho no bucket `marcas`.
+ * Devolve: a URL, ou null sem logo.
+ */
+export async function signedLogoUrl(path: string | null): Promise<string | null> {
+  if (!path) return null;
+  const { data } = await createAdminClient().storage.from("marcas").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
 }
 
 /**
