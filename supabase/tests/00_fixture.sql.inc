@@ -41,7 +41,7 @@ begin
   loop
     perform lancar_creditos(m.marca, 'bonus', 100, null, 'saldo de teste', null);
     insert into produtos (marca_id, nome, categoria) values (m.marca, 'Top', 'top') returning id into v_prod;
-    insert into fotos_produto (produto_id, marca_id, storage_path) values (v_prod, m.marca, m.marca || '/' || v_prod || '/originais/1.jpg');
+    insert into fotos_produto (produto_id, marca_id, storage_path) values (v_prod, m.marca, 'produtos/' || m.marca || '/' || v_prod || '/originais/1.jpg');
     insert into geracoes (marca_id, tipo, modelo, entrada) values (m.marca, 'ficha_produto', 'modelo', '{}') returning id into v_ger;
     insert into fichas_produto (produto_id, marca_id, versao, status, geracao_id) values (v_prod, m.marca, 1, 'aguardando_aprovacao', v_ger) returning id into v_ficha;
     insert into anuncios (marca_id, produto_id, ficha_id, criado_por, titulo, cenario, modalidade, genero_modelo)

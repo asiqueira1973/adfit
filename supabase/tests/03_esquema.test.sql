@@ -39,14 +39,14 @@ select throws_ok($$ insert into perfis (id, papel, nome, email) values ('0000000
 
 -- trg_fotos_produto_limite: a 5ª foto é bloqueada.
 insert into fotos_produto (produto_id, marca_id, storage_path, ordem)
-select p.id, p.marca_id, 'x/' || g, g from produtos p, generate_series(2, 4) g where p.marca_id = 'aaaaaaaa-0000-0000-0000-000000000000';
-select throws_ok($$ insert into fotos_produto (produto_id, marca_id, storage_path, ordem) select id, marca_id, 'x/5', 4 from produtos where marca_id = 'aaaaaaaa-0000-0000-0000-000000000000' $$, 'P0001', 'limite_fotos', '5ª foto bloqueada');
+select p.id, p.marca_id, 'produtos/' || p.marca_id || '/' || p.id || '/originais/' || g || '.jpg', g from produtos p, generate_series(2, 4) g where p.marca_id = 'aaaaaaaa-0000-0000-0000-000000000000';
+select throws_ok($$ insert into fotos_produto (produto_id, marca_id, storage_path, ordem) select id, marca_id, 'produtos/' || marca_id || '/' || id || '/originais/5.jpg', 4 from produtos where marca_id = 'aaaaaaaa-0000-0000-0000-000000000000' $$, 'P0001', 'limite_fotos', '5ª foto bloqueada');
 
 -- Foto nova não entra depois da ficha aprovada (fotos_insert).
 update produtos set ficha_aprovada_id = (select id from fichas_produto where marca_id = 'bbbbbbbb-0000-0000-0000-000000000000') where marca_id = 'bbbbbbbb-0000-0000-0000-000000000000';
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b1","role":"authenticated"}', true);
-select throws_ok($$ insert into fotos_produto (produto_id, marca_id, storage_path, ordem) select id, marca_id, 'x/2', 2 from produtos $$, '42501', null, 'sem foto nova com ficha aprovada');
+select throws_ok($$ insert into fotos_produto (produto_id, marca_id, storage_path, ordem) select id, marca_id, 'produtos/' || marca_id || '/' || id || '/originais/2b.jpg', 2 from produtos $$, '42501', null, 'sem foto nova com ficha aprovada');
 reset role;
 
 -- Usuário desativado perde o escopo da marca (seção 6.3).
