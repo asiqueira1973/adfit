@@ -5,11 +5,12 @@ import { businessCodeOf } from "../api/http";
 import { createBrand, updateBrand } from "./brands";
 import { launchCredits } from "./credits";
 import { inviteUser, setUserActive } from "./users";
+import { setMailerForTests, type WelcomeMail } from "../mail/mailer";
 import { launchCreditsSchema } from "./schemas";
 
 /**
  * Critérios do épico 8.2 contra o Supabase local: criar marca, convidar usuário (perfil com a
- * marca certa e e-mail de convite com link para /auth/confirm), lançar créditos (saldo 100 e
+ * marca certa e e-mail de boas-vindas — MD-7), lançar créditos (saldo 100 e
  * saldo_apos 100), ajuste negativo recusado, pausar marca e desativar usuário.
  */
 assertLocalSupabase();
@@ -89,20 +90,34 @@ describe("8.2 — usuários e pausa", () => {
   const email = `convite_${suffix}@kore.test`;
   let userId = "";
 
-  it("convite cria o perfil com a marca certa e envia o e-mail com link para /auth/confirm", async () => {
-    userId = await inviteUser({ email, nome: "Convidado Teste", marca_id: marcaId });
+  // MD-7 (01/11/2026): login só com Google — o convite cria o acesso sem senha e manda o e-mail de
+  // boas-vindas do AdFit (não mais o convite de senha do Supabase).
+  it("convite cria o acesso sem senha, o perfil com a marca certa e manda o e-mail de boas-vindas", async () => {
+    const sent: WelcomeMail[] = [];
+    setMailerForTests({ sendWelcome: async (m) => (sent.push(m), true) });
+    const result = await inviteUser({ email, nome: "Convidado Teste", marca_id: marcaId }, "pt_br");
+    setMailerForTests(null);
+    userId = result.id;
+    expect(result.emailEnviado).toBe(true);
     const { data } = await db.from("perfis").select("marca_id, papel, ativo, email").eq("id", userId).single();
     expect(data).toEqual({ marca_id: marcaId, papel: "usuario_marca", ativo: true, email });
+    const { data: auth } = await db.auth.admin.getUserById(userId);
+    expect(auth.user?.email_confirmed_at).toBeTruthy();
+    expect(sent).toEqual([{ to: email, nome: "Convidado Teste", marca: `Marca teste ${suffix}`, idioma: "pt_br", link: expect.stringMatching(/\/entrar$/) }]);
+  });
 
-    const mailpit = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/:\d+$/, ":55324");
-    const search = await fetch(`${mailpit}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`).then((r) => r.json());
-    expect(search.messages?.length).toBeGreaterThan(0);
-    const message = await fetch(`${mailpit}/api/v1/message/${search.messages[0].ID}`).then((r) => r.json());
-    expect(message.HTML).toMatch(/\/auth\/confirm\?next=%2Fdefinir-senha(&|&amp;)token_hash=\w+(&|&amp;)type=invite/);
+  it("e-mail que já existe no Auth compartilhado (outro app) ganha o perfil sem criar outro usuário", async () => {
+    const outro = `outroapp_${suffix}@kore.test`;
+    const { data: created } = await db.auth.admin.createUser({ email: outro, email_confirm: true });
+    setMailerForTests({ sendWelcome: async () => false });
+    const result = await inviteUser({ email: outro, nome: "De outro app", marca_id: marcaId }, "en");
+    setMailerForTests(null);
+    expect(result.id).toBe(created.user!.id);
+    expect(result.emailEnviado).toBe(false);
   });
 
   it("e-mail já cadastrado é recusado", async () => {
-    const err = await inviteUser({ email, nome: "De novo", marca_id: marcaId }).catch((e) => e);
+    const err = await inviteUser({ email, nome: "De novo", marca_id: marcaId }, "pt_br").catch((e) => e);
     expect(businessCodeOf(err)).toBe("email_existente");
   });
 
