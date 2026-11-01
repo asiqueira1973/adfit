@@ -122,33 +122,6 @@ export const fxAdminUsers = [
   { id: "u3", nome: "Teste Demo", email: "demo@exemplo.com", marca: "Marca Demo", ativo: false },
 ];
 
-export type GenStatus = "na_fila" | "processando" | "concluida" | "falhou" | "bloqueada_nsfw";
-export const GEN_BADGE: Record<GenStatus, { label: string; tone: Tone }> = {
-  na_fila: { label: "Na fila", tone: "neutral" },
-  processando: { label: "Processando", tone: "processing" },
-  concluida: { label: "Concluída", tone: "success" },
-  falhou: { label: "Falhou", tone: "danger" },
-  bloqueada_nsfw: { label: "Bloqueada", tone: "danger" },
-};
-export const GEN_TYPE_LABEL = { ficha_produto: "Ficha", quadro_chave: "Imagem de cena", clipe_video: "Clipe" } as const;
-
-export const fxGenerations = [
-  { id: "g1", criado_em: "2026-10-31T11:00:10Z", marca: "Kore Active", tipo: "clipe_video" as const, modelo: "kling-video/v3.0/i2v (a confirmar)", status: "processando" as GenStatus, tentativa: 1, custo_usd: null as number | null, request_id: "req_8f2a…", erro: null as string | null },
-  { id: "g2", criado_em: "2026-10-31T10:21:00Z", marca: "Kore Active", tipo: "quadro_chave" as const, modelo: "nano-banana/edit (a confirmar)", status: "concluida" as GenStatus, tentativa: 1, custo_usd: 0.08, request_id: "req_77c1…", erro: null },
-  { id: "g3", criado_em: "2026-10-30T14:40:00Z", marca: "Kore Active", tipo: "clipe_video" as const, modelo: "kling-video/v3.0/i2v (a confirmar)", status: "falhou" as GenStatus, tentativa: 2, custo_usd: null, request_id: "req_1b9d…", erro: "failed: upstream timeout" },
-  { id: "g4", criado_em: "2026-10-29T08:01:00Z", marca: "Kore Active", tipo: "ficha_produto" as const, modelo: "nano-banana/edit (a confirmar)", status: "concluida" as GenStatus, tentativa: 1, custo_usd: 0.08, request_id: "req_02aa…", erro: null },
-];
-
-export const fxCosts = {
-  creditos_consumidos: 64,
-  custo_usd: 11.42,
-  cotacao: 5.5,
-  receita_brl: 165,
-  anuncios_criados: 4,
-  anuncios_prontos: 3,
-  creditos_por_anuncio_pronto: 19.3,
-};
-
 export const fxSettings = [
   { chave: "modelo_imagem", valor: "(a confirmar — 25.5)", descricao: "Ficha e quadros" },
   { chave: "modelo_video", valor: "(a confirmar — 25.5)", descricao: "Clipes" },

@@ -376,22 +376,31 @@ export async function patchAdTexts(actor: AdActor, anuncioId: string, body: z.in
   return { avisos };
 }
 
+/** Filtro da biblioteca (critério 8.8): produto e status; "andamento" = gerando ou montando. */
+export type AdListFilter = { produtoId?: string | null; status?: string | null };
+
+const BUSY_STATUSES = ["gerando_roteiro", "gerando_quadros", "gerando_clipes", "montando"] as const;
+const ALL_STATUSES = [...BUSY_STATUSES, "aguardando_aprovacao", "pronto", "falhou"] as const;
+
 /**
- * Lista de anúncios da marca (tela [Marca] Anúncios; biblioteca com filtros fica no 8.8): não
- * arquivados, mais recentes primeiro, com miniatura do quadro atual da cena 1.
- * Recebe: marca. Devolve: anúncios.
+ * Biblioteca de anúncios da marca (seção 10; critério 8.8): mais recentes primeiro, sem arquivados,
+ * com miniatura da cena 1 e filtro opcional por produto e status. Recebe: marca e filtro. Devolve: itens.
  */
-export async function listAds(marcaId: string) {
+export async function listAds(marcaId: string, filter: AdListFilter = {}) {
   const db = createAdminClient();
-  const { data } = await db
+  let q = db
     .from("anuncios")
-    .select("id, titulo, status, formato, criado_em, cenas(ordem, quadros!cenas_quadro_atual_id_fkey(imagem_path))")
+    .select("id, titulo, status, formato, criado_em, produto_id, cenas(ordem, quadros!cenas_quadro_atual_id_fkey(imagem_path))")
     .eq("marca_id", marcaId)
     .eq("arquivado", false)
     .order("criado_em", { ascending: false });
+  if (filter.produtoId) q = q.eq("produto_id", filter.produtoId);
+  if (filter.status === "andamento") q = q.in("status", [...BUSY_STATUSES]);
+  else if (filter.status && (ALL_STATUSES as readonly string[]).includes(filter.status)) q = q.eq("status", filter.status as AdStatus);
+  const { data } = await q;
   const rows = (data ?? []).map((a) => {
     const c1 = ((a.cenas ?? []) as Array<{ ordem: number; quadros: { imagem_path: string | null } | null }>).find((c) => c.ordem === 1);
-    return { id: a.id, titulo: a.titulo, status: a.status as AdStatus, formato: a.formato, criadoEm: a.criado_em, thumbPath: c1?.quadros?.imagem_path ?? null };
+    return { id: a.id, titulo: a.titulo, status: a.status as AdStatus, formato: a.formato, criadoEm: a.criado_em, produtoId: a.produto_id, thumbPath: c1?.quadros?.imagem_path ?? null };
   });
   const urls = await signBrandPaths(marcaId, rows.flatMap((r) => (r.thumbPath ? [r.thumbPath] : [])));
   return rows.map((r) => ({ ...r, thumb: r.thumbPath ? (urls[r.thumbPath] ?? null) : null, busy: isBusy(r.status) }));

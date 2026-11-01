@@ -319,3 +319,21 @@ describe("fecho opcional (MD-15)", () => {
     expect(Object.fromEntries((data ?? []).map((r) => [r.id, r.com_fecho]))).toEqual({ [sem]: false, [padrao]: true });
   });
 });
+
+describe("biblioteca: filtros por produto e status (critério 8.8)", () => {
+  it("filtra por produto, por status e por 'em andamento'", async () => {
+    const p1 = await approvedProduct();
+    const p2 = await approvedProduct();
+    ai.scriptFails = true;
+    const { anuncioId: falhou } = await createAd(actor, input(p1));
+    ai.scriptFails = false;
+    const { anuncioId: gerando } = await createAd(actor, input(p2));
+
+    const ids = async (f: Parameters<typeof listAds>[1]) => (await listAds(marcaId, f)).map((a) => a.id);
+    expect(await ids({ produtoId: p1 })).toEqual([falhou]);
+    expect(await ids({ produtoId: p2 })).toEqual([gerando]);
+    expect(await ids({ produtoId: p1, status: "falhou" })).toEqual([falhou]);
+    expect(await ids({ produtoId: p2, status: "andamento" })).toEqual([gerando]);
+    expect(await ids({ produtoId: p2, status: "pronto" })).toEqual([]);
+  });
+});
