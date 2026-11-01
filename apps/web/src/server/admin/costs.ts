@@ -185,24 +185,37 @@ export function costsCsv(rows: CostRow[]): string {
  */
 export async function loadCostInputs(): Promise<CostInputs> {
   const db = createAdminClient();
+  /**
+   * Lê todas as linhas em páginas de 1000 (o PostgREST corta em `max_rows` = 1000 sem avisar;
+   * verificador, 01/11/2026). Recebe: a consulta por intervalo. Devolve: todas as linhas.
+   */
+  async function all<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+    const out: T[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await page(from, from + 999);
+      if (error) throw error;
+      out.push(...(data ?? []));
+      if (!data || data.length < 1000) return out;
+    }
+  }
   const [brands, ads, moves, gens, payments, downloads, config] = await Promise.all([
-    db.from("marcas").select("id, nome"),
-    db.from("anuncios").select("marca_id, criado_em, status"),
-    db.from("movimentacoes_creditos").select("marca_id, criado_em, tipo, acao, quantidade, valor_pago_centavos, moeda, pagamento_id"),
-    db.from("geracoes").select("marca_id, criado_em, custo_usd"),
-    db.from("pagamentos").select("marca_id, pago_em, valor_centavos, moeda").eq("status", "pago"),
-    db.from("downloads_anuncio").select("marca_id, criado_em"),
+    all((a, b) => db.from("marcas").select("id, nome").order("id").range(a, b)),
+    all((a, b) => db.from("anuncios").select("marca_id, criado_em, status").order("id").range(a, b)),
+    all((a, b) => db.from("movimentacoes_creditos").select("marca_id, criado_em, tipo, acao, quantidade, valor_pago_centavos, moeda, pagamento_id").order("id").range(a, b)),
+    all((a, b) => db.from("geracoes").select("marca_id, criado_em, custo_usd").order("id").range(a, b)),
+    all((a, b) => db.from("pagamentos").select("marca_id, pago_em, valor_centavos, moeda").eq("status", "pago").order("id").range(a, b)),
+    all((a, b) => db.from("downloads_anuncio").select("marca_id, criado_em").order("id").range(a, b)),
     db.from("configuracoes").select("chave, valor").in("chave", ["cotacao_usd_brl", "cotacoes_para_brl"]),
   ]);
-  for (const r of [brands, ads, moves, gens, payments, downloads, config]) if (r.error) throw r.error;
+  if (config.error) throw config.error;
   const cfg = Object.fromEntries((config.data ?? []).map((c) => [c.chave, c.valor]));
   return {
-    brands: brands.data ?? [],
-    ads: ads.data ?? [],
-    moves: (moves.data ?? []) as CostInputs["moves"],
-    gens: (gens.data ?? []).map((g) => ({ ...g, custo_usd: g.custo_usd === null ? null : Number(g.custo_usd) })),
-    payments: payments.data ?? [],
-    downloads: downloads.data ?? [],
+    brands,
+    ads,
+    moves: moves as CostInputs["moves"],
+    gens: gens.map((g) => ({ ...g, custo_usd: g.custo_usd === null ? null : Number(g.custo_usd) })),
+    payments,
+    downloads,
     cotacaoUsdBrl: Number(cfg.cotacao_usd_brl ?? 5.5),
     cotacoes: (cfg.cotacoes_para_brl as Record<string, number> | undefined) ?? {},
   };

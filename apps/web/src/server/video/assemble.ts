@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import ffmpegStatic from "ffmpeg-static";
-import { renderTextImage } from "./text-image";
+import { fitTextImage } from "./text-image";
+import sharp from "sharp";
 
 const run = promisify(execFile);
 
@@ -93,8 +94,9 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
     // Textos viram PNG transparentes sobrepostos com overlay (bug B-8: sem drawtext no ffmpeg da Vercel).
     // Entradas: 0–2 clipes, 3 logo (ou 2×2 preto), 4 áudio mudo, 5… imagens de texto.
     const images: string[] = [];
+    // Nenhum texto passa de 88% da largura (6% de margem de cada lado, regra 11.8).
     const addImage = async (lines: string[], size: number, color: string) => {
-      const img = await renderTextImage(lines, size, color);
+      const img = await fitTextImage(lines, size, color, Math.round(W * 0.88));
       const file = join(work, `txt${images.length}.png`);
       writeFileSync(file, img.png);
       images.push(file);
@@ -162,11 +164,17 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       const centerY = Math.round(H * 0.45);
       let below: number;
       if (input.logoPng) {
-        filters.push(`[3:v]scale=${logoW}:-1[logo]`);
+        // Logo cabe numa caixa (largura da regra 11.8 × 30% da altura): logo alto não encosta no CTA.
+        const meta = await sharp(input.logoPng).metadata();
+        const maxH = Math.round(H * 0.3);
+        const scale = Math.min(logoW / (meta.width || logoW), maxH / (meta.height || maxH));
+        const lw = Math.max(2, Math.round(((meta.width || logoW) * scale) / 2) * 2);
+        const lh = Math.max(2, Math.round(((meta.height || logoW) * scale) / 2) * 2);
+        filters.push(`[3:v]scale=${lw}:${lh}[logo]`);
         const next = `s${filters.length}`;
         filters.push(`[${last}][logo]overlay=x=(W-w)/2:y=${centerY}-h/2:${closing}[${next}]`);
         last = next;
-        below = centerY + Math.round(logoW / 2.5);
+        below = centerY + Math.round(lh / 2);
       } else {
         const name = await addImage([input.marca], vertical ? 76 : 72, "#FFFFFF");
         overlayImage(name.index, centerY - name.height / 2, CLOSING_START, TOTAL, false);

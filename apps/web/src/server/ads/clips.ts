@@ -230,6 +230,59 @@ export async function checkClipsProgress(anuncioId: string): Promise<void> {
   await transition(anuncioId, "gerando_clipes", "aguardando_aprovacao");
 }
 
+/**
+ * Varredura de clipes órfãos (bug B-14; regra 11.2): anúncio em `gerando_clipes` há mais que o tempo
+ * de órfão, com débito feito e clipe nunca criado (função encerrada entre o débito e a criação).
+ * - "Gerar vídeo": cena sem clipe depois do débito → clipe `falhou` + estorno da parte da cena.
+ * - "Refazer cena": débito de `refazer_clipe` cujo clipe não existe → estorno integral.
+ * Idempotente (`estornar_creditos` recusa estorno repetido). Recebe: anúncio. Devolve: nada.
+ */
+export async function sweepOrphanClips(anuncioId: string, now = Date.now(), orphanAfterMs = 6 * 60_000): Promise<void> {
+  const db = createAdminClient();
+  const { data: cenas } = await db.from("cenas").select("id, ordem, marca_id, quadro_atual_id, clipes!clipes_cena_id_fkey(id, versao, criado_em)").eq("anuncio_id", anuncioId);
+  if (!cenas?.length) return;
+  const { data: video } = await db
+    .from("movimentacoes_creditos")
+    .select("id, criado_em")
+    .eq("tipo", "consumo")
+    .eq("acao", "gerar_video")
+    .eq("referencia_tipo", "anuncio")
+    .eq("referencia_id", anuncioId)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (video) {
+    for (const c of cenas) {
+      const clips = (c.clipes ?? []) as Array<{ id: string; versao: number; criado_em: string }>;
+      if (!c.quadro_atual_id || clips.some((k) => k.criado_em >= video.criado_em)) continue;
+      const clipeId = randomUUID();
+      const versao = Math.max(0, ...clips.map((k) => k.versao)) + 1;
+      const { error } = await db.from("clipes").insert({ id: clipeId, cena_id: c.id, marca_id: c.marca_id, quadro_id: c.quadro_atual_id, versao, status: "falhou" });
+      if (error) console.error("Clipe órfão não registrado:", error.message);
+      if (!error) await refundScene(video.id, clipeId, c.ordem);
+    }
+  }
+  const allClipIds = new Set(cenas.flatMap((c) => ((c.clipes ?? []) as Array<{ id: string }>).map((k) => k.id)));
+  const { data: redos } = await db
+    .from("movimentacoes_creditos")
+    .select("id, referencia_id")
+    .eq("tipo", "consumo")
+    .eq("acao", "refazer_clipe")
+    .eq("marca_id", cenas[0].marca_id)
+    .eq("referencia_tipo", "clipe")
+    .gte("criado_em", new Date(now - 24 * 3_600_000).toISOString())
+    // Só débitos antigos: um refazer de outro anúncio feito há segundos ainda pode estar criando o clipe.
+    .lte("criado_em", new Date(now - orphanAfterMs).toISOString());
+  // Débito de refazer sem o clipe dele depois do tempo de órfão: estorna (seja de qual anúncio for).
+  for (const r of redos ?? []) {
+    if (!r.referencia_id || allClipIds.has(r.referencia_id)) continue;
+    const { data: exists } = await db.from("clipes").select("id").eq("id", r.referencia_id).maybeSingle();
+    if (exists) continue;
+    const { error } = await db.rpc("estornar_creditos", { p_movimentacao_id: r.id, p_observacao: "Falha técnica ao refazer a cena" });
+    if (error && error.message !== "ja_estornado") throw error;
+  }
+}
+
 /** Nome do arquivo baixado (critério 8.7): `<instagram-ou-marca>_<produto>_<formato>_v<n>.mp4`, sem acento/espaço. */
 export function downloadName(marca: { instagram: string | null; nome: string }, produto: string, formato: string, versao: number): string {
   const slug = (s: string) =>

@@ -28,3 +28,6 @@ Ao tocar em Refazer (embaixo), o aviso aparecia no topo do painel, fora da tela.
 
 ## B-13 — Estalo no começo do som da cena (01/11/2026)
 Vídeo da orla: pico de −4 dB aos 0,3 s da cena 1 (resto do ambiente ~−40 dB), gerado pelo Seedance. Montagem: entrada suave de 0,6 s no som de cada cena + compressor (threshold 0,05, ratio 12). No áudio real, o pico caiu para −18 dB. Teste: `server/video/ambient-audio.test.ts` ("estalo…").
+
+## B-14 — Débito sem estorno quando a função cai antes de criar os clipes (01/11/2026, verificador)
+`startVideo`/`redoClip` debitam antes de criar os clipes; se a função caísse no meio, o anúncio ficava em `gerando_clipes` com o crédito debitado. Correção: `sweepOrphanClips` (chamado por `refreshAd` com `gerando_clipes` parado há mais de 6 min e nenhum clipe gerando) cria o clipe `falhou` da cena e estorna a parte dela (gerar vídeo) ou estorna o refazer sem clipe. Teste: `clips.integration.test.ts` ("clipes órfãos").

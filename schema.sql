@@ -58,7 +58,12 @@ CREATE TYPE "public"."cenario" AS ENUM (
     'estudio_funcional',
     'ao_ar_livre_urbano',
     'ao_ar_livre_natureza',
-    'pista_de_corrida'
+    'pista_de_corrida',
+    'orla_praia',
+    'academia_praia',
+    'parque_urbano',
+    'calcadao_rio',
+    'academia_ampla'
 );
 
 
@@ -726,6 +731,7 @@ CREATE TABLE IF NOT EXISTS "public"."anuncios" (
     "arquivado" boolean DEFAULT false NOT NULL,
     "criado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
     "atualizado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "com_fecho" boolean DEFAULT true NOT NULL,
     CONSTRAINT "anuncios_observacoes_check" CHECK (("char_length"("observacoes") <= 200)),
     CONSTRAINT "anuncios_tentativas_montagem_check" CHECK (("tentativas_montagem" >= 0)),
     CONSTRAINT "anuncios_texto_oferta_check" CHECK (("char_length"("texto_oferta") <= 40)),
@@ -784,6 +790,17 @@ CREATE TABLE IF NOT EXISTS "public"."configuracoes" (
 
 
 ALTER TABLE "public"."configuracoes" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."downloads_anuncio" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "anuncio_id" "uuid" NOT NULL,
+    "marca_id" "uuid" NOT NULL,
+    "criado_em" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."downloads_anuncio" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."feedbacks" (
@@ -865,7 +882,7 @@ CREATE TABLE IF NOT EXISTS "public"."marcas" (
     "instagram" "text",
     "logo_path" "text",
     "cor_destaque" "text",
-    "cta_padrao" "text" DEFAULT 'Compre pelo link da bio'::"text" NOT NULL,
+    "cta_padrao" "text" DEFAULT 'Compre pelo link da bio'::"text",
     "tom_de_voz" "text",
     "idioma_anuncios" "public"."idioma" DEFAULT 'pt_br'::"public"."idioma" NOT NULL,
     "saldo_creditos" integer DEFAULT 0 NOT NULL,
@@ -1047,6 +1064,11 @@ ALTER TABLE "public"."quadros" OWNER TO "postgres";
 
 
 ALTER TABLE ONLY "public"."anuncios"
+    ADD CONSTRAINT "anuncios_id_marca_id_key" UNIQUE ("id", "marca_id");
+
+
+
+ALTER TABLE ONLY "public"."anuncios"
     ADD CONSTRAINT "anuncios_pkey" PRIMARY KEY ("id");
 
 
@@ -1073,6 +1095,11 @@ ALTER TABLE ONLY "public"."clipes"
 
 ALTER TABLE ONLY "public"."configuracoes"
     ADD CONSTRAINT "configuracoes_pkey" PRIMARY KEY ("chave");
+
+
+
+ALTER TABLE ONLY "public"."downloads_anuncio"
+    ADD CONSTRAINT "downloads_anuncio_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1221,6 +1248,14 @@ CREATE INDEX "clipes_marca_id_idx" ON "public"."clipes" USING "btree" ("marca_id
 
 
 CREATE INDEX "clipes_quadro_id_idx" ON "public"."clipes" USING "btree" ("quadro_id");
+
+
+
+CREATE INDEX "downloads_anuncio_anuncio_marca_idx" ON "public"."downloads_anuncio" USING "btree" ("anuncio_id", "marca_id");
+
+
+
+CREATE INDEX "downloads_anuncio_marca_criado_em_idx" ON "public"."downloads_anuncio" USING "btree" ("marca_id", "criado_em");
 
 
 
@@ -1420,6 +1455,16 @@ ALTER TABLE ONLY "public"."clipes"
 
 
 
+ALTER TABLE ONLY "public"."downloads_anuncio"
+    ADD CONSTRAINT "downloads_anuncio_anuncio_id_marca_id_fkey" FOREIGN KEY ("anuncio_id", "marca_id") REFERENCES "public"."anuncios"("id", "marca_id");
+
+
+
+ALTER TABLE ONLY "public"."downloads_anuncio"
+    ADD CONSTRAINT "downloads_anuncio_marca_id_fkey" FOREIGN KEY ("marca_id") REFERENCES "public"."marcas"("id");
+
+
+
 ALTER TABLE ONLY "public"."feedbacks"
     ADD CONSTRAINT "feedbacks_marca_id_fkey" FOREIGN KEY ("marca_id") REFERENCES "public"."marcas"("id");
 
@@ -1564,6 +1609,13 @@ ALTER TABLE "public"."configuracoes" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "configuracoes_select_admin" ON "public"."configuracoes" FOR SELECT TO "authenticated" USING (( SELECT "public"."eh_admin"() AS "eh_admin"));
+
+
+
+ALTER TABLE "public"."downloads_anuncio" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "downloads_anuncio_select_admin" ON "public"."downloads_anuncio" FOR SELECT TO "authenticated" USING (( SELECT "public"."eh_admin"() AS "eh_admin"));
 
 
 
@@ -1911,6 +1963,11 @@ GRANT SELECT ON TABLE "public"."clipes" TO "authenticated";
 
 GRANT ALL ON TABLE "public"."configuracoes" TO "service_role";
 GRANT SELECT ON TABLE "public"."configuracoes" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."downloads_anuncio" TO "service_role";
+GRANT SELECT ON TABLE "public"."downloads_anuncio" TO "authenticated";
 
 
 

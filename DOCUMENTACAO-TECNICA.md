@@ -1,6 +1,6 @@
 # AdFit — Documentação técnica
 
-Descreve o sistema **como está implementado** (seção 19 do `docs/spec.md`). Atualizada no mesmo commit de toda mudança de schema, função, política, prompt ou lógica de tela. Estado atual: épicos 8.0, design, 8.1, 8.2, 8.9 e 8.3.
+Descreve o sistema **como está implementado** (seção 19 do `docs/spec.md`). Atualizada no mesmo commit de toda mudança de schema, função, política, prompt ou lógica de tela. Estado atual: épicos 8.0 a 8.9 (MVP completo), com as emendas MD-1 a MD-16 de `docs/mudancas-de-escopo.md`.
 
 ## 1. Modelo de dados
 
@@ -8,12 +8,12 @@ Banco Postgres (Supabase), schema `public`, nomes em português `snake_case` exa
 
 | Tabela | Para que serve |
 |---|---|
-| `marcas` | Cliente da plataforma: kit (nome, @, logo, cor, CTA, tom de voz), **idioma do texto dos vídeos** (`idioma_anuncios`, MD-1), saldo de créditos e se está ativa (pausada = não consome crédito). |
+| `marcas` | Cliente da plataforma: kit (nome, @, logo, cor, CTA **opcional** — MD-13, tom de voz), **idioma do texto dos vídeos** (`idioma_anuncios`, MD-1), saldo de créditos e se está ativa (pausada = não consome crédito). |
 | `perfis` | Uma linha por usuário do Supabase Auth com acesso ao AdFit: papel (`admin_plataforma` ou `usuario_marca`), marca, **idioma da interface** (`idioma`, MD-1), ativo. Sem linha aqui = sem acesso (o Auth é compartilhado com outros apps). |
 | `produtos` | Peça cadastrada pela marca. `ficha_aprovada_id` aponta a ficha usada nos anúncios. Arquivar = `arquivado`. |
 | `fotos_produto` | 1 a 4 fotos originais da peça. |
 | `fichas_produto` | Versões da ficha (imagem limpa frente/costas/logo). |
-| `anuncios` | Anúncio de 15 s: opções escolhidas, roteiro, versão dos prompts, vídeo final, estado. `montagem_iniciada_em` e `tentativas_montagem` controlam o worker (D-3). |
+| `anuncios` | Anúncio de 15 s: opções escolhidas (com `com_texto` e `com_fecho` — MD-15), roteiro, versão dos prompts, vídeo final, estado, `arquivado` (D-24). `montagem_iniciada_em` e `tentativas_montagem` controlam a montagem (D-3, D-23). |
 | `cenas` | Exatamente 3 por anúncio; texto da tela (2 linhas × 32). |
 | `quadros`, `clipes` | Versões de imagem e de vídeo de cada cena. |
 | `geracoes` | Cada chamada à Higgsfield (só admin): modelo, payload, custo USD, tentativa, erro. |
@@ -22,6 +22,8 @@ Banco Postgres (Supabase), schema `public`, nomes em português `snake_case` exa
 | `pagamentos` | Uma linha por Checkout Session da Stripe. |
 | `precos_acoes` | Preço em créditos de cada ação (regra 11.1). |
 | `feedbacks` | Problemas e sugestões enviados pelos usuários (MD-6); cada um lê os próprios, o admin lê todos e muda o status. |
+| `pedidos_convite` | Pedidos de acesso da tela pública (MD-9); só o admin lê e muda o status. |
+| `downloads_anuncio` | Um registro por download do vídeo final (métrica da seção 21); gravado pelo servidor, lido só pelo admin. FK composta (anúncio, marca). |
 | `configuracoes` | Chave-valor da regra 11.6 (modelos, preços USD, cotações, contato de suporte). |
 
 Enums: os da seção 7.2, na mesma ordem, mais `idioma` (`pt_br`, `en`) — emenda MD-1.
@@ -65,7 +67,7 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 
 **Storage:** buckets privados `marcas` (5 MB, PNG/SVG/JPG), `produtos` (10 MB, JPG/PNG/HEIC/WEBP), `anuncios`. Políticas `storage_adfit_select/insert/update/delete`: 1º segmento do caminho = marca do usuário (ou admin); cliente só escreve em `marcas/<marca>/logo/*` e `produtos/<marca>/<produto>/originais/*`.
 
-## 4. Mapa tela → tabelas (até o 8.1)
+## 4. Mapa tela → tabelas
 
 | Tela | Lê | Escreve (via) |
 |---|---|---|
@@ -78,8 +80,12 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | [Marca] Comprar créditos | `pacotes_creditos` (só ativos, por `ordem`), `marcas.ativa` | `POST /api/creditos/checkout` |
 | [Marca] Compra concluída (`/creditos/obrigado`) | `pagamentos`, `marcas` | `fulfillCheckout` → `creditar_pagamento` (servidor) |
 | [Marca] Novo anúncio | `produtos` com ficha aprovada (URL assinada da ficha), `precos_acoes` | `POST /api/anuncios` |
-| [Marca] Anúncio | `anuncios`, `cenas`, `quadros` (sem colunas técnicas; service_role com posse conferida) | `GET /api/anuncios/:id` (polling), `PATCH /api/anuncios/:id/textos` |
-| [Marca] Anúncios | `anuncios` + quadro atual da cena 1 | — |
+| [Marca] Anúncio | `anuncios`, `cenas`, `quadros`, `clipes` (sem colunas técnicas; service_role com posse conferida) | `GET /api/anuncios/:id` (polling + varredura), `PATCH /api/anuncios/:id` (arquivar), `PATCH .../textos`, `POST .../gerar-video`, `GET .../download` (+ `downloads_anuncio`), `POST /api/cenas/:id/{refazer-quadro,usar-quadro,refazer-clipe,usar-clipe}` (com atalhos de refação) |
+| [Marca] Anúncios | `anuncios` (não arquivados; filtro por produto e status) + quadro atual da cena 1, `produtos` | — |
+| [Marca] Créditos | `movimentacoes_creditos` com o item de cada linha (ficha → produto; quadro/clipe/anúncio → anúncio), `precos_acoes`, `pacotes_creditos` na moeda do idioma (MD-16), `pagamentos` | — |
+| [Admin] Custos | `marcas`, `anuncios`, `movimentacoes_creditos`, `geracoes`, `pagamentos` (pagos), `downloads_anuncio`, `configuracoes` (cotações) | `GET /api/admin/custos/csv` (seção 14) |
+| [Admin] Gerações | `geracoes` (+ `marcas.nome`), URL assinada do resultado | `POST /api/admin/geracoes/:id/reconsultar` |
+| [Admin] Pedidos de acesso | `pedidos_convite` | `PATCH /api/admin/pedidos/:id`, convite |
 | Fale com a gente (`/feedback`) | — | `POST /api/feedback` (RLS `feedbacks_insert`) |
 | [Admin] Feedbacks | `feedbacks` + `perfis`, `marcas` (service_role) | `PATCH /api/admin/feedbacks/:id` |
 | [Admin] Configurações | `precos_acoes`, `pacotes_creditos`, `configuracoes` (service_role) | `PUT /api/admin/configuracoes`, `POST /api/admin/pacotes`, `PATCH /api/admin/pacotes/:id` |
@@ -87,12 +93,11 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | [Marca] Produtos | `produtos` (não arquivados) + `fotos_produto` + `fichas_produto` (selo), URLs assinadas | — |
 | [Marca] Novo produto | — | `produtos` (RLS `produtos_insert`), Storage `produtos/<marca>/<produto>/originais/*`, `fotos_produto` (RLS `fotos_insert`), `POST /api/fotos/:id/converter` (HEIC) |
 | [Marca] Produto | `produtos`, `fotos_produto`, `fichas_produto` (versões com URL assinada), `precos_acoes` | `fotos_produto` delete (RLS `fotos_delete`), `produtos.arquivado` (RLS `produtos_update`), `POST /api/produtos/:id/ficha`, `GET /api/produtos/:id/ficha` (polling 5 s), `POST /api/fichas/:id/aprovar` |
-| Demais telas | ainda com dados fictícios do design (`src/features/fixtures`) | ligadas nos épicos seguintes |
 
-## 5. Lógica por tela (até o 8.1)
+## 5. Lógica por tela
 
 - **Proxy (`src/proxy.ts`)**: renova a sessão; sem sessão → `/entrar` (APIs → 401 JSON); sem perfil → desloga e `/entrar?erro=sem_acesso`; desativado → desloga e `/acesso-desativado`; admin fica em `/admin`, marca fora de `/admin`; grava o cookie `adfit_idioma`.
-- **Entrar**: `signInWithPassword`; erro genérico "E-mail ou senha incorretos." (não revela se o e-mail existe).
+- **Entrar** (MD-7): botão do Google (GIS) + `signInWithIdToken` com nonce; só entra quem tem perfil. Formulário de e-mail e senha só em desenvolvimento. Vitrine do fluxo, troca PT/EN e "Pedir um convite" (MD-9).
 - **Esqueci a senha**: sempre a mesma resposta; link do e-mail → `/auth/confirm` → `/redefinir-senha?etapa=nova`.
 - **Convite**: link do e-mail → `/auth/confirm` (verifyOtp) → `/definir-senha` (mín. 8 caracteres + confirmação) → Início.
 - **Sair**: `POST /sair` (POST para o prefetch de links nunca deslogar ninguém).
@@ -187,6 +192,17 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
    - QC que não rodou há mais de 3 min → roda.
 9. Estados do anúncio só mudam por `transition()` (`ads/stateMachine.ts`, 12.2), com update condicional por status.
 
+Imagens das cenas no modelo `modelo_quadro` (Marketing Studio Flare, MD-12); a ficha segue em `modelo_imagem` (Grok). Nova tentativa pós-nsfw manda a ficha sem o painel do close (B-9).
+
+### Pipeline do vídeo — clipes e montagem (épicos 8.6/8.7; D-23)
+1. `POST /api/anuncios/:id/gerar-video`: 3 quadros atuais `pronto` e nenhum gerando → debita `gerar_video` (45, MD-4a) **uma vez** com referência ao anúncio → `gerando_clipes` → 3 `clipes` + `geracoes` `clipe_video` (Seedance 2.5, 5 s, 1080p, `generate_audio: true` — MD-11). Prompt: `prompt_movimento` (roteiro.v4: duas ações por cena — MD-10) + `CLAUSULA_AUDIO` + `CLAUSULA_VIDEO` no fim.
+2. Resultado copiado para `anuncios/<marca>/<anuncio>/clipes/…`. Falha definitiva da cena → clipe `falhou` + estorno de `floor(45/3) = 15` (referência ao clipe); a cena mostra "Refazer cena".
+3. `checkClipsProgress`: 3 clipes prontos e atuais → `montando` (`requestMontage`) e a montagem roda em `after()`; alguma cena falhou → `aguardando_aprovacao`.
+4. **Montagem** (`server/video/assemble.ts`, ffmpeg-static na função da Vercel): cada clipe em 2 planos de 2,5 s, o 2º com zoom de 12% (MD-10); texto da cena em PNG (Inter Bold via opentype.js — o ffmpeg Linux não tem drawtext, B-8); som ambiente dos clipes com entrada suave e compressor (B-13); fecho opcional (MD-15) como cartela desfocada e escurecida com logo/nome, CTA opcional (MD-13) e oferta (MD-14); H.264 High 30 fps CRF 20, AAC, faststart. Grava `video/v<n>.mp4` e vai a `pronto`.
+5. **Retentativas e órfãos:** `refreshAd` (polling da tela e varredura a cada 5 min — `/api/cron/varredura`) refaz montagem parada há mais de 10 min (até 3 tentativas) e, com `gerando_clipes` parado há mais de 6 min sem clipe gerando, estorna débitos sem clipe (`sweepOrphanClips`, B-14).
+6. **Ajustes grátis:** editar texto com o vídeo pronto, usar outra versão de clipe → `versao_montagem++` e remonta. `refazer_clipe` (15) gera nova versão da cena (atalhos de refação + `refacao.v2`).
+7. **Download:** URL assinada de 60 min com o nome da regra 8.7 e um registro em `downloads_anuncio`.
+
 ## 7. Divergências em relação ao spec
 
 | # | Divergência | Por quê |
@@ -214,7 +230,7 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
 | D-21 | `roteiro.v2` pede a `descricao` no idioma de quem cria (`{idioma_descricao}`) e o texto da tela no idioma da marca. Texto barrado pela regex só é trocado pela `descricao` se os idiomas forem iguais; senão, a cena fica sem texto | A `descricao` é para o lojista (seção 15); o texto do vídeo segue a marca (MD-1). |
 | D-22 | `PATCH /api/anuncios/:id/textos` não aceita `cta` | `anuncios` não tem coluna de CTA (seção 7.3); o CTA do fecho vem de `marcas.cta_padrao`, editado na tela Marca. |
 | MD-3 | Modelos Claude: `claude-sonnet-5` (roteiro, refação, QC de imagem) e `claude-haiku-4-5` (QC de texto, nova chave `modelo_claude_qc_texto`) | O spec citava `claude-sonnet-5-5`/`claude-haiku-5-5`, que não existem; decisão do Alexandre. |
-| MD-4 | Imagem: Grok Imagine 2.0 (`xai/grok-imagine-image-2.0`); vídeo: Seedance 2.5 1080p (`bytedance/seedance-2.5/image-to-video`); `gerar_video` = 51, `refazer_clipe` = 17; pacotes de 60 por US$ 36 e de 150 por US$ 81 | Nano Banana não existe na Higgsfield API; o Seedance foi escolhido pela qualidade e custa ~US$ 17 por vídeo, então os preços foram revistos para margem ≥ 30% (decisão do Alexandre, 25.5 e 25.1). |
+| MD-4 / MD-4a | Imagem: Grok Imagine 2.0 (`xai/grok-imagine-image-2.0`); vídeo: Seedance 2.5 1080p (`bytedance/seedance-2.5/image-to-video`); `gerar_video` = 45, `refazer_clipe` = 15 (MD-4a; antes 51/17); pacotes de 60 por US$ 36 e de 150 por US$ 81 | Nano Banana não existe na Higgsfield API; o Seedance foi escolhido pela qualidade e custa ~US$ 17 por vídeo, então os preços foram revistos para margem ≥ 30% (decisão do Alexandre, 25.5 e 25.1). |
 | MD-5 | Login com Google (só e-mails já convidados) | Emenda do Alexandre; o OAuth volta por `/auth/confirm`. |
 | MD-6 | Feedback do usuário (tabela `feedbacks`, telas `/feedback` e `/admin/feedbacks`) | Emenda do Alexandre. |
 | MD-7 | Login só com Google (GIS + `signInWithIdToken`); convite sem senha com e-mail de boas-vindas (Resend) | Emenda do Alexandre; substitui as seções 6.1/6.2. |
@@ -222,7 +238,16 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
 | D-23 | Montagem do vídeo com ffmpeg (`ffmpeg-static`) numa função da Vercel, sem worker separado (`src/server/video/assemble.ts`, `ads/clips.ts`); verificação em `GET /api/admin/saude` | Decisão do Alexandre; o spec previa worker com Dockerfile (Railway/Fly). |
 | MD-9 | Pedido de convite (`/pedir-convite`, `pedidos_convite`, [Admin] Pedidos de acesso) e novo layout da tela Entrar | Emenda do Alexandre. |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
-| MD-2 | Crédito "Feito pela Dab Lab" | Emenda do Alexandre. |
+| MD-2 | Crédito "Feito pela Dab Lab" (link para dablab.com.br) | Emenda do Alexandre. |
+| MD-10 | 2 planos de 2,5 s por cena (zoom no 2º); `roteiro.v4` com duas ações por cena | Ritmo de Reels sem custo extra. |
+| MD-11 | Som ambiente do Seedance (sem música/fala) no lugar da faixa muda | Pedido do Alexandre; mesmo preço. |
+| MD-12 | Imagens das cenas no Marketing Studio 2.5 Flare (`modelo_quadro`, `preco_usd_por_quadro`) | O Grok barrava como nsfw toda cena de corrida com top. |
+| MD-13 | CTA da marca opcional | Pedido do Alexandre. |
+| MD-14 | Fecho como cartela desfocada e escurecida (o logo nunca cobre a peça) | O logo cobria a modelo no 16:9. |
+| MD-15 | Fecho opcional por anúncio (`anuncios.com_fecho`) | O lojista pode querer só as cenas. |
+| MD-16 | Pacotes por moeda; a tela mostra os da moeda do idioma (pt-BR → BRL) | A conta Stripe brasileira só cobra cartão brasileiro em BRL. |
+| D-25 | Tabela `downloads_anuncio` | A métrica "anúncios baixados por semana" (seção 21) precisa do registro; o spec não tinha onde guardar. |
+| D-26 | Meta "créditos por anúncio pronto ≤ 22" (seção 21) não se aplica | Com os preços do MD-4a um anúncio completo custa 47 créditos; o painel mostra o valor sem meta. |
 
 ### Varredura periódica (01/11/2026)
 `GET /api/cron/varredura` (Bearer `CRON_SECRET`, fora do proxy) roda `refreshAd` em todos os anúncios em `gerando_*`/`montando`: a montagem e suas retentativas não dependem mais da tela do anúncio aberta. Disparo a cada 5 min por `.github/workflows/varredura.yml` (o plano Hobby da Vercel só aceita cron diário, que fica como reserva em `apps/web/vercel.json`). `CRON_SECRET` precisa existir na Vercel (Production) e nos secrets do repositório GitHub.

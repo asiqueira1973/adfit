@@ -9,7 +9,7 @@ import { generationDeps, submitGeneration, type GenerationDeps, type GenerationI
 import { refreshStaleGenerations } from "../higgsfield/stale";
 import type { AiClient } from "../claude/types";
 import { buildFramePrompt, checkAdProgress, refundAd, runFrameQc } from "./frames";
-import { checkClipsProgress, downloadName, MONTAGE_STALE_MS, requestMontage, runMontage } from "./clips";
+import { checkClipsProgress, downloadName, MONTAGE_STALE_MS, requestMontage, runMontage, sweepOrphanClips } from "./clips";
 import { aiClient, runLater } from "./runtime";
 import { buildScriptSystem, sanitizeScreenTexts } from "./script";
 import { isBusy, transition, type AdStatus } from "./stateMachine";
@@ -303,6 +303,8 @@ export async function refreshAd(anuncioId: string, now = Date.now()): Promise<vo
     const { data: cs } = await db.from("cenas").select("clipes!clipes_cena_id_fkey(status, geracao_id)").eq("anuncio_id", anuncioId);
     const gerando = (cs ?? []).flatMap((c) => (c.clipes ?? []) as Array<{ status: string; geracao_id: string | null }>).filter((k) => k.status === "gerando" && k.geracao_id);
     await refreshStaleGenerations({ geracaoIds: gerando.map((k) => k.geracao_id!) }, now);
+    // Débito feito e clipe nunca criado (função encerrada no meio): estorna e destrava (B-14).
+    if (age > AD_ORPHAN_AFTER_MS && !gerando.length) await sweepOrphanClips(anuncioId, now, AD_ORPHAN_AFTER_MS);
     await checkClipsProgress(anuncioId);
     return;
   }
@@ -462,8 +464,11 @@ export async function downloadAd(actor: AdActor, anuncioId: string): Promise<{ u
   if (error || !data) throw error ?? new Error("assinatura_falhou");
   // Métrica da seção 21 (anúncios baixados por semana): um registro por download. Falha aqui não
   // impede o download.
-  const { error: dlErr } = await db.from("downloads_anuncio").insert({ anuncio_id: anuncioId, marca_id: ad.marca_id });
-  if (dlErr) console.error("Registro de download falhou:", dlErr.message);
+  // Só downloads do lojista contam (o admin conferindo um vídeo não é uso da marca).
+  if (actor.papel === "usuario_marca") {
+    const { error: dlErr } = await db.from("downloads_anuncio").insert({ anuncio_id: anuncioId, marca_id: ad.marca_id });
+    if (dlErr) console.error("Registro de download falhou:", dlErr.message);
+  }
   await track({ nome: "adfit_video_baixado", distinctId: actor.email ?? "", tela: "Anúncio", descricao: "baixou o vídeo do anúncio", propriedades: { anuncio_id: anuncioId, versao_montagem: ad.versao_montagem } });
   return { url: data.signedUrl, nome };
 }

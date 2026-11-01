@@ -70,7 +70,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/creditos">[
               <div className="truncate text-[13px] text-text-2">
                 {formatDate(m.criado_em, intl)}
                 {m.valor_pago_centavos && m.moeda ? ` · ${formatMoney(m.valor_pago_centavos, m.moeda, intl)}` : ""}
-                {m.referencia_tipo === "anuncio" && m.referencia_id ? <> · <Link href={`/anuncios/${m.referencia_id}`} className="text-brand-text">{t.nav.anuncios}</Link></> : null}
+                {m.item ? <> · <Link href={m.item.href} className="text-brand-text">{m.item.label}</Link></> : null}
               </div>
             </div>
             <div className="shrink-0 text-right">

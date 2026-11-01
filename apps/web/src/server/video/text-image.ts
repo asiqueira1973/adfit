@@ -64,3 +64,15 @@ export async function renderTextImage(lines: string[], size: number, color: stri
   const png = await sharp(Buffer.from(svg)).png().toBuffer();
   return { png, width, height };
 }
+
+/**
+ * Como `renderTextImage`, mas reduz o tamanho da fonte até a imagem caber em `maxWidth` (verificador,
+ * 01/11/2026: 32 maiúsculas a 58 px davam 1214 px no vertical de 1080). Recebe: linhas, tamanho,
+ * cor e largura máxima. Devolve: PNG e medidas.
+ */
+export async function fitTextImage(lines: string[], size: number, color: string, maxWidth: number): Promise<TextImage> {
+  const first = await renderTextImage(lines, size, color);
+  if (first.width <= maxWidth) return first;
+  const smaller = Math.max(16, Math.floor((size * (maxWidth - 12)) / first.width));
+  return renderTextImage(lines, smaller, color);
+}
