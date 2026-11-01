@@ -226,3 +226,6 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
 
 ### Varredura periódica (01/11/2026)
 `GET /api/cron/varredura` (Bearer `CRON_SECRET`, fora do proxy) roda `refreshAd` em todos os anúncios em `gerando_*`/`montando`: a montagem e suas retentativas não dependem mais da tela do anúncio aberta. Disparo a cada 5 min por `.github/workflows/varredura.yml` (o plano Hobby da Vercel só aceita cron diário, que fica como reserva em `apps/web/vercel.json`). `CRON_SECRET` precisa existir na Vercel (Production) e nos secrets do repositório GitHub.
+
+### D-24 — Arquivar anúncio (01/11/2026)
+`PATCH /api/anuncios/:id { arquivado: true }` (rota fora da seção 13; a ação "Arquivar anúncio" está nas seções 6 e 10). Marca só os próprios, admin qualquer; recusado com o anúncio gerando/montando ou com imagem/cena refazendo. Nada é apagado (vídeo, gerações e extrato ficam); some da lista e da tela.

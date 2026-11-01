@@ -411,6 +411,9 @@ export const en: Dictionary = {
     iniciandoVideo: "Starting the video…",
     emBreve: "Available in the next step.",
     maisAcoes: "More actions",
+    arquivar: "Archive ad",
+    arquivarConfirma: "Archive this ad? It leaves your list. Credits already used are not returned.",
+    arquivarEmAndamento: "You can archive it once it finishes generating.",
   },
   feedback: {
     menu: "Send feedback",

@@ -394,6 +394,25 @@ export async function listAds(marcaId: string) {
 }
 
 /**
+ * Arquivar anúncio (seção 6: "Arquivar anúncio" — marca só os próprios, admin qualquer; pedido do
+ * Alexandre em 01/11/2026). Some da lista e da tela; nada é apagado (vídeo e extrato ficam). Recusa
+ * anúncio em andamento (gerando, montando ou com imagem/cena refazendo) para não deixar geração sem dono.
+ * Recebe: ator e anúncio. Devolve: nada.
+ */
+export async function archiveAd(actor: AdActor, anuncioId: string): Promise<void> {
+  const db = createAdminClient();
+  const { data: ad } = await db.from("anuncios").select("id, marca_id, status, arquivado").eq("id", anuncioId).maybeSingle();
+  if (!ad || ad.arquivado) throw new BusinessError("anuncio_inexistente");
+  assertOwner(actor, ad.marca_id);
+  if (isBusy(ad.status as AdStatus)) throw new BusinessError("transicao_invalida");
+  const { data: cenas } = await db.from("cenas").select("quadros!quadros_cena_id_fkey(status), clipes!clipes_cena_id_fkey(status)").eq("anuncio_id", anuncioId);
+  const generating = (cenas ?? []).some((c) => [...((c.quadros ?? []) as Array<{ status: string }>), ...((c.clipes ?? []) as Array<{ status: string }>)].some((x) => x.status === "gerando"));
+  if (generating) throw new BusinessError("transicao_invalida");
+  const { error } = await db.from("anuncios").update({ arquivado: true }).eq("id", anuncioId).eq("arquivado", false);
+  if (error) throw error;
+}
+
+/**
  * Varredura periódica (pedido do Alexandre, 01/11/2026): a montagem, suas retentativas e as
  * varreduras de órfãos não podem depender da tela do anúncio aberta. Roda `refreshAd` em todos os
  * anúncios em andamento (gerando_*, montando) de todas as marcas; cada um é idempotente.

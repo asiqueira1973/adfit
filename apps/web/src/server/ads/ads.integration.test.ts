@@ -11,7 +11,7 @@ import { handleHiggsfieldWebhook } from "../higgsfield/webhook";
 import webhookCompleted from "../higgsfield/__fixtures__/webhook-completed.json";
 import webhookFailed from "../higgsfield/__fixtures__/webhook-failed.json";
 import { setAiClientForTests } from "./runtime";
-import { AD_ORPHAN_AFTER_MS, createAd, getAdView, patchAdTexts, refreshAd, type AdActor, type CreateAdInput } from "./service";
+import { AD_ORPHAN_AFTER_MS, archiveAd, createAd, getAdView, listAds, patchAdTexts, refreshAd, type AdActor, type CreateAdInput } from "./service";
 
 /**
  * Critérios do épico 8.5 (seções 11.2–11.5, 11.7, 12.2 e 13) contra o Supabase local, com dublês
@@ -287,5 +287,25 @@ describe("8.5 — texto da tela editável", () => {
     const outro: AdActor = { id: actor.id, papel: "usuario_marca", marcaId: outraMarcaId, idioma: "pt_br" };
     expect(businessCodeOf(await patchAdTexts(outro, anuncioId, { cenas: [] }).catch((e) => e))).toBe("anuncio_inexistente");
     expect(businessCodeOf(await getAdView(outro, anuncioId).catch((e) => e))).toBe("anuncio_inexistente");
+  });
+});
+
+describe("arquivar anúncio (seção 6 \"Arquivar anúncio\"; pedido do Alexandre, 01/11/2026)", () => {
+  it("anúncio que falhou é arquivado e some da lista; em andamento ou de outra marca é recusado", async () => {
+    const produto = await approvedProduct();
+    ai.scriptFails = true;
+    const { anuncioId: falhou } = await createAd(actor, input(produto));
+    expect((await adRow(falhou)).status).toBe("falhou");
+    ai.scriptFails = false;
+
+    const outro: AdActor = { ...actor, marcaId: outraMarcaId };
+    expect(businessCodeOf(await archiveAd(outro, falhou).catch((e) => e))).toBe("anuncio_inexistente");
+
+    await archiveAd(actor, falhou);
+    expect((await listAds(marcaId)).some((a) => a.id === falhou)).toBe(false);
+    expect(businessCodeOf(await getAdView(actor, falhou).catch((e) => e))).toBe("anuncio_inexistente");
+
+    const { anuncioId: gerando } = await createAd(actor, input(produto));
+    expect(businessCodeOf(await archiveAd(actor, gerando).catch((e) => e))).toBe("transicao_invalida");
   });
 });

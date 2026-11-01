@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { Archive, Download } from "lucide-react";
 import { Button, CostButton } from "@/components/ui/button";
 import { Banner } from "@/components/ui/feedback";
 import { fill } from "@/lib/copy";
@@ -58,7 +58,23 @@ export function AdScreen({
     return () => clearInterval(timer);
   }, [busy, ad.id, signature, router]);
 
-  if (ad.status === "falhou") return <Banner tone="danger">{t.copy.falhaGeral}</Banner>;
+  const archiveButton = (
+    <div className="flex flex-col items-center gap-1 pt-2">
+      <button type="button" onClick={archive} disabled={busy || saving} className="flex min-h-11 items-center gap-2 rounded-[10px] px-3 text-[14px] font-medium text-text-2 hover:bg-surface disabled:opacity-50">
+        <Archive className="size-4" /> {a.arquivar}
+      </button>
+      {busy && <p className="text-[12px] text-text-2">{a.arquivarEmAndamento}</p>}
+    </div>
+  );
+
+  if (ad.status === "falhou")
+    return (
+      <div className="flex flex-col gap-4">
+        <Banner tone="danger">{t.copy.falhaGeral}</Banner>
+        {message && <Banner tone={message.tone}>{message.text}</Banner>}
+        {archiveButton}
+      </div>
+    );
 
   const videoPhase = ad.status === "gerando_clipes" || ad.status === "montando" || ad.status === "pronto";
   const failedClipScenes = ad.status === "aguardando_aprovacao" ? ad.cenas.filter((c) => c.clipes.at(-1)?.status === "falhou") : [];
@@ -75,6 +91,16 @@ export function AdScreen({
     setSaving(false);
     setMessage(r.ok ? (ok ? { tone: "success", text: ok } : null) : { tone: "danger", text: r.mensagem || t.erros.generico });
     if (r.ok) router.refresh();
+  }
+
+  // Arquivar (seção 6): some da lista; recusado enquanto algo gera.
+  async function archive() {
+    if (!window.confirm(a.arquivarConfirma)) return;
+    setSaving(true);
+    const r = await callApi("PATCH", `/api/anuncios/${ad.id}`, { arquivado: true });
+    setSaving(false);
+    if (!r.ok) return setMessage({ tone: "danger", text: r.mensagem || t.erros.generico });
+    router.push("/anuncios");
   }
 
   const saveTexts = () =>
@@ -180,6 +206,8 @@ export function AdScreen({
           </div>
         </div>
       )}
+
+      {archiveButton}
     </div>
   );
 }

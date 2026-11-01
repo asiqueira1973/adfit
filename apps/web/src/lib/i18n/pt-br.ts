@@ -410,6 +410,9 @@ export const ptBR = {
     iniciandoVideo: "Iniciando o vídeo…",
     emBreve: "Disponível na próxima etapa.",
     maisAcoes: "Mais ações",
+    arquivar: "Arquivar anúncio",
+    arquivarConfirma: "Arquivar este anúncio? Ele sai da sua lista. Os créditos já usados não voltam.",
+    arquivarEmAndamento: "Dá para arquivar quando o anúncio terminar de gerar.",
   },
   feedback: {
     menu: "Enviar feedback",
