@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- AdFit: "A" de traço grosso em verde-limão (cor brand) com um "play" no lugar da barra:
+       anúncio em vídeo + movimento. Fundo grafite (brand-ink). -->
+  <rect width="512" height="512" rx="112" fill="#1d1d1f"/>
+  <path d="M256 92 L392 420 L322 420 L256 254 L190 420 L120 420 Z" fill="#c6f432"/>
+  <path d="M242 334 L242 398 L290 366 Z" fill="#c6f432"/>
+</svg>
