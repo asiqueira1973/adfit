@@ -17,5 +17,5 @@ export async function GET() {
   } catch (e) {
     ffmpeg = `erro: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}`;
   }
-  return NextResponse.json({ ffmpeg, fonte: existsSync(fontPath()) });
+  return NextResponse.json({ ffmpeg, fonte: existsSync(fontPath()), caminho_fonte: fontPath(), cwd: process.cwd() });
 }

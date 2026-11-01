@@ -29,9 +29,14 @@ export function ffmpegPath(): string {
   return found;
 }
 
-/** Fonte Inter Bold do repositório (regra 11.8), lida do disco (incluída no trace pelo next.config). */
+/**
+ * Fonte Inter Bold do repositório (regra 11.8), incluída no trace pelo next.config. Confere a
+ * existência nos caminhos possíveis da função (o diretório de trabalho muda entre local e Vercel).
+ */
 export function fontPath(): string {
-  return join(process.cwd(), "src/server/video/assets/Inter-Bold.ttf");
+  const rel = "src/server/video/assets/Inter-Bold.ttf";
+  const candidates = [join(process.cwd(), rel), join(process.cwd(), "apps/web", rel), join("/var/task/apps/web", rel), join("/var/task", rel)];
+  return candidates.find((c) => existsSync(c)) ?? candidates[0];
 }
 
 export type AssembleInput = {
@@ -175,7 +180,13 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       "+faststart",
       input.out,
     ];
-    await run(ffmpegPath(), args, { maxBuffer: 16 * 1024 * 1024 });
+    try {
+      await run(ffmpegPath(), args, { maxBuffer: 16 * 1024 * 1024 });
+    } catch (e) {
+      // O motivo real fica no stderr do ffmpeg; a mensagem padrão só traz o comando (bug B-8).
+      const stderr = String((e as { stderr?: string }).stderr ?? "").trim();
+      throw new Error(`ffmpeg: ${stderr.slice(-400) || (e instanceof Error ? e.message.slice(0, 200) : String(e))}`);
+    }
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
