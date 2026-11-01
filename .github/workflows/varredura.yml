@@ -10,4 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - run: curl -fsS -m 60 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://adfit-roan.vercel.app/api/cron/varredura
+      - name: chamar a varredura
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -m 60 -H "Authorization: Bearer $CRON_SECRET" https://adfit-roan.vercel.app/api/cron/varredura
