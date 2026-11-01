@@ -56,3 +56,21 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 - **Entrada de imagens:** a API aceita URL pública HTTPS. As URLs assinadas do Supabase (60 min) servem. Reserva: `POST /files/generate-upload-url`.
 - **Retenção:** a Higgsfield guarda os resultados por 7 dias (`expires_at`). Copiamos tudo para o Storage antes de marcar `pronto`, como o spec já manda.
 - **Stripe:** os Prices de teste foram recriados como avulsos em USD (`price_1UWyAc…` = Pacote 60, `price_1UWyAe…` = Pacote 150) e os pacotes antigos foram desativados no banco local. Para produção, o Alexandre cria os dois Prices na conta live e roda o `seed:admin` remoto com `SEED_STRIPE_PRICE_PACOTE_60/150`.
+
+## MD-5 — Login com Google (01/11/2026, Alexandre) — a detalhar
+- **Decisão:** entrar com a conta Google, por ser mais fácil que e-mail e senha.
+- **Proposta:**
+  - O cadastro continua só por convite (princípio da seção 6). O botão "Entrar com Google" só funciona para e-mails já convidados; sem perfil, vale a mesma recusa de hoje.
+  - E-mail e senha continuam como alternativa.
+  - O provedor Google é ativado no projeto Supabase compartilhado, com o cliente OAuth criado pelo Alexandre no Google Cloud.
+- **Conflita com:** a seção 6.1 (login por e-mail e senha) e a seção 28 (fora do escopo: nada; o autocadastro continua fora).
+
+## MD-6 — Feedback do usuário (01/11/2026, Alexandre) — a detalhar
+- **Decisão:** o usuário consegue mandar problemas e sugestões de melhoria de dentro do app.
+- **Proposta:**
+  - Item "Enviar feedback" no menu do perfil, com tipo (problema ou sugestão), texto e a tela atual anexada automaticamente.
+  - Nova tabela `feedbacks` com RLS: o usuário da marca só cria e lê os próprios; o admin lê todos.
+  - Tela [Admin] Feedbacks com status (novo, visto, resolvido).
+
+## I-1 — Plano de mídia a partir de uma pasta (backlog, ver `docs/ideias.md`)
+- Reforço do Alexandre: sugerir o plano **não consome crédito**; só o que for gerado de fato é cobrado.
