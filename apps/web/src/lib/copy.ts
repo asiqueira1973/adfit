@@ -21,6 +21,7 @@ export const COPY = {
   saldoInsuficiente: "Saldo insuficiente",
   comprarTitulo: "Escolha um pacote",
   pacoteRende: "Rende cerca de {n} anúncios",
+  pacoteRende1: "Rende cerca de 1 anúncio",
   indoPagamento: "Abrindo o pagamento seguro…",
   confirmando: "Confirmando seu pagamento…",
   compraConcluida: "Pronto! {n} créditos adicionados.",

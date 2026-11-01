@@ -50,6 +50,7 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | `creditar_pagamento(pagamento, payment_intent, valor, moeda)` | Credita compra da Stripe uma única vez; repetido devolve a mesma movimentação. |
 | `estornar_pagamento(pagamento)` | Reembolso total: `reembolsado` + ajuste negativo até o saldo; diferença em `observacao`. Idempotente. |
 | `pode_gravar_original(nome)` | Usada nas políticas de Storage: o objeto `<marca>/<produto>/originais/*` é de produto da marca do usuário (ou admin) e sem ficha aprovada. |
+| `aprovar_ficha(ficha)` | Aprova uma versão da ficha (`aguardando_aprovacao`, `aprovada` ou `descartada` com imagem): as demais viram `descartada` e `produtos.ficha_aprovada_id` aponta para ela. Só `service_role`. |
 | `pegar_proximo_anuncio_para_montar()` | Fila do worker com `for update skip locked`; ignora montagem em andamento (< 10 min) e anúncios com 3 tentativas (D-3). |
 | `definir_atualizado_em()` | Atualiza `atualizado_em` (triggers `trg_*_atualizado_em`). |
 
@@ -58,6 +59,8 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 **Políticas (RLS):** nomes e regras da seção 6.4 (`marcas_select`, `marcas_update_kit`, `perfis_select`, `produtos_*`, `fotos_*`, `fichas_select`, `anuncios_select`, `anuncios_update_basico`, `cenas_select`, `quadros_select`, `clipes_select`, `geracoes_select_admin`, `movimentacoes_select`, `precos_select`, `pacotes_select`, `pagamentos_select`, `configuracoes_select_admin`). As colunas que o cliente pode escrever são limitadas por GRANT de coluna (ex.: em `marcas`, só o kit + `idioma_anuncios`; `saldo_creditos` e `ativa` nunca).
 
 **Caminhos amarrados (migration 20261101000900):** CHECK `fotos_produto_caminho_chk` (`produtos/<marca_id>/<produto_id>/originais/<arquivo>`) e `marcas_logo_caminho_chk` (`<marca_id>/logo/<arquivo>`); função `pode_gravar_original(nome)` nas políticas de escrita do bucket `produtos` (produto da própria marca, sem ficha aprovada). O servidor só assina/baixa/converte com service_role dentro da pasta da marca dona (`signMany`, `signedLogoUrl`, `convertHeicPhoto`).
+
+**Índice `fichas_produto_uma_gerando_uidx`:** no máximo uma ficha `gerando` por produto (regra da seção 13 contra cliques simultâneos; o servidor estorna se o índice recusar).
 
 **Storage:** buckets privados `marcas` (5 MB, PNG/SVG/JPG), `produtos` (10 MB, JPG/PNG/HEIC/WEBP), `anuncios`. Políticas `storage_adfit_select/insert/update/delete`: 1º segmento do caminho = marca do usuário (ou admin); cliente só escreve em `marcas/<marca>/logo/*` e `produtos/<marca>/<produto>/originais/*`.
 
@@ -77,7 +80,7 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | [Marca] Marca | `marcas` (kit), URL assinada do logo | `marcas` direto pela RLS `marcas_update_kit`; Storage `marcas/<marca>/logo/*` |
 | [Marca] Produtos | `produtos` (não arquivados) + `fotos_produto` + `fichas_produto` (selo), URLs assinadas | — |
 | [Marca] Novo produto | — | `produtos` (RLS `produtos_insert`), Storage `produtos/<marca>/<produto>/originais/*`, `fotos_produto` (RLS `fotos_insert`), `POST /api/fotos/:id/converter` (HEIC) |
-| [Marca] Produto | `produtos`, `fotos_produto`, `precos_acoes` | `fotos_produto` delete (RLS `fotos_delete`), `produtos.arquivado` (RLS `produtos_update`) |
+| [Marca] Produto | `produtos`, `fotos_produto`, `fichas_produto` (versões com URL assinada), `precos_acoes` | `fotos_produto` delete (RLS `fotos_delete`), `produtos.arquivado` (RLS `produtos_update`), `POST /api/produtos/:id/ficha`, `GET /api/produtos/:id/ficha` (polling 5 s), `POST /api/fichas/:id/aprovar` |
 | Demais telas | ainda com dados fictícios do design (`src/features/fixtures`) | ligadas nos épicos seguintes |
 
 ## 5. Lógica por tela (até o 8.1)
@@ -125,8 +128,27 @@ Idempotência: `creditar_pagamento` (trava + status), `pagamentos_stripe_checkou
 
 Admin: pacotes só são criados/alterados se o Price existir na Stripe, ativo, `one_time`, com a mesma moeda e valor (`assertStripePrice`).
 
-### Pipeline de geração
-Entra nos épicos 8.4–8.7.
+### Pipeline de geração — ficha de produto (épico 8.4)
+1. `POST /api/produtos/:id/ficha` confere o produto: da marca, não arquivado, com ≥1 foto e sem ficha `gerando`. Cria a versão `gerando`; o índice único barra o 2º clique.
+2. `debitar_creditos`: `gerar_ficha` (2) se nenhuma versão tem imagem, senão `refazer_ficha` (1). Sem saldo ou com a marca pausada, a versão é apagada e nada é cobrado.
+3. Refação: o Claude (Anexo C.3, `salvar_prompt`, 2 tentativas, modelo `modelo_claude_roteiro`) traduz o pedido. O prompt é o C.1 (v1) ou o texto do Claude, mais `CLAUSULA_IMAGEM` concatenada pelo código.
+4. `geracoes` recebe `modelo` = `configuracoes.modelo_imagem` (MD-4: Grok Imagine 2.0) e `entrada` = prompt, versão do prompt e **caminhos** das fotos (sem URL assinada).
+5. Submissão (`src/server/higgsfield/`):
+   - URLs de entrada: assinadas (60 min) quando o Storage é https; no ambiente local, upload pela API da Higgsfield (D-17).
+   - `hf_webhook` só quando `APP_URL` é https.
+   - No máximo 10 submissões simultâneas por instância.
+6. Resultado, por qualquer um dos três caminhos:
+   - webhook `POST /api/webhooks/higgsfield?token=` (token em tempo constante; assinatura Standard Webhooks se `HF_WEBHOOK_SECRET` existir, D-16);
+   - polling de reserva disparado pela tela (D-15);
+   - "Reconsultar" do admin.
+7. `completed`: baixa, grava em `produtos/<marca>/<produto>/fichas/v<n>-<geracao>.<ext>` e só então a ficha vira `aguardando_aprovacao`. Depois a geração vira `concluida` com `custo_usd` = `preco_usd_por_imagem`. Idempotente por `request_id`: estado final não muda; upload com caminho determinístico.
+8. `failed`, `nsfw`, erro de submissão ou timeout de 15 min:
+   - tentativa 1 → nova geração (tentativa 2, mesma cobrança, sem débito);
+   - tentativa 2 → ficha `falhou` + `estornar_creditos` integral (idempotente);
+   - a tela mostra "Algo deu errado do nosso lado…".
+9. `POST /api/fichas/:id/aprovar` → `aprovar_ficha`. As fotos originais congelam (`pode_gravar_original`). Voltar para uma versão anterior é aprovar uma `descartada`, sem custo.
+
+Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGeneration`.
 
 ## 7. Divergências em relação ao spec
 
@@ -146,6 +168,9 @@ Entra nos épicos 8.4–8.7.
 | D-12 | `estornar_pagamento` acrescenta a nota em `observacao` (migration 20261101000800) | A versão original sobrescrevia a nota de um reembolso parcial anterior (bug achado por teste). |
 | D-13 | Checkout envia `customer_email` e `locale` do usuário | E-mail pré-preenchido e página da Stripe no idioma do usuário (MD-1). |
 | D-14 | Conversão HEIC → JPG por `POST /api/fotos/:id/converter` depois do envio direto ao Storage | A Vercel limita o corpo das funções a 4,5 MB; fotos vão até 10 MB. A rota não está na seção 13. |
+| D-15 | `GET /api/produtos/:id/ficha` (estado das versões para o polling de 5 s) também dispara o polling de reserva das gerações paradas há mais de 3 min | Rota fora da seção 13. Até o worker do 8.6 existir não há processo periódico (a Vercel Hobby só tem cron diário); a tela aberta faz a reconsulta. |
+| D-16 | Webhook da Higgsfield confere também a assinatura Standard Webhooks (`webhook-signature`, segredo `whsec_` em `HF_WEBHOOK_SECRET`), além do token da query | A documentação atual da Higgsfield assina as entregas (MD-4); o token continua obrigatório. |
+| D-17 | No ambiente local, as fotos de entrada sobem pela API de upload da Higgsfield em vez de URL assinada | O Storage local (http://127.0.0.1) não é alcançável pela Higgsfield; em produção vale a URL assinada da seção 4.3. |
 | MD-3 | Modelos Claude: `claude-sonnet-5` (roteiro, refação, QC de imagem) e `claude-haiku-4-5` (QC de texto, nova chave `modelo_claude_qc_texto`) | O spec citava `claude-sonnet-5-5`/`claude-haiku-5-5`, que não existem; decisão do Alexandre. |
 | MD-4 | Imagem: Grok Imagine 2.0 (`xai/grok-imagine-image-2.0`); vídeo: Seedance 2.5 1080p (`bytedance/seedance-2.5/image-to-video`); `gerar_video` = 51, `refazer_clipe` = 17; pacotes de 60 por US$ 36 e de 150 por US$ 81 | Nano Banana não existe na Higgsfield API; o Seedance foi escolhido pela qualidade e custa ~US$ 17 por vídeo, então os preços foram revistos para margem ≥ 30% (decisão do Alexandre, 25.5 e 25.1). |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |

@@ -27,7 +27,7 @@ Plataforma de anúncios em vídeo com IA para marcas de roupa fitness. Spec: [`d
 
 ## Deploy
 - Web: `vercel deploy --prod` (projeto `adfit`, produção em https://adfit-roan.vercel.app).
-- Migrations: `supabase db push` no projeto remoto; depois rodar os advisors.
+- Migrations: no remoto compartilhado, pelo MCP `apply_migration` com o mesmo SQL do arquivo (nunca `supabase db push`); depois rodar os advisors.
 
 ## Pagamentos (Stripe, modo de teste)
 1. Chaves de TESTE no `apps/web/.env.local`: `STRIPE_SECRET_KEY=sk_test_…`, `SEED_STRIPE_PRICE_PACOTE_60/150=price_…` (Prices **avulsos/One-off** em USD) e `npm run seed:admin` para criar os pacotes.
@@ -37,4 +37,10 @@ Plataforma de anúncios em vídeo com IA para marcas de roupa fitness. Spec: [`d
 5. Reenvio de evento: `stripe events resend <evt_…>`; reembolso: painel da Stripe ou `POST /v1/refunds`.
 Produção: chaves live e o endpoint `https://<app>/api/webhooks/stripe` (eventos da seção 4.5) só na Vercel, nunca no `.env.local`.
 
-_Seções sobre worker e webhook local da Higgsfield (túnel) entram nos épicos 8.4 e 8.6._
+## Geração (Higgsfield e Claude)
+- `apps/web/.env.local`: `HF_API_KEY_ID` e `HF_API_KEY_SECRET` (console da Higgsfield API — são os dois lados do par `id:secret`), `HF_WEBHOOK_TOKEN` (aleatório, ≥ 16 caracteres), `HF_WEBHOOK_SECRET=whsec_…` (opcional, Settings do console) e `ANTHROPIC_API_KEY`.
+- A API da Higgsfield tem **saldo pré-pago próprio** (console → Billing), separado do plano/assinatura do site ou do conector MCP. Sem saldo, toda submissão volta `403 not_enough_credits` e a ficha falha com estorno.
+- Localmente não há webhook (o `APP_URL` é http): o resultado chega pelo polling da tela (reconsulta a cada 30 s depois de 3 min) ou pelo "Reconsultar" do admin.
+- Modelos e preços ficam em `configuracoes` (`modelo_imagem`, `modelo_video`, `preco_usd_*`): trocar sem deploy. Valores jsonb são strings simples (`"xai/grok-imagine-image-2.0"`), nunca `JSON.stringify` de novo.
+
+_A seção sobre o worker entra no épico 8.6._

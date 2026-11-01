@@ -52,7 +52,7 @@ export async function listProducts(marcaId: string, categoria?: string) {
 }
 
 /**
- * Um produto com fotos (URL assinada) para a tela [Marca] Produto (seção 10).
+ * Um produto com fotos e versões da ficha (URLs assinadas) para a tela [Marca] Produto (seção 10).
  * Recebe: id. Devolve: o produto ou null (inexistente, arquivado ou de outra marca — RLS).
  */
 export async function getProduct(id: string) {
@@ -64,6 +64,11 @@ export async function getProduct(id: string) {
     .maybeSingle();
   if (!data || data.arquivado) return null;
   const fotos = [...((data.fotos_produto ?? []) as Array<{ id: string; storage_path: string; ordem: number }>)].sort((a, b) => a.ordem - b.ordem);
-  const urls = await signMany(data.marca_id, fotos.map((f) => f.storage_path));
-  return { ...data, fotos: fotos.map((f) => ({ ...f, url: urls[f.storage_path] ?? null })) };
+  const fichas = [...((data.fichas_produto ?? []) as Array<{ id: string; versao: number; status: string; imagem_path: string | null }>)].sort((a, b) => a.versao - b.versao);
+  const urls = await signMany(data.marca_id, [...fotos.map((f) => f.storage_path), ...fichas.flatMap((f) => (f.imagem_path ? [f.imagem_path] : []))]);
+  return {
+    ...data,
+    fotos: fotos.map((f) => ({ ...f, url: urls[f.storage_path] ?? null })),
+    fichas: fichas.map((f) => ({ id: f.id, versao: f.versao, status: f.status, url: f.imagem_path ? (urls[f.imagem_path] ?? null) : null })),
+  };
 }

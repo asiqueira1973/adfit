@@ -20,10 +20,12 @@ export function PackagePicker({
   packages,
   intl,
   labels,
+  adCost,
 }: {
   packages: Pkg[];
   intl: string;
-  labels: { pagar: string; abrindo: string; rende: string; creditos: string; erro: string };
+  labels: { pagar: string; abrindo: string; rende: string; rende1: string; creditos: string; erro: string };
+  adCost: number;
 }) {
   const [selected, setSelected] = useState(packages[0]?.id);
   const [opening, setOpening] = useState(false);
@@ -55,7 +57,7 @@ export function PackagePicker({
                   <span className="tabular text-[34px] font-bold leading-none tracking-tight">{p.creditos}</span>
                   <span className="text-[15px] text-text-2">{labels.creditos}</span>
                 </div>
-                <div className="mt-1.5 text-[14px] text-text-2">{fill(labels.rende, { n: typicalAds(p.creditos) })}</div>
+                <div className="mt-1.5 text-[14px] text-text-2">{typicalAds(p.creditos, adCost) === 1 ? labels.rende1 : fill(labels.rende, { n: typicalAds(p.creditos, adCost) })}</div>
               </div>
               <div className="text-right">
                 <div className="tabular text-[20px] font-semibold">{formatMoney(p.preco_centavos, p.moeda, intl)}</div>

@@ -12,3 +12,4 @@ dist/
 supabase/.temp/
 *.tsbuildinfo
 .vercel
+apps/web/*.tmp.ts

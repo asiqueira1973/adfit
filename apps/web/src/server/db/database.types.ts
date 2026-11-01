@@ -413,7 +413,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "creditar_pagamento":
+            "aprovar_ficha":
+{ Args: { "p_ficha_id": string }; Returns: string
+                           },
+"creditar_pagamento":
 { Args: { "p_moeda": string,"p_pagamento_id": string,"p_stripe_payment_intent_id": string,"p_valor_centavos": number }; Returns: string
                            },
 "debitar_creditos":
@@ -436,6 +439,9 @@ isOneToOne: false
                            },
 "pegar_proximo_anuncio_para_montar":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"pode_gravar_original":
+{ Args: { "p_nome": string }; Returns: boolean
                            }
           }
           Enums: {

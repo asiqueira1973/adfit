@@ -48,4 +48,8 @@ O app terá pt-BR e inglês (emenda MD-1 em `docs/mudancas-de-escopo.md`); nenhu
 - Botões cobrados (`CostButton`) leem saldo e pausa reais do `BrandStatusProvider` da casca; não passar saldo de fixture achando que vale.
 - Erros de negócio do banco sobem com MESSAGE = código (`saldo_insuficiente`…); o servidor traduz.
 - Não chamar função volátil (ex.: `debitar_creditos`) dentro de WHERE em teste: roda uma vez por linha.
+- Higgsfield API: saldo pré-pago próprio (separado do conector MCP); `403 not_enough_credits` = recarregar no console. `HF_API_KEY_ID`/`HF_API_KEY_SECRET` são as duas metades do par `id:secret`.
+- `configuracoes.valor` é jsonb: grave a string pura (`"modelo"`), nunca `JSON.stringify(...)` antes do supabase-js (vira string com aspas dentro).
+- Prompts `.md` são lidos do disco em tempo de execução (`loadPrompt`); `next.config.ts` os inclui no trace com `outputFileTracingIncludes`.
+- Gerações: nunca grave URL assinada em `geracoes.entrada` (expira e vaza); grave os caminhos e assine na submissão.
 - Quando o agente errar a mesma coisa duas vezes, a correção entra aqui.

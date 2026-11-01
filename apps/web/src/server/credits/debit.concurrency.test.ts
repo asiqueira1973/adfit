@@ -4,7 +4,7 @@ import { Client } from "pg";
 /**
  * Seção 22 (banco): "concorrência — dois débitos simultâneos não deixam saldo negativo".
  * Usa duas conexões reais no Supabase local (npm test sobe o banco antes, scripts/test-db.mjs).
- * A marca de teste recebe 12 créditos e duas transações tentam debitar `gerar_video` (12) ao
+ * A marca de teste recebe o preço de `gerar_video` em créditos e duas transações tentam debitá-lo ao
  * mesmo tempo: o `for update` de debitar_creditos serializa; uma passa e a outra recebe
  * `saldo_insuficiente`.
  */
@@ -24,7 +24,8 @@ describe("debitar_creditos concorrente (seção 22)", () => {
     await Promise.all([a.connect(), b.connect()]);
     const { rows } = await a.query("insert into marcas (nome) values ($1) returning id", [`teste-concorrencia-${Date.now()}`]);
     marcaId = rows[0].id;
-    await a.query("select lancar_creditos($1, 'bonus', 12, null, 'teste de concorrência', null)", [marcaId]);
+    // Exatamente o preço atual de gerar_video (12 no spec; 51 depois do MD-4): cabe um débito só.
+    await a.query("select lancar_creditos($1, 'bonus', (select creditos from precos_acoes where acao = 'gerar_video'), null, 'teste de concorrência', null)", [marcaId]);
   });
 
   afterAll(async () => {

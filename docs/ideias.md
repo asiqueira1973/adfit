@@ -13,3 +13,7 @@ item de spec só depois de revisadas (seção 28 continua valendo).
   anúncios sozinho ou só sugere.
 - **Base que já existe:** produtos/fichas (8.3/8.4), opções de anúncio da 11.4, Claude para o
   roteiro (8.5) — o plano seria um prompt novo sobre o catálogo.
+- **Posicionamento (Alexandre, 01/11/2026):** o diferencial frente ao Ads/Marketing Studio da
+  própria Higgsfield (risco "Concorrência" da seção 23) pode estar na **praticidade e no
+  planejamento** — um serviço contínuo (o que postar, quando e com qual peça), não só a geração
+  de um vídeo avulso. A I-1 é o primeiro passo nessa direção.

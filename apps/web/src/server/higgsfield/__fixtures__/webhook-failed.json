@@ -1,0 +1,7 @@
+{
+  "request_id": "REQUEST_ID",
+  "status": "failed",
+  "error": "Generation failed",
+  "expires_at": null,
+  "payload": null
+}

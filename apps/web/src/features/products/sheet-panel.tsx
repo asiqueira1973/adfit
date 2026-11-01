@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Check, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, CostButton } from "@/components/ui/button";
@@ -9,87 +10,169 @@ import { Card } from "@/components/ui/card";
 import { Banner, Spinner } from "@/components/ui/feedback";
 import { TextArea } from "@/components/ui/field";
 import { cn } from "@/components/ui/cn";
-import { COPY } from "@/lib/copy";
-import { fxPrices } from "@/features/fixtures";
+import { fill } from "@/lib/copy";
+import type { Dictionary } from "@/lib/i18n";
+import { callApi } from "@/features/admin/api";
 
-export type SheetState = "sem_ficha" | "gerando" | "aguardando" | "aprovada" | "falhou";
+export type SheetVersion = { id: string; versao: number; status: "gerando" | "aguardando_aprovacao" | "aprovada" | "descartada" | "falhou"; url: string | null };
+
+/** Intervalo do polling enquanto há ficha `gerando` (critério 8.4: "polling de 5 s"). */
+const POLL_MS = 5000;
 
 /**
- * Área da ficha de produto (seção 10 e épico 8.4): gerar, acompanhar, aprovar, refazer com
- * instrução e voltar para versão anterior (sem custo). Fase de design: estado vem da URL.
- * Recebe: estado, saldo e se a marca está pausada. Devolve: o cartão da ficha.
+ * Área da ficha de produto (seção 10; critérios 8.4): gerar, acompanhar sem recarregar a página,
+ * aprovar, refazer com o campo "O que está diferente da peça real?" e voltar para uma versão
+ * anterior (aprovar uma `descartada`, sem custo). Saldo e pausa vêm do BrandStatusProvider.
+ * Recebe: produto, versões (com URL assinada), preços, se há fotos e o dicionário. Devolve: o cartão.
  */
-export function SheetPanel({ state, balance, paused }: { state: SheetState; balance: number; paused: boolean }) {
+export function SheetPanel({
+  produtoId,
+  versions,
+  prices,
+  hasPhotos,
+  t,
+}: {
+  produtoId: string;
+  versions: SheetVersion[];
+  prices: { gerar: number; refazer: number };
+  hasPhotos: boolean;
+  t: Pick<Dictionary, "produtos" | "copy" | "erros">;
+}) {
+  const router = useRouter();
+  const withImage = versions.filter((v) => v.url);
+  const generating = versions.some((v) => v.status === "gerando");
+  const latest = versions.at(-1);
+  const lastFailed = !generating && latest?.status === "falhou";
+  const defaultSelected = (withImage.find((v) => v.status === "aprovada") ?? withImage.at(-1))?.id ?? null;
+
+  const [selectedId, setSelectedId] = useState<string | null>(defaultSelected);
   const [redo, setRedo] = useState(false);
-  const [version, setVersion] = useState(2);
-  const versions = state === "aguardando" || state === "aprovada" ? [1, 2] : [];
+  const [instrucao, setInstrucao] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // A versão escolhida some quando a lista muda (nova versão pronta): volta ao padrão.
+  const selected = withImage.find((v) => v.id === selectedId) ?? withImage.find((v) => v.id === defaultSelected) ?? null;
+
+  useEffect(() => {
+    if (!generating) return;
+    const timer = setInterval(async () => {
+      const res = await fetch(`/api/produtos/${produtoId}/ficha`, { cache: "no-store" }).catch(() => null);
+      const json = res?.ok ? ((await res.json()) as { versoes: Array<{ status: string }> }) : null;
+      if (json && !json.versoes.some((v) => v.status === "gerando")) router.refresh();
+    }, POLL_MS);
+    return () => clearInterval(timer);
+  }, [generating, produtoId, router]);
+
+  async function run(fn: () => ReturnType<typeof callApi>) {
+    setBusy(true);
+    setError(null);
+    const result = await fn();
+    setBusy(false);
+    if (!result.ok) return setError(result.mensagem || t.erros.generico);
+    setRedo(false);
+    setInstrucao("");
+    setSelectedId(null);
+    router.refresh();
+  }
+
+  const generate = (text?: string) => run(() => callApi("POST", `/api/produtos/${produtoId}/ficha`, text ? { instrucao: text } : {}));
+  const approve = (id: string) => run(() => callApi("POST", `/api/fichas/${id}/aprovar`, {}));
 
   return (
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-[17px] font-semibold">Ficha do produto</h2>
-        {state === "aprovada" && version === 2 && <Badge tone="success">Aprovada</Badge>}
-        {state === "aguardando" && <Badge tone="warning">Confira</Badge>}
-        {state === "gerando" && <Badge tone="processing">Preparando</Badge>}
+        <h2 className="text-[17px] font-semibold">{t.produtos.fichaTitulo}</h2>
+        {generating && <Badge tone="processing">{t.produtos.fichaPreparando}</Badge>}
+        {!generating && selected?.status === "aprovada" && <Badge tone="success">{t.produtos.fichaAprovada}</Badge>}
+        {!generating && selected?.status === "aguardando_aprovacao" && <Badge tone="warning">{t.produtos.fichaConfira}</Badge>}
       </div>
 
-      {state === "sem_ficha" && (
+      {error && <Banner tone="danger">{error}</Banner>}
+
+      {!versions.length && (
         <>
-          <p className="text-[15px] text-text-2">A ficha é uma imagem limpa da peça (frente, costas e logo). Ela garante que a peça saia igual nos anúncios.</p>
-          <CostButton label="Gerar ficha" cost={fxPrices.gerar_ficha} balance={balance} paused={paused} />
+          <p className="text-[15px] text-text-2">{t.produtos.fichaExplica}</p>
+          <CostButton label={t.produtos.gerarFicha} cost={prices.gerar} balance={0} disabled={!hasPhotos || busy} onClick={() => generate()} />
         </>
       )}
 
-      {state === "gerando" && (
+      {generating && (
         <div className="flex flex-col items-center gap-3 rounded-[10px] bg-bg px-4 py-10 text-center">
           <Spinner className="size-7" />
-          <p className="max-w-xs text-[15px]">{COPY.fichaGerando}</p>
+          <p className="max-w-xs text-[15px]">{t.copy.fichaGerando}</p>
         </div>
       )}
 
-      {state === "falhou" && (
+      {lastFailed && (
         <>
-          <Banner tone="danger">{COPY.falhaGeral}</Banner>
-          <CostButton label="Gerar ficha" cost={fxPrices.gerar_ficha} balance={balance} paused={paused} />
+          <Banner tone="danger">{t.copy.falhaGeral}</Banner>
+          {!withImage.length && (
+            <CostButton label={t.produtos.gerarFicha} cost={prices.gerar} balance={0} disabled={!hasPhotos || busy} onClick={() => generate()} />
+          )}
         </>
       )}
 
-      {(state === "aguardando" || state === "aprovada") && (
+      {selected && (
         <>
           <div className="relative aspect-[16/9] overflow-hidden rounded-[10px] bg-[#EDEDED]">
-            <Image src="/fixtures/ficha.jpg" alt="Ficha: frente, costas e detalhe do logo" fill sizes="(max-width: 768px) 100vw, 640px" className="object-contain" />
+            <Image src={selected.url!} alt={t.produtos.fichaAlt} fill unoptimized sizes="(max-width: 768px) 100vw, 640px" className="object-contain" />
           </div>
-          {state === "aguardando" && <p className="text-[15px]">{COPY.fichaPronta}</p>}
-          <div className="flex gap-2">
-            {versions.map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setVersion(v)}
-                className={cn("flex min-h-11 items-center rounded-full px-3.5 text-[13px] font-semibold", version === v ? "bg-text text-bg" : "bg-bg text-text")}
-              >
-                Versão {v}
-              </button>
-            ))}
-          </div>
-          {redo ? (
-            <div className="flex flex-col gap-3">
-              <TextArea label={COPY.fichaRefazerCampo} name="instrucao" rows={3} maxChars={200} placeholder="Ex.: o logo é menor e fica do lado esquerdo" />
-              <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="ghost" onClick={() => setRedo(false)}>Cancelar</Button>
-                <CostButton label="Refazer" cost={fxPrices.refazer_ficha} balance={balance} paused={paused} />
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {!(state === "aprovada" && version === 2) && (
-                <Button type="button"><Check className="size-4.5" /> Aprovar ficha</Button>
-              )}
-              <Button type="button" variant="secondary" onClick={() => setRedo(true)}>
-                <RotateCcw className="size-4" /> Refazer · 1 crédito
-              </Button>
+          {selected.status === "aguardando_aprovacao" && <p className="text-[15px]">{t.copy.fichaPronta}</p>}
+          {withImage.length > 1 && (
+            <div className="flex flex-wrap gap-2">
+              {withImage.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setSelectedId(v.id)}
+                  aria-pressed={v.id === selected.id}
+                  className={cn("flex min-h-11 items-center rounded-full px-3.5 text-[13px] font-semibold", v.id === selected.id ? "bg-text text-bg" : "bg-bg text-text")}
+                >
+                  {fill(t.produtos.versao, { n: v.versao })}
+                </button>
+              ))}
             </div>
           )}
+
+          {!generating &&
+            (redo ? (
+              <div className="flex flex-col gap-3">
+                <TextArea
+                  label={t.copy.fichaRefazerCampo}
+                  name="instrucao"
+                  rows={3}
+                  maxChars={200}
+                  value={instrucao}
+                  onChange={(e) => setInstrucao(e.target.value)}
+                  placeholder={t.produtos.refazerExemplo}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant="ghost" onClick={() => setRedo(false)} disabled={busy}>
+                    {t.produtos.cancelar}
+                  </Button>
+                  <CostButton label={t.produtos.refazerFicha} cost={prices.refazer} balance={0} disabled={busy} onClick={() => generate(instrucao)} />
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {selected.status !== "aprovada" && (
+                  <Button type="button" onClick={() => approve(selected.id)} disabled={busy}>
+                    <Check className="size-4.5" /> {selected.status === "descartada" ? t.produtos.aprovarVersao : t.produtos.aprovarFicha}
+                  </Button>
+                )}
+                <CostButton
+                  label={t.produtos.refazerFicha}
+                  cost={prices.refazer}
+                  balance={0}
+                  variant="secondary"
+                  icon={<RotateCcw className="size-4" />}
+                  onClick={() => setRedo(true)}
+                  disabled={busy}
+                />
+              </div>
+            ))}
+          {selected.status === "aprovada" && <p className="text-[13px] text-text-2">{t.produtos.fichaFotosCongeladas}</p>}
         </>
       )}
     </Card>

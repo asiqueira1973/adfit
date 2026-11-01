@@ -51,6 +51,7 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 | grande | 120 créditos por US$ 65 | **Pacote 150**: 150 créditos por US$ 81 (US$ 0,54/crédito) |
 
 - **Anúncio típico** (11.1) passa a custar 2 + 51 = **53 créditos** (US$ 28,60 a 31,80). Com as refações usuais, 2 + 2 + 51 + 17 = **72 créditos**. Margem do vídeo no pior caso (crédito a US$ 0,54): 1 − 17,06 / 27,54 ≈ **38% bruta, ~31% depois da Stripe**. A meta "margem bruta ≥ 55%" da seção 21 fica abaixo com o Seedance; o painel 8.8 mede o valor real.
+- **"Rende cerca de {n} anúncios" (seção 15):** deixa de usar o "÷ 20" fixo. Passa a dividir pelo custo atual do anúncio típico sem refação (`gerar_roteiro_quadros` + `gerar_video` = 53): Pacote 60 rende cerca de 1 anúncio e Pacote 150, cerca de 2.
 - **Webhook da Higgsfield:** a documentação atual assina cada entrega no padrão Standard Webhooks (`webhook-id`, `webhook-timestamp`, `webhook-signature`, segredo `whsec_` no console). O token na query da seção 4.3 continua obrigatório. A assinatura é conferida também quando `HF_WEBHOOK_SECRET` estiver configurado.
 - **Entrada de imagens:** a API aceita URL pública HTTPS. As URLs assinadas do Supabase (60 min) servem. Reserva: `POST /files/generate-upload-url`.
 - **Retenção:** a Higgsfield guarda os resultados por 7 dias (`expires_at`). Copiamos tudo para o Storage antes de marcar `pronto`, como o spec já manda.

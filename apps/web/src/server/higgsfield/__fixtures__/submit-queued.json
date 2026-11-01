@@ -1,0 +1,6 @@
+{
+  "status": "queued",
+  "request_id": "REQUEST_ID",
+  "status_url": "https://api.higgsfield.ai/requests/REQUEST_ID/status",
+  "cancel_url": "https://api.higgsfield.ai/requests/REQUEST_ID/cancel"
+}

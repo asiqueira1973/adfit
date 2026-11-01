@@ -28,11 +28,20 @@ export function signedCredits(n: number): string {
 }
 
 /**
- * Quantos anúncios típicos um pacote rende (seção 15: créditos ÷ 20, para baixo).
- * Recebe: créditos do pacote. Devolve: número inteiro de anúncios.
+ * Custo em créditos de um anúncio típico sem refação (regra 11.1: criar anúncio + gerar vídeo),
+ * lido dos preços atuais — com o MD-4, 2 + 51 = 53. Recebe: preços por ação. Devolve: créditos.
  */
-export function typicalAds(credits: number): number {
-  return Math.floor(credits / 20);
+export function typicalAdCost(prices: Partial<Record<string, number>>): number {
+  return (prices.gerar_roteiro_quadros ?? 0) + (prices.gerar_video ?? 0);
+}
+
+/**
+ * Quantos anúncios típicos um pacote rende (seção 15, com o custo real do MD-4 no lugar do
+ * "÷ 20" fixo): créditos ÷ custo do anúncio típico, para baixo. Recebe: créditos e custo.
+ * Devolve: número inteiro de anúncios (0 se o custo for 0).
+ */
+export function typicalAds(credits: number, adCost: number): number {
+  return adCost > 0 ? Math.floor(credits / adCost) : 0;
 }
 
 /** Data curta no idioma: "31/10/2026" (pt-BR) ou "10/31/2026" (en-US). */

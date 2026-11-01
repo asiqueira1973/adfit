@@ -42,6 +42,13 @@ export function businessError(code: string, t: Dictionary, supportContact = ""):
     pacote_inexistente: { mensagem: t.erros.pacoteInexistente, status: 404 },
     price_invalido: { mensagem: t.erros.priceInvalido, status: 422 },
     saldo_insuficiente: { mensagem: t.copy.saldoInsuficiente, status: 402 },
+    produto_inexistente: { mensagem: t.erros.produtoInexistente, status: 404 },
+    produto_arquivado: { mensagem: t.erros.produtoArquivado, status: 422 },
+    produto_sem_fotos: { mensagem: t.erros.produtoSemFotos, status: 422 },
+    ficha_em_geracao: { mensagem: t.erros.fichaEmGeracao, status: 409 },
+    ficha_inexistente: { mensagem: t.erros.fichaInexistente, status: 404 },
+    transicao_invalida: { mensagem: t.erros.transicaoInvalida, status: 409 },
+    geracao_inexistente: { mensagem: t.erros.geracaoInexistente, status: 404 },
   };
   return map[code] ?? { mensagem: t.erros.generico, status: 500 };
 }

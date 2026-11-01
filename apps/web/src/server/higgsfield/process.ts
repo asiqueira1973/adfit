@@ -1,0 +1,193 @@
+import "server-only";
+import { createAdminClient } from "../db/supabase";
+import { publicServerEnv, higgsfieldEnv } from "../env";
+import { readConfig } from "../config";
+import { PHOTO_BUCKET } from "@/lib/storage-paths";
+import { createHiggsfieldClient, downloadResult } from "./client";
+import { referenceUrls } from "./inputs";
+import { buildImageBody, type ImageRequest } from "./models";
+import type { Downloader, GenerationClient, HfResult } from "./types";
+
+/** Dependências externas da geração (seção 22: dublês nos testes). */
+export type GenerationDeps = { hf: GenerationClient; download: Downloader };
+
+let testDeps: GenerationDeps | null = null;
+
+/** Troca as dependências nos testes de integração (nunca usado fora de testes). */
+export function setGenerationDepsForTests(deps: GenerationDeps | null): void {
+  testDeps = deps;
+}
+
+/** Dependências em uso: dublês nos testes, clientes reais no resto. */
+export function generationDeps(): GenerationDeps {
+  return testDeps ?? { hf: createHiggsfieldClient(), download: downloadResult };
+}
+
+/** Entrada gravada em `geracoes.entrada` (sem URLs assinadas — seção 20; elas expiram em 60 min). */
+export type GenerationInput = {
+  prompt: string;
+  prompt_base: string;
+  prompt_versao: string;
+  referencias: string[];
+  aspect_ratio: ImageRequest["aspectRatio"];
+  resumo_refacao?: string | null;
+};
+
+type GenerationRow = {
+  id: string;
+  marca_id: string;
+  tipo: "ficha_produto" | "quadro_chave" | "clipe_video";
+  modelo: string;
+  request_id: string | null;
+  status: "na_fila" | "processando" | "concluida" | "falhou" | "bloqueada_nsfw";
+  entrada: unknown;
+  tentativa: number;
+  cobranca_id: string | null;
+  criado_em: string;
+};
+
+const GEN_COLUMNS = "id, marca_id, tipo, modelo, request_id, status, entrada, tentativa, cobranca_id, criado_em";
+
+/** Tentativas por geração: a original + 1 retentativa automática sem cobrança (seção 8.4 e 12). */
+export const MAX_ATTEMPTS = 2;
+
+/** URL do webhook com o token (seção 4.3). Só quando o app é público (https); localmente, vale o polling. */
+function webhookUrl(): string | undefined {
+  const app = publicServerEnv().APP_URL;
+  if (!app.startsWith("https://")) return undefined;
+  return `${app}/api/webhooks/higgsfield?token=${encodeURIComponent(higgsfieldEnv().HF_WEBHOOK_TOKEN)}`;
+}
+
+/** Lê uma geração. */
+export async function getGeneration(id: string): Promise<GenerationRow | null> {
+  const { data } = await createAdminClient().from("geracoes").select(GEN_COLUMNS).eq("id", id).maybeSingle();
+  return (data as GenerationRow | null) ?? null;
+}
+
+/** Lê a geração pelo `request_id` da Higgsfield (webhook, seção 13). */
+export async function getGenerationByRequestId(requestId: string): Promise<GenerationRow | null> {
+  const { data } = await createAdminClient().from("geracoes").select(GEN_COLUMNS).eq("request_id", requestId).maybeSingle();
+  return (data as GenerationRow | null) ?? null;
+}
+
+/**
+ * Submete uma geração `na_fila` à Higgsfield (seção 4.3): monta as URLs de entrada, o corpo do
+ * modelo configurado e o `hf_webhook`; grava `request_id` e `processando` (12.3).
+ * Erro na submissão segue a política de falha (retentativa ou estorno).
+ * Recebe: id da geração e dependências. Devolve: nada.
+ */
+export async function submitGeneration(geracaoId: string, deps = generationDeps()): Promise<void> {
+  const db = createAdminClient();
+  const g = await getGeneration(geracaoId);
+  if (!g || g.status !== "na_fila") return;
+  try {
+    const entrada = g.entrada as GenerationInput;
+    const imageUrls = await referenceUrls(g.marca_id, entrada.referencias, deps.hf);
+    const body = buildImageBody(g.modelo, { prompt: entrada.prompt, imageUrls, aspectRatio: entrada.aspect_ratio });
+    const { request_id } = await deps.hf.submit(g.modelo, body, webhookUrl());
+    await db.from("geracoes").update({ request_id, status: "processando" }).eq("id", g.id).eq("status", "na_fila");
+  } catch (e) {
+    await failGeneration(g, "falhou", `submissao: ${e instanceof Error ? e.message : String(e)}`, deps);
+  }
+}
+
+/** Extensão e tipo aceitos pelo bucket `produtos` a partir do content-type devolvido. */
+function imageType(contentType: string): { ext: string; mime: string } {
+  if (contentType.includes("jpeg") || contentType.includes("jpg")) return { ext: "jpg", mime: "image/jpeg" };
+  if (contentType.includes("webp")) return { ext: "webp", mime: "image/webp" };
+  return { ext: "png", mime: "image/png" };
+}
+
+/**
+ * Processa um resultado da Higgsfield — webhook, polling ou "Reconsultar" (seções 4.3 e 13).
+ * Idempotente por `request_id`: geração em estado final não muda; a cópia ao Storage usa caminho
+ * determinístico (upsert). `completed` → copia o arquivo ao Storage ANTES de liberar a ficha
+ * (pegadinha do CLAUDE.md), grava custo e conclui. `failed`/`nsfw` → política de falha.
+ * Recebe: geração, resultado e dependências. Devolve: nada.
+ */
+export async function applyResult(g: GenerationRow, result: HfResult, deps = generationDeps()): Promise<void> {
+  if (g.status === "concluida" || g.status === "falhou" || g.status === "bloqueada_nsfw") return;
+  const db = createAdminClient();
+
+  if (result.status === "queued" || result.status === "in_progress") {
+    if (g.status === "na_fila") await db.from("geracoes").update({ status: "processando" }).eq("id", g.id).eq("status", "na_fila");
+    return;
+  }
+  if (result.status === "nsfw") return failGeneration(g, "bloqueada_nsfw", "nsfw", deps);
+  if (result.status !== "completed") return failGeneration(g, "falhou", result.error ?? result.status, deps);
+
+  const url = result.images?.[0]?.url ?? result.video?.url;
+  if (!url) return failGeneration(g, "falhou", "resultado_sem_arquivo", deps);
+
+  if (g.tipo !== "ficha_produto") throw new Error(`tipo_nao_suportado:${g.tipo}`);
+  const { data: ficha } = await db.from("fichas_produto").select("id, produto_id, versao").eq("geracao_id", g.id).maybeSingle();
+  if (!ficha) throw new Error("ficha_da_geracao_inexistente");
+
+  // 1. Copia para o Storage (nunca guardamos só a URL externa — seção 4.3).
+  const file = await deps.download(url);
+  const { ext, mime } = imageType(file.contentType);
+  const object = `${g.marca_id}/${ficha.produto_id}/fichas/v${ficha.versao}-${g.id}.${ext}`;
+  const { error: upErr } = await db.storage.from(PHOTO_BUCKET).upload(object, file.bytes, { contentType: mime, upsert: true });
+  if (upErr) throw upErr;
+  const path = `${PHOTO_BUCKET}/${object}`;
+
+  // 2. Libera a ficha para aprovação (12.1) e 3. conclui a geração com o custo real (seção 7.3).
+  await db.from("fichas_produto").update({ imagem_path: path, status: "aguardando_aprovacao" }).eq("id", ficha.id).eq("status", "gerando");
+  const { preco_usd_por_imagem } = await readConfig(["preco_usd_por_imagem"]);
+  await db
+    .from("geracoes")
+    .update({ status: "concluida", resultado_url: path, custo_usd: Number(preco_usd_por_imagem), concluido_em: new Date().toISOString() })
+    .eq("id", g.id)
+    .in("status", ["na_fila", "processando"]);
+}
+
+/**
+ * Política de falha técnica (seção 8.4; 12.1 e 12.3): marca a geração como falha (só quem "ganha"
+ * a atualização condicional segue — webhook repetido não duplica efeito). Tentativa 1 → nova
+ * geração, tentativa 2, mesma cobrança, sem novo débito. Tentativa 2 → ficha `falhou` e estorno
+ * integral via `estornar_creditos` (regra 11.2.4; idempotente por consumo).
+ * Recebe: geração, status final, motivo técnico e dependências. Devolve: nada.
+ */
+export async function failGeneration(
+  g: GenerationRow,
+  status: "falhou" | "bloqueada_nsfw",
+  erro: string,
+  deps = generationDeps(),
+): Promise<void> {
+  const db = createAdminClient();
+  const { data: claimed } = await db
+    .from("geracoes")
+    .update({ status, erro: erro.slice(0, 500), concluido_em: new Date().toISOString(), custo_usd: 0 })
+    .eq("id", g.id)
+    .in("status", ["na_fila", "processando"])
+    .select("id");
+  if (!claimed?.length) return;
+
+  if (g.tipo !== "ficha_produto") throw new Error(`tipo_nao_suportado:${g.tipo}`);
+  const { data: ficha } = await db.from("fichas_produto").select("id, versao").eq("geracao_id", g.id).maybeSingle();
+  if (!ficha) return;
+
+  if (g.tentativa < MAX_ATTEMPTS) {
+    const { data: retry, error } = await db
+      .from("geracoes")
+      .insert({ marca_id: g.marca_id, tipo: g.tipo, modelo: g.modelo, entrada: g.entrada as never, tentativa: g.tentativa + 1, cobranca_id: g.cobranca_id })
+      .select("id")
+      .single();
+    if (error) throw error;
+    await db.from("fichas_produto").update({ geracao_id: retry.id }).eq("id", ficha.id).eq("status", "gerando");
+    await submitGeneration(retry.id, deps);
+    return;
+  }
+
+  const { data: failed } = await db.from("fichas_produto").update({ status: "falhou" }).eq("id", ficha.id).eq("status", "gerando").select("id");
+  if (failed?.length && g.cobranca_id) {
+    const { error } = await db.rpc("estornar_creditos", {
+      p_movimentacao_id: g.cobranca_id,
+      p_observacao: `Falha técnica na ficha (versão ${ficha.versao})`,
+      p_referencia_tipo: "ficha",
+      p_referencia_id: ficha.id,
+    });
+    // `ja_estornado`: outro processo já devolveu — idempotente.
+    if (error && error.message !== "ja_estornado") throw error;
+  }
+}

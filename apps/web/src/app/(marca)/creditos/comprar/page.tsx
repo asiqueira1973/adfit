@@ -4,7 +4,8 @@ import { PackagePicker } from "@/features/credits/package-picker";
 import { Banner, PageHeader } from "@/components/ui/feedback";
 import { fill } from "@/lib/copy";
 import { brandContext } from "@/server/brand/context";
-import { listActivePackages } from "@/server/brand/credits";
+import { listActionPrices, listActivePackages } from "@/server/brand/credits";
+import { typicalAdCost } from "@/lib/format";
 import { getSupportContact } from "@/server/brand/queries";
 
 /**
@@ -22,7 +23,8 @@ export default function BuyCreditsPage() {
 
 async function Content() {
   const { brand, t, intl } = await brandContext();
-  const packages = await listActivePackages();
+  const [packages, prices] = await Promise.all([listActivePackages(), listActionPrices()]);
+  const adCost = typicalAdCost(Object.fromEntries(prices.map((p) => [p.acao, p.creditos])));
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6">
       <PageHeader title={t.copy.comprarTitulo} subtitle={t.creditos.subtituloComprar} />
@@ -34,7 +36,8 @@ async function Content() {
         <PackagePicker
           packages={packages}
           intl={intl}
-          labels={{ pagar: t.creditos.pagar, abrindo: t.copy.indoPagamento, rende: t.copy.pacoteRende, creditos: t.custo.creditos, erro: t.erros.generico }}
+          adCost={adCost}
+          labels={{ pagar: t.creditos.pagar, abrindo: t.copy.indoPagamento, rende: t.copy.pacoteRende, rende1: t.copy.pacoteRende1, creditos: t.custo.creditos, erro: t.erros.generico }}
         />
       )}
       <p className="flex items-center justify-center gap-1.5 text-[12px] text-text-2">

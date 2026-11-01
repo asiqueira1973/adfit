@@ -43,3 +43,22 @@ export function stripeEnv(): z.infer<typeof stripeSchema> {
 export function serverEnv(): z.infer<typeof secretSchema> {
   return parse(secretSchema);
 }
+
+const higgsfieldSchema = z.object({
+  HF_API_KEY_ID: z.string().min(1),
+  HF_API_KEY_SECRET: z.string().min(1),
+  HF_WEBHOOK_TOKEN: z.string().min(16),
+  HF_WEBHOOK_SECRET: z.string().regex(/^whsec_/).optional(),
+});
+
+/** Chaves da Higgsfield API (seção 4.3) e do webhook (token na query; assinatura opcional, D-16). */
+export function higgsfieldEnv(): z.infer<typeof higgsfieldSchema> {
+  return parse(higgsfieldSchema);
+}
+
+const anthropicSchema = z.object({ ANTHROPIC_API_KEY: z.string().min(1) });
+
+/** Chave da API do Claude (seção 4.2). Só servidor. */
+export function anthropicEnv(): z.infer<typeof anthropicSchema> {
+  return parse(anthropicSchema);
+}

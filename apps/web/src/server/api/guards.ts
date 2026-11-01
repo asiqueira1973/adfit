@@ -34,3 +34,17 @@ export async function requireBrandApi(): Promise<(Profile & { marcaId: string })
 export function isResponse<P extends Profile>(value: P | NextResponse): value is NextResponse {
   return value instanceof Response;
 }
+
+/**
+ * Guarda das rotas "marca/admin" da seção 13 (ficha, anúncio): usuário da marca ativo com marca,
+ * ou admin ativo. A posse do recurso (marca do produto/ficha) é conferida no serviço.
+ * Recebe: nada. Devolve: o perfil, ou a resposta 401/403.
+ */
+export async function requireBrandOrAdminApi(): Promise<Profile | NextResponse> {
+  const profile = await getCurrentProfile();
+  const t = getDictionary(profile?.idioma);
+  if (!profile) return jsonError("nao_autenticado", t.erros.naoAutenticado, 401);
+  const ok = profile.ativo && (profile.papel === "admin_plataforma" || (profile.papel === "usuario_marca" && !!profile.marcaId));
+  if (!ok) return jsonError("nao_autorizado", t.erros.naoAutorizado, 403);
+  return profile;
+}

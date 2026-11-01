@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   // Sem o selo do modo dev: ele cobre a barra inferior nas capturas de tela (seção 22.1).
   devIndicators: false,
   partialPrefetching: true,
+  // Prompts versionados (Anexo C) são lidos do disco em tempo de execução: entram no trace das funções.
+  outputFileTracingIncludes: { "/**": ["./src/server/prompts/*.md"] },
   turbopack: {
     rules: {
       "*.css": {
