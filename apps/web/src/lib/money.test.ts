@@ -12,6 +12,9 @@ describe("parseMoneyToCents (regra 11.2.6)", () => {
     ["US$ 65.00", 6500],
     ["1.234", 123400],
     ["0,5", 50],
+    ["1.234.567", 123456700],
+    ["1,234,567", 123456700],
+    ["1.234.567,89", 123456789],
   ])("%s → %i centavos", (input, cents) => expect(parseMoneyToCents(input)).toBe(cents));
   it.each(["", "0", "0,00", "-10", "abc"])("recusa %s", (input) => expect(parseMoneyToCents(input)).toBeNull());
 });
