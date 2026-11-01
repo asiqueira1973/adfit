@@ -23,3 +23,8 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 - **Decisão (Alexandre):** o app mostra que foi feito pela Dab Lab.
 - **Onde:** linha discreta no rodapé das telas públicas (entrar, senha), no fim do menu do perfil da marca e no rodapé do menu lateral do admin. Constante `MADE_BY` em `apps/web/src/lib/constants.ts`; texto `feitoPor` em `copy.ts` ("Made by Dab Lab" no dicionário em inglês do MD-1).
 - **Onde não:** dentro dos vídeos. O fecho do vídeo é só da marca do cliente (princípio 3 e regra 11.8).
+
+## Respostas às perguntas abertas (seção 25) — 01/11/2026, Alexandre
+- **25.1 Pacotes:** USD como proposto na regra 11.2.9 — Pacote 50 = 50 créditos por US$ 30; Pacote 120 = 120 créditos por US$ 65. **Sem cortesia**: a Kore Active compra o primeiro pacote pela Stripe.
+- **25.6 Conta Stripe:** Dab Lab (CNPJ), Brasil. Atenção ao risco da seção 23 (repasse mais lento e taxa maior para cartão internacional); a taxa entra no preço dos pacotes.
+- **E-mails do Auth no projeto compartilhado "BANCO DE TESTE":** aplicar os modelos do AdFit (convite e recuperação, bilíngues, com `{{ .RedirectTo }}`) no projeto compartilhado, ciente de que os outros apps passam a usar esses modelos.
