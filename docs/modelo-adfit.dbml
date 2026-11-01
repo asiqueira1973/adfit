@@ -1,0 +1,413 @@
+// AdFit (nome provisório) — modelo de dados da seção 7 do spec.md v0.2
+// Banco em português, snake_case. Cole em dbdiagram.io.
+
+Project adfit {
+  database_type: 'PostgreSQL'
+  Note: 'Plataforma de anúncios em vídeo com IA para marcas de roupa fitness — piloto Kore Active'
+}
+
+// ---------- Enums ----------
+
+enum papel_usuario {
+  admin_plataforma
+  usuario_marca
+}
+
+enum categoria_peca {
+  top
+  legging
+  shorts
+  camiseta
+  regata
+  jaqueta
+  conjunto
+  outro
+}
+
+enum genero_alvo {
+  feminino
+  masculino
+  unissex
+}
+
+enum status_ficha {
+  gerando
+  aguardando_aprovacao
+  aprovada
+  descartada
+  falhou
+}
+
+enum status_anuncio {
+  gerando_roteiro
+  gerando_quadros
+  aguardando_aprovacao
+  gerando_clipes
+  montando
+  pronto
+  falhou
+}
+
+enum status_item {
+  gerando
+  pronto
+  descartado
+  falhou
+}
+
+enum status_geracao {
+  na_fila
+  processando
+  concluida
+  falhou
+  bloqueada_nsfw
+}
+
+enum tipo_geracao {
+  ficha_produto
+  quadro_chave
+  clipe_video
+}
+
+enum cenario {
+  academia
+  box_crossfit
+  estudio_funcional
+  ao_ar_livre_urbano
+  ao_ar_livre_natureza
+  pista_de_corrida
+}
+
+enum modalidade {
+  musculacao
+  crossfit
+  hyrox
+  corrida
+  funcional
+  yoga_pilates
+}
+
+enum genero_modelo {
+  mulher
+  homem
+}
+
+enum faixa_etaria {
+  de_20_a_30
+  de_30_a_45
+  acima_de_45
+}
+
+enum estilo_video {
+  energetico
+  cinematografico
+  lifestyle
+}
+
+enum formato_video {
+  vertical_9_16
+  horizontal_16_9
+}
+
+enum tipo_movimentacao {
+  compra
+  bonus
+  consumo
+  estorno
+  ajuste_manual
+}
+
+enum acao_cobravel {
+  gerar_ficha
+  refazer_ficha
+  gerar_roteiro_quadros
+  refazer_quadro
+  gerar_video
+  refazer_clipe
+  remontar_texto
+}
+
+enum status_pagamento {
+  iniciado
+  pago
+  falhou
+  expirado
+  reembolsado
+}
+
+// ---------- Tabelas ----------
+
+// Desativação (ativa), nunca exclusão. saldo_creditos só muda via funções de crédito (trg_marcas_proteger_saldo).
+// checks: instagram ~ '^[A-Za-z0-9._]{1,30}$'; cor_destaque ~ '^#[0-9A-Fa-f]{6}$'; cta_padrao ≤ 40; saldo_creditos >= 0
+Table marcas {
+  id uuid [pk, default: `gen_random_uuid()`]
+  nome text [not null]
+  instagram text
+  logo_path text
+  cor_destaque text
+  cta_padrao text [not null, default: 'Compre pelo link da bio']
+  tom_de_voz text
+  saldo_creditos integer [not null, default: 0]
+  ativa boolean [not null, default: true]
+  criado_em timestamptz [not null, default: `now()`]
+  atualizado_em timestamptz [not null, default: `now()`]
+}
+
+// id = auth.users.id (fk para auth.users, fora do schema public)
+// check perfis_marca_obrigatoria_chk: papel = 'admin_plataforma' or marca_id is not null
+Table perfis {
+  id uuid [pk]
+  marca_id uuid
+  papel papel_usuario [not null, default: 'usuario_marca']
+  nome text [not null]
+  email text [not null, unique]
+  ativo boolean [not null, default: true]
+  criado_em timestamptz [not null, default: `now()`]
+}
+
+// Soft delete (arquivado).
+Table produtos {
+  id uuid [pk, default: `gen_random_uuid()`]
+  marca_id uuid [not null]
+  nome text [not null]
+  categoria categoria_peca [not null]
+  genero_alvo genero_alvo [not null, default: 'unissex']
+  descricao text
+  ficha_aprovada_id uuid
+  arquivado boolean [not null, default: false]
+  criado_em timestamptz [not null, default: `now()`]
+  atualizado_em timestamptz [not null, default: `now()`]
+}
+
+// Máx. 4 por produto (trg_fotos_produto_limite); check ordem between 1 and 4.
+// Hard delete permitido enquanto o produto não tem ficha aprovada.
+Table fotos_produto {
+  id uuid [pk, default: `gen_random_uuid()`]
+  produto_id uuid [not null]
+  marca_id uuid [not null]
+  storage_path text [not null]
+  ordem smallint [not null, default: 1]
+  criado_em timestamptz [not null, default: `now()`]
+}
+
+// Nunca excluída; versões substituídas ficam 'descartada'.
+Table fichas_produto {
+  id uuid [pk, default: `gen_random_uuid()`]
+  produto_id uuid [not null]
+  marca_id uuid [not null]
+  versao integer [not null]
+  status status_ficha [not null, default: 'gerando']
+  imagem_path text
+  geracao_id uuid
+  instrucao_refacao text
+  criado_em timestamptz [not null, default: `now()`]
+
+  indexes {
+    (produto_id, versao) [unique]
+  }
+}
+
+// Soft delete (arquivado). texto_oferta ≤ 40.
+Table anuncios {
+  id uuid [pk, default: `gen_random_uuid()`]
+  marca_id uuid [not null]
+  produto_id uuid [not null]
+  ficha_id uuid [not null]
+  criado_por uuid [not null]
+  titulo text [not null]
+  cenario cenario [not null]
+  modalidade modalidade [not null]
+  genero_modelo genero_modelo [not null]
+  faixa_etaria faixa_etaria [not null, default: 'de_20_a_30']
+  estilo estilo_video [not null, default: 'energetico']
+  formato formato_video [not null, default: 'vertical_9_16']
+  com_texto boolean [not null, default: true]
+  texto_oferta text
+  observacoes text
+  status status_anuncio [not null, default: 'gerando_roteiro']
+  roteiro jsonb
+  prompt_versao text
+  video_final_path text
+  versao_montagem integer [not null, default: 0]
+  erro text
+  arquivado boolean [not null, default: false]
+  criado_em timestamptz [not null, default: `now()`]
+  atualizado_em timestamptz [not null, default: `now()`]
+}
+
+// Exatamente 3 por anúncio; check ordem between 1 and 3. Nunca excluída.
+Table cenas {
+  id uuid [pk, default: `gen_random_uuid()`]
+  anuncio_id uuid [not null]
+  marca_id uuid [not null]
+  ordem smallint [not null]
+  descricao text [not null]
+  prompt_quadro text [not null]
+  prompt_movimento text [not null]
+  texto_tela text
+  quadro_atual_id uuid
+  clipe_atual_id uuid
+  criado_em timestamptz [not null, default: `now()`]
+
+  indexes {
+    (anuncio_id, ordem) [unique]
+  }
+}
+
+// Nunca excluído.
+Table quadros {
+  id uuid [pk, default: `gen_random_uuid()`]
+  cena_id uuid [not null]
+  marca_id uuid [not null]
+  versao integer [not null]
+  status status_item [not null, default: 'gerando']
+  imagem_path text
+  geracao_id uuid
+  instrucao_refacao text
+  qc_aprovado boolean
+  qc_detalhe jsonb
+  criado_em timestamptz [not null, default: `now()`]
+
+  indexes {
+    (cena_id, versao) [unique]
+  }
+}
+
+// Nunca excluído.
+Table clipes {
+  id uuid [pk, default: `gen_random_uuid()`]
+  cena_id uuid [not null]
+  marca_id uuid [not null]
+  quadro_id uuid [not null]
+  versao integer [not null]
+  status status_item [not null, default: 'gerando']
+  video_path text
+  geracao_id uuid
+  instrucao_refacao text
+  criado_em timestamptz [not null, default: `now()`]
+
+  indexes {
+    (cena_id, versao) [unique]
+  }
+}
+
+// Uma linha por chamada à Higgsfield API. Só admin lê. Nunca excluída.
+Table geracoes {
+  id uuid [pk, default: `gen_random_uuid()`]
+  marca_id uuid [not null]
+  tipo tipo_geracao [not null]
+  modelo text [not null]
+  request_id text [unique]
+  status status_geracao [not null, default: 'na_fila']
+  entrada jsonb [not null]
+  resultado_url text
+  custo_usd numeric(10,4)
+  tentativa smallint [not null, default: 1]
+  erro text
+  cobranca_id uuid
+  criado_em timestamptz [not null, default: `now()`]
+  concluido_em timestamptz
+}
+
+// Livro-razão append-only (trg_movimentacoes_imutaveis). check quantidade <> 0.
+// check: observacao obrigatória quando tipo in ('ajuste_manual', 'bonus').
+// check: moeda obrigatória quando valor_pago_centavos is not null.
+Table movimentacoes_creditos {
+  id uuid [pk, default: `gen_random_uuid()`]
+  marca_id uuid [not null]
+  tipo tipo_movimentacao [not null]
+  quantidade integer [not null]
+  saldo_apos integer [not null]
+  acao acao_cobravel
+  referencia_tipo text
+  referencia_id uuid
+  estorno_de_id uuid
+  valor_pago_centavos integer
+  moeda text
+  pagamento_id uuid [unique]
+  observacao text
+  criado_por uuid
+  criado_em timestamptz [not null, default: `now()`]
+}
+
+// Desativação (ativo), nunca exclusão. checks: creditos > 0; preco_centavos > 0; moeda ~ '^[a-z]{3}$'
+Table pacotes_creditos {
+  id uuid [pk, default: `gen_random_uuid()`]
+  nome text [not null]
+  creditos integer [not null]
+  preco_centavos integer [not null]
+  moeda text [not null]
+  stripe_price_id text [not null, unique]
+  ativo boolean [not null, default: true]
+  ordem smallint [not null, default: 1]
+  criado_em timestamptz [not null, default: `now()`]
+  atualizado_em timestamptz [not null, default: `now()`]
+}
+
+// Uma linha por Checkout Session. Nunca excluída.
+Table pagamentos {
+  id uuid [pk, default: `gen_random_uuid()`]
+  marca_id uuid [not null]
+  pacote_id uuid [not null]
+  criado_por uuid [not null]
+  creditos integer [not null]
+  valor_centavos integer [not null]
+  moeda text [not null]
+  status status_pagamento [not null, default: 'iniciado']
+  stripe_checkout_session_id text [unique]
+  stripe_payment_intent_id text
+  pago_em timestamptz
+  observacao text
+  criado_em timestamptz [not null, default: `now()`]
+  atualizado_em timestamptz [not null, default: `now()`]
+}
+
+// check creditos >= 0
+Table precos_acoes {
+  acao acao_cobravel [pk]
+  creditos integer [not null]
+  descricao text [not null]
+  atualizado_em timestamptz [not null, default: `now()`]
+}
+
+Table configuracoes {
+  chave text [pk]
+  valor jsonb [not null]
+  descricao text [not null]
+  atualizado_em timestamptz [not null, default: `now()`]
+}
+
+// ---------- Relacionamentos ----------
+
+Ref: perfis.marca_id > marcas.id
+Ref: produtos.marca_id > marcas.id
+Ref: produtos.ficha_aprovada_id > fichas_produto.id
+Ref: fotos_produto.produto_id > produtos.id
+Ref: fotos_produto.marca_id > marcas.id
+Ref: fichas_produto.produto_id > produtos.id
+Ref: fichas_produto.marca_id > marcas.id
+Ref: fichas_produto.geracao_id > geracoes.id
+Ref: anuncios.marca_id > marcas.id
+Ref: anuncios.produto_id > produtos.id
+Ref: anuncios.ficha_id > fichas_produto.id
+Ref: anuncios.criado_por > perfis.id
+Ref: cenas.anuncio_id > anuncios.id
+Ref: cenas.marca_id > marcas.id
+Ref: cenas.quadro_atual_id > quadros.id
+Ref: cenas.clipe_atual_id > clipes.id
+Ref: quadros.cena_id > cenas.id
+Ref: quadros.marca_id > marcas.id
+Ref: quadros.geracao_id > geracoes.id
+Ref: clipes.cena_id > cenas.id
+Ref: clipes.marca_id > marcas.id
+Ref: clipes.quadro_id > quadros.id
+Ref: clipes.geracao_id > geracoes.id
+Ref: geracoes.marca_id > marcas.id
+Ref: geracoes.cobranca_id > movimentacoes_creditos.id
+Ref: movimentacoes_creditos.marca_id > marcas.id
+Ref: movimentacoes_creditos.estorno_de_id > movimentacoes_creditos.id
+Ref: movimentacoes_creditos.criado_por > perfis.id
+Ref: movimentacoes_creditos.pagamento_id - pagamentos.id
+Ref: pagamentos.marca_id > marcas.id
+Ref: pagamentos.pacote_id > pacotes_creditos.id
+Ref: pagamentos.criado_por > perfis.id
