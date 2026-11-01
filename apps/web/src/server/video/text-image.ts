@@ -1,16 +1,16 @@
 import "server-only";
 import { readFileSync } from "node:fs";
-import opentype from "opentype.js";
+import { parse, type Font, type Glyph } from "opentype.js";
 import sharp from "sharp";
 import { fontPath } from "./assemble";
 
-let font: opentype.Font | null = null;
+let font: Font | null = null;
 
 /** Carrega a Inter Bold do repositório uma vez (regra 11.8). */
-function interBold(): opentype.Font {
+function interBold(): Font {
   if (!font) {
     const buf = readFileSync(fontPath());
-    font = opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+    font = parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   }
   return font;
 }
@@ -22,11 +22,11 @@ export type TextImage = { png: Buffer; width: number; height: number };
  * suporta na Inter 4 — "substFormat 2 is not yet supported"). Para texto latino com acentos basta:
  * cada caractere tem o seu desenho pré-composto. Devolve: path SVG e largura.
  */
-function layoutLine(f: opentype.Font, text: string, x0: number, y: number, size: number): { d: string; width: number } {
+function layoutLine(f: Font, text: string, x0: number, y: number, size: number): { d: string; width: number } {
   const scale = size / f.unitsPerEm;
   let x = x0;
   let d = "";
-  let prev: opentype.Glyph | null = null;
+  let prev: Glyph | null = null;
   for (const ch of Array.from(text)) {
     const glyph = f.charToGlyph(ch);
     if (prev) x += f.getKerningValue(prev, glyph) * scale;
