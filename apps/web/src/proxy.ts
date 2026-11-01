@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/server/db/database.types";
-import { LOCALE_COOKIE, isLocale, localeFromAcceptLanguage } from "@/lib/i18n";
+import { LOCALE_COOKIE, getDictionary, isLocale, localeFromAcceptLanguage } from "@/lib/i18n";
 
 /** Rotas públicas (seção 10): acessíveis sem sessão. */
 const PUBLIC_PATHS = ["/entrar", "/definir-senha", "/redefinir-senha", "/acesso-desativado", "/auth/confirm", "/sair"];
@@ -51,7 +51,7 @@ export async function proxy(request: NextRequest) {
       response.cookies.set(LOCALE_COOKIE, localeFromAcceptLanguage(request.headers.get("accept-language")), { path: "/", sameSite: "lax" });
     }
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ erro: "nao_autenticado", mensagem: "Entre de novo para continuar." }, { status: 401 });
+      return NextResponse.json({ erro: "nao_autenticado", mensagem: getDictionary(request.cookies.get(LOCALE_COOKIE)?.value).erros.naoAutenticado }, { status: 401 });
     }
     return isPublic(pathname) ? response : redirectTo("/entrar");
   }
@@ -62,7 +62,7 @@ export async function proxy(request: NextRequest) {
     await supabase.auth.signOut();
     const target = perfil ? "/acesso-desativado" : "/entrar?erro=sem_acesso";
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ erro: "acesso_desativado", mensagem: "Seu acesso foi desativado. Fale com o suporte." }, { status: 403 });
+      return NextResponse.json({ erro: "acesso_desativado", mensagem: getDictionary(perfil?.idioma).copy.usuarioDesativado }, { status: 403 });
     }
     return pathname === target.split("?")[0] ? response : redirectTo(target);
   }

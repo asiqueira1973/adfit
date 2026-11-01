@@ -8,6 +8,8 @@ import { Banner, EmptyState } from "@/components/ui/feedback";
 import { AdCard } from "@/features/ads/ad-card";
 import { fxAds, fxBrand, fxProducts, PRODUCT_BADGE } from "@/features/fixtures";
 import { readFlags } from "@/features/fixtures/flags";
+import { requireBrandUser } from "@/server/auth/profile";
+import { getBrandSummary } from "@/server/brand/queries";
 import { COPY } from "@/lib/copy";
 
 /**
@@ -24,6 +26,9 @@ export default function HomePage({ searchParams }: PageProps<"/inicio">) {
 
 async function HomeContent({ searchParams }: { searchParams: PageProps<"/inicio">["searchParams"] }) {
   const flags = readFlags(await searchParams);
+  // Saldo real da marca (critério 8.8); o restante da tela ainda usa fixtures até os épicos 8.3/8.8.
+  const profile = await requireBrandUser();
+  const brand = await getBrandSummary(profile.marcaId);
   const empty = flags.estado === "vazio";
   const ads = empty ? [] : fxAds.slice(0, 6);
   const withoutSheet = empty ? [] : fxProducts.filter((p) => p.status !== "pronto");
@@ -34,7 +39,7 @@ async function HomeContent({ searchParams }: { searchParams: PageProps<"/inicio"
         <div>
           <div className="text-[13px] font-medium text-text-2">Seu saldo</div>
           <div className="flex items-baseline gap-1.5">
-            <span className="tabular text-[40px] font-bold leading-none tracking-tight">{flags.saldo}</span>
+            <span className="tabular text-[40px] font-bold leading-none tracking-tight">{brand?.saldo_creditos ?? 0}</span>
             <span className="text-[15px] text-text-2">créditos</span>
           </div>
         </div>

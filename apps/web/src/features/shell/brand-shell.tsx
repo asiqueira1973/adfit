@@ -5,14 +5,16 @@ import { fill } from "@/lib/copy";
 import type { Dictionary, Locale } from "@/lib/i18n";
 import { BottomTabBar, BottomTabBarView, TopTabs, TopTabsView } from "./brand-nav";
 import { ProfileMenu } from "./profile-menu";
+import { BrandStatusProvider } from "./brand-status";
 
 /**
  * Casca das telas da marca: barra superior com saldo (critério 8.8), abas no desktop, barra
  * inferior no celular, menu do perfil e faixa de aviso (ex.: conta pausada, seção 6.3).
  * Recebe: saldo, nomes, idioma, dicionário, faixa opcional e o conteúdo. Devolve: o layout.
  */
-export function BrandShell({ balance, userName, brandName, locale, t, banner, children }: { balance: number; userName: string; brandName: string; locale: Locale; t: Dictionary; banner?: ReactNode; children: ReactNode }) {
+export function BrandShell({ balance, paused, userName, brandName, locale, t, banner, children }: { balance: number; paused: boolean; userName: string; brandName: string; locale: Locale; t: Dictionary; banner?: ReactNode; children: ReactNode }) {
   return (
+    <BrandStatusProvider value={{ balance, paused }}>
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-hairline bg-bg/85 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
@@ -34,6 +36,7 @@ export function BrandShell({ balance, userName, brandName, locale, t, banner, ch
       </main>
       <Suspense fallback={<BottomTabBarView pathname="" labels={t.nav} />}><BottomTabBar labels={t.nav} /></Suspense>
     </div>
+    </BrandStatusProvider>
   );
 }
 

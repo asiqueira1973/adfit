@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
 import { COPY } from "@/lib/copy";
 import { costSuffix } from "@/lib/format";
+import { useBrandStatus } from "@/features/shell/brand-status";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -42,6 +45,8 @@ export function ButtonLink({
  * Botão de ação cobrada (princípio 4 e seção 9.2.6): mostra o custo no rótulo
  * ("Gerar vídeo · 12 créditos" / "· grátis"); sem saldo fica desabilitado com
  * "Saldo insuficiente" e link "Comprar créditos"; com a marca pausada fica desabilitado.
+ * Dentro das telas da marca, saldo e pausa vêm do banco (BrandStatusProvider na casca) e têm
+ * prioridade sobre as props; as props valem fora desse contexto.
  * Recebe: rótulo, custo, saldo atual, se a marca está pausada e props de botão.
  * Devolve: o botão (e o link de compra quando falta saldo).
  */
@@ -62,15 +67,18 @@ export function CostButton({
   variant?: Variant;
   icon?: ReactNode;
 }) {
-  const insufficient = balance < cost;
-  const disabled = props.disabled || paused || insufficient;
+  const status = useBrandStatus();
+  const effectiveBalance = status?.balance ?? balance;
+  const effectivePaused = status?.paused ?? paused;
+  const insufficient = effectiveBalance < cost;
+  const disabled = props.disabled || effectivePaused || insufficient;
   return (
     <div className={cn("flex flex-col items-stretch gap-1.5", className)}>
       <button {...props} disabled={disabled} className={buttonClass(variant, "w-full")}>
         {icon}
         {insufficient ? COPY.saldoInsuficiente : `${label} · ${costSuffix(cost)}`}
       </button>
-      {insufficient && !paused && (
+      {insufficient && !effectivePaused && (
         <Link href="/creditos/comprar" className="text-center text-[13px] font-medium text-brand-text underline-offset-2 hover:underline">
           Comprar créditos
         </Link>

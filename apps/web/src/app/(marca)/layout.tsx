@@ -26,7 +26,7 @@ async function BrandFrame({ children }: { children: ReactNode }) {
   const paused = brand ? !brand.ativa : false;
   const banner = paused ? <Banner tone="warning">{fill(t.copy.contaPausada, { contato_suporte: await getSupportContact() })}</Banner> : undefined;
   return (
-    <BrandShell balance={brand?.saldo_creditos ?? 0} userName={profile.nome} brandName={brand?.nome ?? ""} locale={profile.idioma} t={t} banner={banner}>
+    <BrandShell balance={brand?.saldo_creditos ?? 0} paused={paused} userName={profile.nome} brandName={brand?.nome ?? ""} locale={profile.idioma} t={t} banner={banner}>
       {children}
     </BrandShell>
   );

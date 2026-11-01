@@ -217,9 +217,10 @@ web3 = 30
 # provider = "hcaptcha"
 # secret = ""
 
+# Mantém o provedor de e-mail ligado; o autocadastro é bloqueado em [auth] enable_signup (seção 6.1).
 [auth.email]
 # Allow/disallow new user signups via email to your project.
-enable_signup = false
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true

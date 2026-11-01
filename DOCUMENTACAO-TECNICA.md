@@ -1,6 +1,6 @@
 # AdFit — Documentação técnica
 
-Descreve o sistema **como está implementado** (seção 19 do `docs/spec.md`). Atualizada no mesmo commit de toda mudança de schema, função, política, prompt ou lógica de tela. Estado atual: épicos 8.0, design e 8.1.
+Descreve o sistema **como está implementado** (seção 19 do `docs/spec.md`). Atualizada no mesmo commit de toda mudança de schema, função, política, prompt ou lógica de tela. Estado atual: épicos 8.0, design, 8.1 e 8.2.
 
 ## 1. Modelo de dados
 
@@ -64,7 +64,9 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 |---|---|---|
 | Entrar, Definir/Redefinir senha | `perfis` (próprio) | Supabase Auth; `perfis.idioma` no 1º acesso (server action, service_role) |
 | Casca da marca (todas as telas da marca) | `perfis`, `marcas` (nome, saldo, ativa), `configuracoes.contato_suporte` (servidor) | `perfis.idioma` (troca de idioma) |
-| [Admin] Marcas | `marcas`, `anuncios` (contagem do mês) | — (criação no 8.2) |
+| [Admin] Marcas | `marcas`, `anuncios` (contagem do mês) | `POST /api/admin/marcas` |
+| [Admin] Marca | `marcas`, `perfis`, `movimentacoes_creditos`, `pagamentos` (+ `pacotes_creditos.nome`), `anuncios` | `PATCH /api/admin/marcas/:id` (kit, pausar), `POST /api/admin/creditos` (`lancar_creditos`), `POST /api/admin/usuarios`, `PATCH /api/admin/usuarios/:id` |
+| [Admin] Usuários | `perfis` (+ `marcas.nome`), `marcas` | `POST /api/admin/usuarios`, `PATCH /api/admin/usuarios/:id` |
 | Demais telas | ainda com dados fictícios do design (`src/features/fixtures`) | ligadas nos épicos seguintes |
 
 ## 5. Lógica por tela (até o 8.1)
@@ -74,6 +76,10 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 - **Esqueci a senha**: sempre a mesma resposta; link do e-mail → `/auth/confirm` → `/redefinir-senha?etapa=nova`.
 - **Convite**: link do e-mail → `/auth/confirm` (verifyOtp) → `/definir-senha` (mín. 8 caracteres + confirmação) → Início.
 - **Sair**: `POST /sair` (POST para o prefetch de links nunca deslogar ninguém).
+- **Rotas de admin (`src/app/api/admin/*`)**: `requireAdminApi()` (401 sem sessão, 403 se não for admin ativo), corpo validado com Zod (`src/server/admin/schemas.ts`), lógica em `src/server/admin/*` com service_role. Erros do banco viram `{ erro, mensagem }` (`src/server/api/http.ts`): `saldo_negativo` → "O ajuste deixaria o saldo negativo." (422), `compra_exige_valor`, `observacao_obrigatoria`, `email_existente` (409)…
+- **Lançar créditos**: valor pago digitado em qualquer formato ("1.234,56", "US$ 65.00") → centavos (`src/lib/money.ts`); moeda BRL/USD/EUR.
+- **Convidar**: recusa e-mail já em `perfis` ou no Auth; `inviteUserByEmail` com `redirectTo` para `/auth/confirm?next=/definir-senha`; se o perfil falhar, o usuário do Auth é removido.
+- **Pausar marca**: `marcas.ativa = false` → faixa "Conta pausada" em todas as telas da marca, botões cobrados desabilitados (contexto `BrandStatusProvider` com saldo e pausa reais) e `debitar_creditos` recusa (`marca_inativa`).
 - **Idioma (MD-1)**: antes do login, `Accept-Language`; no 1º acesso, gravado em `perfis.idioma`; troca no menu do perfil e no rodapé do admin.
 
 ## 6. Pipelines

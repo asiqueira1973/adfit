@@ -6,10 +6,8 @@
  * Formata um valor em centavos na moeda do pacote com Intl.NumberFormat (critério 8.9).
  * Recebe: centavos e código ISO 4217 minúsculo. Devolve: ex. "US$ 30,00".
  */
-export function formatMoney(cents: number, currency: string): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: currency.toUpperCase() }).format(
-    cents / 100,
-  );
+export function formatMoney(cents: number, currency: string, locale = "pt-BR"): string {
+  return new Intl.NumberFormat(locale, { style: "currency", currency: currency.toUpperCase() }).format(cents / 100);
 }
 
 /**
@@ -34,14 +32,14 @@ export function typicalAds(credits: number): number {
   return Math.floor(credits / 20);
 }
 
-/** Data curta pt-BR: "31/10/2026". */
-export function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date(iso));
+/** Data curta no idioma: "31/10/2026" (pt-BR) ou "10/31/2026" (en-US). */
+export function formatDate(iso: string, locale = "pt-BR"): string {
+  return new Intl.DateTimeFormat(locale, { timeZone: "America/Sao_Paulo" }).format(new Date(iso));
 }
 
 /** Data e hora curtas pt-BR: "31/10, 14:05". */
-export function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+export function formatDateTime(iso: string, locale = "pt-BR"): string {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",

@@ -39,6 +39,8 @@ O app terá pt-BR e inglês (emenda MD-1 em `docs/mudancas-de-escopo.md`); nenhu
 - Cache Components: leitura de sessão/cookies sempre dentro de `<Suspense>`; `createUserClient()` chama `connection()` (o Supabase usa o relógio).
 - Hooks de cliente com `usePathname`/`useSearchParams` precisam de `<Suspense>` (padrão: componente `*View` puro como fallback).
 - `/sair` é POST (formulário); nunca `<Link href="/sair">`.
+- No `config.toml`, `[auth] enable_signup = false` bloqueia autocadastro; `[auth.email] enable_signup` precisa ficar `true` (senão desliga o login por e-mail). Mudou o config → `supabase stop && supabase start`.
+- Botões cobrados (`CostButton`) leem saldo e pausa reais do `BrandStatusProvider` da casca; não passar saldo de fixture achando que vale.
 - Erros de negócio do banco sobem com MESSAGE = código (`saldo_insuficiente`…); o servidor traduz.
 - Não chamar função volátil (ex.: `debitar_creditos`) dentro de WHERE em teste: roda uma vez por linha.
 - Quando o agente errar a mesma coisa duas vezes, a correção entra aqui.
