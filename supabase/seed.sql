@@ -3,25 +3,25 @@
 -- scripts/seed-admin.ts, que lê SEED_ADMIN_* e SEED_STRIPE_PRICE_* das variáveis de ambiente.
 -- =============================================================================
 
--- Preços por ação (regra 11.1).
+-- Preços por ação (regra 11.1, com gerar_video e refazer_clipe da emenda MD-4).
 insert into public.precos_acoes (acao, creditos, descricao) values
   ('gerar_ficha', 2, 'Gerar ficha do produto'),
   ('refazer_ficha', 1, 'Refazer ficha'),
   ('gerar_roteiro_quadros', 2, 'Criar anúncio'),
   ('refazer_quadro', 1, 'Refazer imagem da cena'),
-  ('gerar_video', 12, 'Gerar vídeo'),
-  ('refazer_clipe', 4, 'Refazer cena em vídeo'),
+  ('gerar_video', 51, 'Gerar vídeo'),
+  ('refazer_clipe', 17, 'Refazer cena em vídeo'),
   ('remontar_texto', 0, 'Atualizar vídeo')
 on conflict (acao) do nothing;
 
--- Configurações (regra 11.6). Endpoints da Higgsfield ficam "a_confirmar" até a pergunta 25.5;
--- modelos Claude confirmados pelo Alexandre em 01/11/2026 (MD-3).
+-- Configurações (regra 11.6). Endpoints e preços da Higgsfield confirmados pelo Alexandre em
+-- 01/11/2026 (pergunta 25.5, emenda MD-4); modelos Claude confirmados no mesmo dia (MD-3).
 insert into public.configuracoes (chave, valor, descricao) values
-  ('modelo_imagem', '"a_confirmar"', 'Endpoint ID do modelo de edição de imagem (ficha e quadros) — pergunta 25.5'),
-  ('modelo_video', '"a_confirmar"', 'Endpoint ID do Kling 3.0 image-to-video (clipes) — pergunta 25.5'),
+  ('modelo_imagem', '"xai/grok-imagine-image-2.0"', 'Endpoint ID do modelo de edição de imagem (ficha e quadros) — Grok Imagine 2.0 (MD-4); alternativa: alibaba/qwen-image-3/edit'),
+  ('modelo_video', '"bytedance/seedance-2.5/image-to-video"', 'Endpoint ID do image-to-video (clipes) — Seedance 2.5 (MD-4); alternativa: kling-video/v3.0/pro/image-to-video'),
   ('resolucao_video', '"1080p"', 'Resolução dos clipes'),
-  ('preco_usd_por_segundo_video', '0.112', 'Custo USD por segundo de clipe (Kling 3.0 1080p sem áudio; confirmar no console)'),
-  ('preco_usd_por_imagem', '0.08', 'Custo USD por imagem (confirmar no console)'),
+  ('preco_usd_por_segundo_video', '1.1372', 'Custo USD por segundo de clipe (Seedance 2.5 1080p sem áudio, sem desconto; MD-4)'),
+  ('preco_usd_por_imagem', '0.09', 'Custo USD por imagem (Grok Imagine 2.0 em 2k; MD-4)'),
   ('cotacao_usd_brl', '5.50', 'Cotação USD→BRL do painel de custos'),
   ('cotacoes_para_brl', '{"usd": 5.50, "eur": 6.00}', 'Cotações para converter receita de pagamentos em BRL'),
   ('modelo_claude_roteiro', '"claude-sonnet-5"', 'Modelo Claude do roteiro e da refação'),

@@ -27,8 +27,8 @@ export const fxPrices = {
   refazer_ficha: 1,
   gerar_roteiro_quadros: 2,
   refazer_quadro: 1,
-  gerar_video: 12,
-  refazer_clipe: 4,
+  gerar_video: 51,
+  refazer_clipe: 17,
   remontar_texto: 0,
 } as const;
 
@@ -37,8 +37,8 @@ export const fxPriceRows = [
   { acao: "refazer_ficha", descricao: "Refazer ficha", creditos: 1 },
   { acao: "gerar_roteiro_quadros", descricao: "Criar anúncio", creditos: 2 },
   { acao: "refazer_quadro", descricao: "Refazer imagem da cena", creditos: 1 },
-  { acao: "gerar_video", descricao: "Gerar vídeo", creditos: 12 },
-  { acao: "refazer_clipe", descricao: "Refazer cena em vídeo", creditos: 4 },
+  { acao: "gerar_video", descricao: "Gerar vídeo", creditos: 51 },
+  { acao: "refazer_clipe", descricao: "Refazer cena em vídeo", creditos: 17 },
   { acao: "remontar_texto", descricao: "Atualizar vídeo", creditos: 0 },
 ];
 
@@ -91,8 +91,8 @@ export const fxLedger = [
 ];
 
 export const fxPackages = [
-  { id: "pk50", nome: "Pacote 50", creditos: 50, preco_centavos: 3000, moeda: "usd", stripe_price_id: "price_1Q…50", ativo: true, ordem: 1 },
-  { id: "pk120", nome: "Pacote 120", creditos: 120, preco_centavos: 6500, moeda: "usd", stripe_price_id: "price_1Q…120", ativo: true, ordem: 2 },
+  { id: "pk60", nome: "Pacote 60", creditos: 60, preco_centavos: 3600, moeda: "usd", stripe_price_id: "price_1Q…60", ativo: true, ordem: 1 },
+  { id: "pk150", nome: "Pacote 150", creditos: 150, preco_centavos: 8100, moeda: "usd", stripe_price_id: "price_1Q…150", ativo: true, ordem: 2 },
 ];
 
 export type PaymentStatus = "iniciado" | "pago" | "falhou" | "expirado" | "reembolsado";
@@ -105,9 +105,9 @@ export const PAYMENT_BADGE: Record<PaymentStatus, { label: string; tone: Tone }>
 };
 
 export const fxPayments = [
-  { id: "pg1", data: "2026-10-30T09:10:00Z", pacote: "Pacote 50", creditos: 50, valor_centavos: 3000, moeda: "usd", status: "pago" as PaymentStatus },
-  { id: "pg2", data: "2026-10-28T19:40:00Z", pacote: "Pacote 120", creditos: 120, valor_centavos: 6500, moeda: "usd", status: "expirado" as PaymentStatus },
-  { id: "pg3", data: "2026-10-28T19:31:00Z", pacote: "Pacote 120", creditos: 120, valor_centavos: 6500, moeda: "usd", status: "falhou" as PaymentStatus },
+  { id: "pg1", data: "2026-10-30T09:10:00Z", pacote: "Pacote 60", creditos: 60, valor_centavos: 3600, moeda: "usd", status: "pago" as PaymentStatus },
+  { id: "pg2", data: "2026-10-28T19:40:00Z", pacote: "Pacote 150", creditos: 150, valor_centavos: 8100, moeda: "usd", status: "expirado" as PaymentStatus },
+  { id: "pg3", data: "2026-10-28T19:31:00Z", pacote: "Pacote 150", creditos: 150, valor_centavos: 8100, moeda: "usd", status: "falhou" as PaymentStatus },
 ];
 
 /* ---------- Admin ---------- */

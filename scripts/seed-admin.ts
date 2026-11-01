@@ -1,7 +1,7 @@
 /**
  * Seed do primeiro administrador e dos pacotes de créditos (seções 5 e 7.6).
  * Recebe (variáveis de ambiente): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
- *   SEED_ADMIN_EMAIL, SEED_ADMIN_SENHA e, opcionalmente, SEED_STRIPE_PRICE_PACOTE_50/120.
+ *   SEED_ADMIN_EMAIL, SEED_ADMIN_SENHA e, opcionalmente, SEED_STRIPE_PRICE_PACOTE_60/150.
  * Faz: cria o usuário no Auth (ou reaproveita, se o e-mail já existir no Auth compartilhado),
  *   grava `perfis` com papel admin_plataforma e marca_id nulo, e cria os pacotes da regra 11.2.9
  *   quando os Price IDs da Stripe forem informados. Idempotente.
@@ -51,10 +51,10 @@ async function main() {
   if (perfilError) throw perfilError;
   console.log("Perfil admin_plataforma gravado.");
 
-  // Pacotes iniciais da regra 11.2.9 (valores a confirmar na pergunta 25.1).
+  // Pacotes iniciais da regra 11.2.9 com os valores da emenda MD-4 (60 e 150 créditos).
   const packs = [
-    { env: "SEED_STRIPE_PRICE_PACOTE_50", nome: "Pacote 50", creditos: 50, preco_centavos: 3000, moeda: "usd", ordem: 1 },
-    { env: "SEED_STRIPE_PRICE_PACOTE_120", nome: "Pacote 120", creditos: 120, preco_centavos: 6500, moeda: "usd", ordem: 2 },
+    { env: "SEED_STRIPE_PRICE_PACOTE_60", nome: "Pacote 60", creditos: 60, preco_centavos: 3600, moeda: "usd", ordem: 1 },
+    { env: "SEED_STRIPE_PRICE_PACOTE_150", nome: "Pacote 150", creditos: 150, preco_centavos: 8100, moeda: "usd", ordem: 2 },
   ];
   for (const p of packs) {
     const priceId = process.env[p.env];

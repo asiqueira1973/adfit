@@ -30,7 +30,7 @@ Plataforma de anúncios em vídeo com IA para marcas de roupa fitness. Spec: [`d
 - Migrations: `supabase db push` no projeto remoto; depois rodar os advisors.
 
 ## Pagamentos (Stripe, modo de teste)
-1. Chaves de TESTE no `apps/web/.env.local`: `STRIPE_SECRET_KEY=sk_test_…`, `SEED_STRIPE_PRICE_PACOTE_50/120=price_…` (Prices **avulsos/One-off** em USD) e `npm run seed:admin` para criar os pacotes.
+1. Chaves de TESTE no `apps/web/.env.local`: `STRIPE_SECRET_KEY=sk_test_…`, `SEED_STRIPE_PRICE_PACOTE_60/150=price_…` (Prices **avulsos/One-off** em USD) e `npm run seed:admin` para criar os pacotes.
 2. `stripe login` (sandbox) e `stripe listen --print-secret` → `STRIPE_WEBHOOK_SECRET=whsec_…` no `.env.local`.
 3. `stripe listen --forward-to localhost:<porta>/api/webhooks/stripe` com o app rodando e `APP_URL` apontando para a mesma porta.
 4. Comprar em Créditos → Comprar créditos com o cartão `4242 4242 4242 4242`, validade futura, qualquer CVC.

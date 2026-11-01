@@ -85,7 +85,7 @@ export function NewPackageForm({ t, closeHref }: { t: T; closeHref: string }) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       {error && <Banner tone="danger">{error}</Banner>}
-      <TextField label={t.config.colNome} name="nome" required maxLength={60} placeholder="Pacote 50" />
+      <TextField label={t.config.colNome} name="nome" required maxLength={60} placeholder="Pacote 60" />
       <div className="grid grid-cols-2 gap-3">
         <TextField label={t.config.colCreditos} name="creditos" type="number" min={1} step={1} required />
         <TextField label={t.config.colOrdem} name="ordem" type="number" min={0} step={1} defaultValue={1} />
