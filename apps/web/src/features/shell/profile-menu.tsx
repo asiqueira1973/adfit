@@ -11,7 +11,8 @@ import { MenuLink } from "./menu-link";
  * Recebe: nome do usuário e da marca, idioma e dicionário. Devolve: o menu.
  */
 export function ProfileMenu({ userName, brandName, locale, t }: { userName: string; brandName: string; locale: Locale; t: Dictionary }) {
-  const initials = userName.split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+  // Só palavras que começam com letra: "Alexandre (lojista teste)" → "AL", não "A(" (bug B-7).
+  const initials = (userName.match(/\p{L}[\p{L}'-]*/gu) ?? []).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
   return (
     <details data-menu className="relative">
       <summary className="flex size-11 cursor-pointer list-none items-center justify-center rounded-full [&::-webkit-details-marker]:hidden" aria-label={t.nav.menuPerfil}>
