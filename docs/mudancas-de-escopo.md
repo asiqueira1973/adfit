@@ -156,3 +156,6 @@ Diverge da regra 11.8 ("3 cenas de 5 s, corte seco"). Motivo: 3 planos de 5 s de
 - Montagem: cada clipe de 5 s vira 2 planos de 2,5 s; o 2º com zoom de 12% ao centro → 6 planos em 15 s. Texto da cena e fecho mantêm os tempos da 11.8. Sem custo extra (gerar 6 clipes dobraria o custo: o Seedance cobra no mínimo 5 s).
 - Roteiro `roteiro.v4`: duas ações encadeadas por cena e câmera em movimento.
 - Junto (mesma data): `ficha.v3` copia só a marca visível por fora; etiqueta interna, tamanho e tag nunca viram logo (caso do top com "oxer P" impresso dentro da gola).
+
+## MD-11 — Som ambiente do Seedance (01/11/2026, aprovado pelo Alexandre)
+Diverge da regra 11.8 ("faixa AAC silenciosa"). Os clipes são gerados com `generate_audio: true` (mesmo preço na estimativa da Higgsfield) e o prompt do clipe termina com `CLAUSULA_AUDIO`: só som ambiente (passos, respiração, equipamento, vento, cidade/natureza) — **sem música, canto, fala ou narração** (trilha e narração seguem fora do escopo, seção 28). A montagem usa 5 s do som de cada clipe (clipe sem áudio entra mudo) com fade de 0,5 s no fim. O lojista decide no Instagram se mantém o som ambiente, põe música ou os dois.

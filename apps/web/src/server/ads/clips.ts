@@ -7,7 +7,7 @@ import sharp from "sharp";
 import { createAdminClient } from "../db/supabase";
 import { BusinessError } from "../api/http";
 import { readConfig } from "../config";
-import { CLAUSULA_VIDEO } from "../prompts/clauses";
+import { CLAUSULA_AUDIO, CLAUSULA_VIDEO } from "../prompts/clauses";
 import { brandObject } from "../storage";
 import { generationDeps, submitGeneration, type GenerationDeps, type GenerationInput, type GenerationRow, type GenerationTarget } from "../higgsfield/process";
 import { assembleVideo } from "../video/assemble";
@@ -18,9 +18,9 @@ import { stripBodyTerms } from "./frames";
 import { transition, type AdStatus } from "./stateMachine";
 import { emailOf, track } from "../analytics/track";
 
-/** Prompt do clipe pelo CÓDIGO (Anexo C.2): `prompt_movimento` + `CLAUSULA_VIDEO` no fim, sem termos de corpo. */
+/** Prompt do clipe pelo CÓDIGO (Anexo C.2): `prompt_movimento` + `CLAUSULA_AUDIO` (MD-11) + `CLAUSULA_VIDEO` sempre no fim, sem termos de corpo. */
 export function buildClipPrompt(promptMovimento: string): string {
-  return `${stripBodyTerms(promptMovimento.replace(CLAUSULA_VIDEO, "").trim())}\n${CLAUSULA_VIDEO}`;
+  return `${stripBodyTerms(promptMovimento.replace(CLAUSULA_VIDEO, "").replace(CLAUSULA_AUDIO, "").trim())}\n${CLAUSULA_AUDIO}\n${CLAUSULA_VIDEO}`;
 }
 
 type Actor = { id: string; papel: "admin_plataforma" | "usuario_marca"; marcaId: string | null; email?: string };

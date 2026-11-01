@@ -76,7 +76,8 @@ const CLOSING_START = 12.5;
  *   área segura vertical entre 15% e 70% da altura; horizontal com margem de 6%;
  * - fecho de 12,5 s a 15 s: escurecimento de 40%, logo centralizado (40% da largura no vertical,
  *   20% no horizontal), CTA abaixo na cor de destaque (branco se nula) e oferta abaixo do CTA;
- * - faixa AAC silenciosa; H.264 High, CRF 20, preset veryfast, +faststart.
+ * - som ambiente dos clipes (MD-11; clipe sem áudio entra mudo), fade de 0,5 s no fim; AAC 128k;
+ *   H.264 High, CRF 20, preset veryfast, +faststart.
  * Recebe: AssembleInput. Devolve: nada (grava `out`). Lança se o ffmpeg falhar.
  */
 export async function assembleVideo(input: AssembleInput): Promise<void> {
@@ -104,6 +105,13 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       filters.push(`[b${i}]trim=${HALF}:${SCENE},setpts=PTS-STARTPTS,scale=trunc(iw*${PUNCH_IN}/2)*2:trunc(ih*${PUNCH_IN}/2)*2,crop=${W}:${H},setsar=1[p${i}b]`);
     }
     filters.push(`[p0a][p0b][p1a][p1b][p2a][p2b]concat=n=6:v=1:a=0[base]`);
+    // Som ambiente dos clipes (emenda MD-11): 5 s de cada, na ordem; clipe sem áudio entra mudo.
+    // Fade de 0,5 s no fim. Sem música, voz ou narração (o prompt do clipe proíbe).
+    for (let i = 0; i < 3; i++) {
+      const source = ffprobeInfo(input.clips[i]).audio ? `[${i}:a]atrim=0:${SCENE},asetpts=PTS-STARTPTS,aresample=48000,apad=whole_dur=${SCENE}` : `aevalsrc=0|0:d=${SCENE}:s=48000`;
+      filters.push(`${source},aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[ca${i}]`);
+    }
+    filters.push(`[ca0][ca1][ca2]concat=n=3:v=0:a=1,afade=t=out:st=${TOTAL - 0.5}:d=0.5[aout]`);
     let last = "base";
     const chain = (f: string) => {
       const next = `s${filters.length}`;
@@ -173,7 +181,7 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       "-map",
       `[${last}]`,
       "-map",
-      "4:a",
+      "[aout]",
       "-t",
       String(TOTAL),
       "-r",

@@ -39,10 +39,10 @@ export function buildImageBody(endpoint: string, request: ImageRequest): Record<
 
 export type VideoRequest = { prompt: string; imageUrl: string; seconds: 5 };
 
-/** Modelos de image-to-video suportados (MD-4: Seedance 2.5 padrão; Kling 3.0 Pro alternativa). */
+/** Modelos de image-to-video suportados (MD-4: Seedance 2.5 padrão; Kling 3.0 Pro alternativa). Seedance com som ambiente (MD-11; mesmo preço). */
 const VIDEO_MODELS: Record<string, (r: VideoRequest) => Record<string, unknown>> = {
   // Seedance 2.5: proporção segue a imagem de entrada; 1080p; sem áudio (o vídeo final é mudo, A-4).
-  "bytedance/seedance-2.5/image-to-video": (r) => ({ prompt: r.prompt, image_url: r.imageUrl, duration: r.seconds, resolution: "1080p", generate_audio: false }),
+  "bytedance/seedance-2.5/image-to-video": (r) => ({ prompt: r.prompt, image_url: r.imageUrl, duration: r.seconds, resolution: "1080p", generate_audio: true }),
   // Kling 3.0 Pro: proporção segue a imagem; sem som.
   "kling-video/v3.0/pro/image-to-video": (r) => ({ prompt: r.prompt, image_url: r.imageUrl, duration: r.seconds, sound: "off" }),
 };

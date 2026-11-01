@@ -128,7 +128,7 @@ describe("8.6 — gerar vídeo", () => {
     expect(clips).toHaveLength(3);
     for (const c of clips) {
       expect(c.endpoint).toBe("bytedance/seedance-2.5/image-to-video");
-      expect(c.body).toMatchObject({ duration: 5, resolution: "1080p", generate_audio: false, image_url: expect.stringContaining("cdn.higgsfield.ai") });
+      expect(c.body).toMatchObject({ duration: 5, resolution: "1080p", generate_audio: true, image_url: expect.stringContaining("cdn.higgsfield.ai") });
       expect(String(c.body.prompt).endsWith(CLAUSULA_VIDEO)).toBe(true);
       expect(String(c.body.prompt)).not.toMatch(/chest/i);
     }
