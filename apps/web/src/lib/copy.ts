@@ -32,6 +32,7 @@ export const COPY = {
   avisoTextoProibido:
     "Evite prometer resultado (ex.: emagrecer X kg). Isso pode derrubar seu anúncio no Instagram.",
   lembreteLogo: "Adicione seu logo para ele aparecer no fim dos vídeos.",
+  feitoPor: "Feito pela {estudio}",
 } as const;
 
 /**

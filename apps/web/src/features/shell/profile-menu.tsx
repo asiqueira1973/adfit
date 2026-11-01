@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { LogOut, Store } from "lucide-react";
+import { MADE_BY } from "@/lib/constants";
+import { COPY, fill } from "@/lib/copy";
 
 /**
  * Menu do perfil (seção 10): avatar com iniciais que abre "Marca" e "Sair".
@@ -24,6 +26,7 @@ export function ProfileMenu({ userName, brandName }: { userName: string; brandNa
         <Link href="/sair" className="flex min-h-11 items-center gap-3 px-4 text-[15px] text-danger hover:bg-surface">
           <LogOut className="size-4.5" /> Sair
         </Link>
+        <div className="border-t border-hairline px-4 py-2.5 text-[12px] text-text-2">{fill(COPY.feitoPor, { estudio: MADE_BY })}</div>
       </div>
     </details>
   );

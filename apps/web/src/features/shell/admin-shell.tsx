@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { LogOut, Menu } from "lucide-react";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, MADE_BY } from "@/lib/constants";
+import { COPY, fill } from "@/lib/copy";
 import { AdminNavGroups, AdminNavGroupsView } from "./admin-nav";
 
 /** Ambiente exibido no selo do rodapé (seção 16.4): "prod" na produção da Vercel, senão "dev". */
@@ -16,7 +17,10 @@ function SidebarFooter({ userName }: { userName: string }) {
     <div className="flex items-center gap-2 border-t border-hairline px-3 py-3">
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-semibold">{userName}</div>
-        <span className="mt-0.5 inline-block rounded-[6px] border border-hairline px-1.5 text-[11px] font-medium uppercase tracking-wide text-text-2">{env}</span>
+        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-text-2">
+          <span className="rounded-[6px] border border-hairline px-1.5 font-medium uppercase tracking-wide">{env}</span>
+          {fill(COPY.feitoPor, { estudio: MADE_BY })}
+        </div>
       </div>
       <Link href="/sair" className="flex size-11 items-center justify-center rounded-full text-text-2 hover:bg-surface" aria-label="Sair">
         <LogOut className="size-4.5" />

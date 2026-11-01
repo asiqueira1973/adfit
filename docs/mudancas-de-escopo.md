@@ -18,3 +18,8 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 - 8.5: o Anexo C pede `texto_tela` em português. O prompt `roteiro.v1.md` entra literal (regra de prompts versionados); o suporte a inglês vira `roteiro.v2.md` com `{idioma_texto}` e o mesmo vale para `qc-texto` e para a lista de termos proibidos (seção 20), que ganha equivalentes em inglês. `refacao` devolve `resumo` no idioma do usuário.
 - 8.9: valores continuam formatados com `Intl.NumberFormat` no idioma do usuário.
 - `CTA padrão` da marca: o default `'Compre pelo link da bio'` vale para `pt_br`; marca com `idioma_anuncios = 'en'` recebe sugestão "Shop via link in bio" na tela da marca (sem mudar o default do banco).
+
+## MD-2 — Crédito "Feito pela Dab Lab" (31/10/2026)
+- **Decisão (Alexandre):** o app mostra que foi feito pela Dab Lab.
+- **Onde:** linha discreta no rodapé das telas públicas (entrar, senha), no fim do menu do perfil da marca e no rodapé do menu lateral do admin. Constante `MADE_BY` em `apps/web/src/lib/constants.ts`; texto `feitoPor` em `copy.ts` ("Made by Dab Lab" no dicionário em inglês do MD-1).
+- **Onde não:** dentro dos vídeos. O fecho do vídeo é só da marca do cliente (princípio 3 e regra 11.8).

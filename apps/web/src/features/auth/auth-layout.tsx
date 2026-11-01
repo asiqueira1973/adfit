@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, MADE_BY } from "@/lib/constants";
+import { COPY, fill } from "@/lib/copy";
 
 /**
  * Moldura das telas públicas (seção 16.3): foto editorial no topo (celular) ou metade
@@ -24,6 +25,7 @@ export function AuthLayout({ title, subtitle, children, image = true }: { title:
             {subtitle && <p className="mt-1.5 text-[15px] text-text-2">{subtitle}</p>}
           </div>
           {children}
+          <p className="pt-4 text-center text-[12px] text-text-2">{fill(COPY.feitoPor, { estudio: MADE_BY })}</p>
         </div>
       </div>
     </div>
