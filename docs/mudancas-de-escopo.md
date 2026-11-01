@@ -165,3 +165,6 @@ O Grok Imagine 2.0 barrou como nsfw toda variação de "mulher correndo de top" 
 
 ## MD-13 — Chamada final (CTA) opcional (01/11/2026, pedido do Alexandre)
 `marcas.cta_padrao` aceita null (o limite de 40 continua). Sem CTA, o fecho mostra o logo (ou o nome) e a oferta logo abaixo. Formulários do kit (marca e admin) sem "obrigatório"; vazio grava null.
+
+## MD-14 — Fecho como cartela: o logo nunca cobre a peça (01/11/2026, regra pedida pelo Alexandre)
+Diverge da 11.8 ("escurecimento de 40%" com logo por cima da cena). No vídeo da orla (16:9), o logo e o nome caíram sobre o rosto e o top da modelo. Regra: de 12,5 s a 15 s a cena 3 fica **desfocada** (boxblur, entrada de 0,4 s) e **escurecida em 50%**; logo (ou nome), CTA e oferta entram por cima, centralizados. Vale para os dois formatos. Teste: `server/video/closing-card.test.ts`.

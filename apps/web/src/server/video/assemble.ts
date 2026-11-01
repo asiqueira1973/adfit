@@ -75,7 +75,7 @@ const CLOSING_START = 12.5;
  * - texto da cena em Inter Bold branco com sombra de 2 px a 50%, de 0,3 s a 4,7 s, fade de 0,2 s
  *   (desenhado em PNG por `renderTextImage` e sobreposto — o ffmpeg da Vercel não tem drawtext, B-8);
  *   área segura vertical entre 15% e 70% da altura; horizontal com margem de 6%;
- * - fecho de 12,5 s a 15 s: escurecimento de 40%, logo centralizado (40% da largura no vertical,
+ * - fecho de 12,5 s a 15 s como cartela (MD-14): cena desfocada e escurecida em 50%, logo centralizado (40% da largura no vertical,
  *   20% no horizontal), CTA abaixo na cor de destaque (branco se nula; opcional, MD-13) e oferta abaixo;
  * - som ambiente dos clipes (MD-11; clipe sem áudio entra mudo), entrada suave de 0,6 s por cena e
  *   compressor contra estalos do áudio gerado, fade de 0,5 s no fim; AAC 128k;
@@ -141,9 +141,19 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       overlayImage(img.index, textCenterY - img.height / 2, i * SCENE + 0.3, i * SCENE + 4.7, true);
     }
 
-    // 3. Fecho: escurecimento de 40%, logo (ou nome da marca), CTA na cor de destaque e oferta.
+    // 3. Fecho como cartela (MD-14: o logo nunca cobre a peça): a cena desfoca e escurece a partir de
+    //    12,5 s (entrada de 0,4 s) e o logo (ou nome), o CTA e a oferta entram por cima.
     const closing = `enable='gte(t,${CLOSING_START})'`;
-    chain(`drawbox=x=0:y=0:w=iw:h=ih:color=black@0.4:t=fill:${closing}`);
+    {
+      const keep = `k${filters.length}`;
+      const soft = `b${filters.length}`;
+      filters.push(`[${last}]split[${keep}][${soft}0]`);
+      filters.push(`[${soft}0]boxblur=luma_radius=28:luma_power=2:chroma_radius=14:chroma_power=2,format=yuva420p,fade=t=in:st=${CLOSING_START}:d=0.4:alpha=1[${soft}]`);
+      const next = `s${filters.length}`;
+      filters.push(`[${keep}][${soft}]overlay=0:0:format=auto,format=yuv420p[${next}]`);
+      last = next;
+    }
+    chain(`drawbox=x=0:y=0:w=iw:h=ih:color=black@0.5:t=fill:${closing}`);
     const logoW = Math.round(W * (vertical ? 0.4 : 0.2));
     const centerY = Math.round(H * 0.45);
     let below: number;

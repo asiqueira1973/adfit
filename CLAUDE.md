@@ -54,4 +54,5 @@ O app terá pt-BR e inglês (emenda MD-1 em `docs/mudancas-de-escopo.md`); nenhu
 - Gerações: nunca grave URL assinada em `geracoes.entrada` (expira e vaza); grave os caminhos e assine na submissão.
 - Analytics (MD-8): use `track()` de `src/server/analytics/track.ts` nos pontos-chave novos (vídeo gerado, download…); nunca bloqueia, nunca manda prompt/URL assinada; `distinct_id` = e-mail.
 - Foto de entrada: sempre `toJpeg()` pelo conteúdo antes de mandar a modelo de IA (já houve `.jpg` que era HEIF).
+- Fecho do vídeo (MD-14): cartela com a cena desfocada e escurecida; o logo nunca pode cobrir a peça.
 - Quando o agente errar a mesma coisa duas vezes, a correção entra aqui.
