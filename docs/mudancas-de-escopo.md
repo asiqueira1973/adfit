@@ -141,3 +141,12 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
   - Evento `adfit_convite_pedido` (MD-8).
 - **Admin:** "Pedidos de acesso", no grupo Clientes, com filtro e status por linha (novo, convidado, recusado). Para dar acesso: criar a marca, Convidar usuário e marcar como convidado.
 - Migration `20261101001300_pedidos_convite.sql`: RLS só para admin; o cliente não lê nem grava. Teste pgTAP `08_pedidos_convite`.
+
+## MD-4a — Custo real do Seedance e novo preço do vídeo (01/11/2026, Alexandre)
+- **Custo real conferido no extrato da Higgsfield:** US$ 4,83 por clipe de 5 s em 1080p, com o desconto de 15% da conta (US$ 0,966/s), e US$ 0,09 por imagem do Grok. O vídeo (3 clipes) custa **US$ 14,49**, menos que os US$ 17,06 estimados no MD-4.
+  - `configuracoes.preco_usd_por_segundo_video` = 0.966. As gerações antigas foram corrigidas para US$ 4,83.
+- **Decisão:** `gerar_video` = **45 créditos** (15 por cena) e `refazer_clipe` = **15**, para o vídeo sair por **menos de US$ 25** ao cliente: 45 × US$ 0,54 = US$ 24,30 no pacote grande e 45 × US$ 0,60 = US$ 27,00 no pequeno.
+  - Estorno de cena que falha = `floor(45/3)` = 15.
+- **Margem no pior caso** (US$ 0,54/crédito): 1 − 14,49/24,30 = **40% bruta**, cerca de 33% depois da Stripe.
+- **Anúncio típico:** 2 + 45 = **47 créditos**. Pacote 60 rende 1 anúncio e Pacote 150 rende 3.
+- **Argumento de venda** (pedido do Alexandre): o vídeo inclui roteiro, 3 cenas com modelo e locação, animação de cada cena e a montagem final com texto, logo e CTA. Não é só um clipe.

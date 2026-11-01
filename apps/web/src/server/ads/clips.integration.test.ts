@@ -76,6 +76,8 @@ const deliver = (fixture: object, requestId: string) => {
   return handleHiggsfieldWebhook(process.env.HF_WEBHOOK_TOKEN!, higgsfieldHeaders(body), body);
 };
 const saldo = async () => (await db.from("marcas").select("saldo_creditos").eq("id", marcaId).single()).data!.saldo_creditos;
+/** Preço atual de uma ação (o admin muda sem deploy; os testes não fixam o valor). */
+const preco = async (acao: "gerar_video" | "refazer_clipe") => (await db.from("precos_acoes").select("creditos").eq("acao", acao).single()).data!.creditos;
 const status = async (id: string) => (await db.from("anuncios").select("status").eq("id", id).single()).data!.status;
 
 /** Anúncio pronto para gerar vídeo (3 quadros aprovados). */
@@ -118,8 +120,9 @@ describe("8.6 — gerar vídeo", () => {
     const ad = await readyAd();
     const antes = await saldo();
     const from = hf.submitted.length;
+    const video = await preco("gerar_video");
     await startVideo(actor, ad.id);
-    expect(await saldo()).toBe(antes - 51);
+    expect(await saldo()).toBe(antes - video);
     expect(await status(ad.id)).toBe("gerando_clipes");
     const clips = hf.submitted.slice(from);
     expect(clips).toHaveLength(3);
@@ -131,7 +134,7 @@ describe("8.6 — gerar vídeo", () => {
     }
     // Repetir o pedido não debita de novo.
     expect(businessCodeOf(await startVideo(actor, ad.id).catch((e) => e))).toBe("transicao_invalida");
-    expect(await saldo()).toBe(antes - 51);
+    expect(await saldo()).toBe(antes - video);
 
     for (const c of clips) await deliver(webhookVideo, c.requestId);
     expect(await status(ad.id)).toBe("pronto");
@@ -145,7 +148,8 @@ describe("8.6 — gerar vídeo", () => {
     expect(info.duration).toBeLessThan(15.2);
     expect(info.video).toMatchObject({ width: 1080, height: 1920, fps: 30 });
     const { data: custo } = await db.from("geracoes").select("custo_usd").eq("request_id", clips[0].requestId).single();
-    expect(Number(custo!.custo_usd)).toBeCloseTo(5.686, 3);
+    const { data: cfg } = await db.from("configuracoes").select("valor").eq("chave", "preco_usd_por_segundo_video").single();
+    expect(Number(custo!.custo_usd)).toBeCloseTo(Number(cfg!.valor) * 5, 3);
 
     // 8.7: download com o nome da regra; outra marca não baixa.
     const dl = await downloadAd(actor, ad.id);
@@ -161,9 +165,10 @@ describe("8.6 — gerar vídeo", () => {
     expect(await saldo()).toBe(semCusto);
   }, 120_000);
 
-  it("cena que falha 2 vezes: estorno de floor(51/3)=17 só dela, volta a aguardar; 'Tentar de novo' cobra refazer_clipe e fecha o vídeo", async () => {
+  it("cena que falha 2 vezes: estorno de floor(preço/3) só dela, volta a aguardar; 'Tentar de novo' cobra refazer_clipe e fecha o vídeo", async () => {
     const ad = await readyAd();
     const antes = await saldo();
+    const [video, refazer] = [await preco("gerar_video"), await preco("refazer_clipe")];
     const from = hf.submitted.length;
     await startVideo(actor, ad.id);
     const [c1, c2, c3] = hf.submitted.slice(from);
@@ -173,12 +178,12 @@ describe("8.6 — gerar vídeo", () => {
     const retry = hf.submitted.at(-1)!;
     await deliver(webhookFailed, retry.requestId);
     expect(await status(ad.id)).toBe("aguardando_aprovacao");
-    expect(await saldo()).toBe(antes - 51 + 17);
+    expect(await saldo()).toBe(antes - video + Math.floor(video / 3));
 
     // Os clipes saem em paralelo: acha a cena que falhou de fato.
     const { data: failed } = await db.from("clipes").select("cena_id").eq("status", "falhou").in("cena_id", ad.cenas.map((c) => c.id)).single();
     await redoClip(actor, failed!.cena_id, undefined);
-    expect(await saldo()).toBe(antes - 51 + 17 - 17);
+    expect(await saldo()).toBe(antes - video + Math.floor(video / 3) - refazer);
     expect(await status(ad.id)).toBe("gerando_clipes");
     await deliver(webhookVideo, hf.submitted.at(-1)!.requestId);
     expect(await status(ad.id)).toBe("pronto");

@@ -1,12 +1,11 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient, createUserClient } from "../db/supabase";
-import { publicServerEnv } from "../env";
 import { getCurrentProfile, getRequestLocale } from "./profile";
-import { getDictionary, isLocale, LOCALE_COOKIE, localeFromAcceptLanguage } from "@/lib/i18n";
+import { getDictionary, isLocale, LOCALE_COOKIE } from "@/lib/i18n";
 
 /** Estado devolvido pelos formulários de autenticação (useActionState). */
 export type AuthFormState = { error?: string; ok?: string } | undefined;

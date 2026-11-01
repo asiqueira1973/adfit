@@ -9,8 +9,8 @@ insert into public.precos_acoes (acao, creditos, descricao) values
   ('refazer_ficha', 1, 'Refazer ficha'),
   ('gerar_roteiro_quadros', 2, 'Criar anúncio'),
   ('refazer_quadro', 1, 'Refazer imagem da cena'),
-  ('gerar_video', 51, 'Gerar vídeo'),
-  ('refazer_clipe', 17, 'Refazer cena em vídeo'),
+  ('gerar_video', 45, 'Gerar vídeo'),
+  ('refazer_clipe', 15, 'Refazer cena em vídeo'),
   ('remontar_texto', 0, 'Atualizar vídeo')
 on conflict (acao) do nothing;
 

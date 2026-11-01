@@ -27,8 +27,8 @@ export const fxPrices = {
   refazer_ficha: 1,
   gerar_roteiro_quadros: 2,
   refazer_quadro: 1,
-  gerar_video: 51,
-  refazer_clipe: 17,
+  gerar_video: 45,
+  refazer_clipe: 15,
   remontar_texto: 0,
 } as const;
 
@@ -37,8 +37,8 @@ export const fxPriceRows = [
   { acao: "refazer_ficha", descricao: "Refazer ficha", creditos: 1 },
   { acao: "gerar_roteiro_quadros", descricao: "Criar anúncio", creditos: 2 },
   { acao: "refazer_quadro", descricao: "Refazer imagem da cena", creditos: 1 },
-  { acao: "gerar_video", descricao: "Gerar vídeo", creditos: 51 },
-  { acao: "refazer_clipe", descricao: "Refazer cena em vídeo", creditos: 17 },
+  { acao: "gerar_video", descricao: "Gerar vídeo", creditos: 45 },
+  { acao: "refazer_clipe", descricao: "Refazer cena em vídeo", creditos: 15 },
   { acao: "remontar_texto", descricao: "Atualizar vídeo", creditos: 0 },
 ];
 
