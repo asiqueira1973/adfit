@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -16,7 +17,8 @@ import webhookCompleted from "../higgsfield/__fixtures__/webhook-completed.json"
 import webhookVideo from "../higgsfield/__fixtures__/webhook-completed-video.json";
 import webhookFailed from "../higgsfield/__fixtures__/webhook-failed.json";
 import { setAiClientForTests } from "./runtime";
-import { createAd, downloadAd, getAdView, patchAdTexts, type AdActor } from "./service";
+import { AD_ORPHAN_AFTER_MS, createAd, downloadAd, getAdView, patchAdTexts, refreshAd, type AdActor } from "./service";
+import { transition } from "./stateMachine";
 import { downloadName, redoClip, selectClip, startVideo } from "./clips";
 import { redoFrame, selectFrame } from "./frames";
 
@@ -250,5 +252,45 @@ describe("8.7 — nome do arquivo", () => {
   it("sem acento e sem espaço; usa o @ quando existe, senão o nome da marca", () => {
     expect(downloadName({ instagram: "kore_active", nome: "Kore" }, "Top Kore Preto", "vertical_9_16", 2)).toBe("kore_active_top-kore-preto_9x16_v2.mp4");
     expect(downloadName({ instagram: null, nome: "Marca Ótima Ltda." }, "Bermuda Masculina", "horizontal_16_9", 1)).toBe("marca_otima_ltda_bermuda-masculina_16x9_v1.mp4");
+  });
+});
+
+/**
+ * Bug B-14 (verificador, 01/11/2026; regra 11.2): se a função cai entre o débito e a criação dos
+ * clipes, o crédito ficava preso. A varredura de órfãos da fase de clipes estorna e destrava.
+ */
+describe("clipes órfãos (B-14)", () => {
+  const later = () => Date.now() + AD_ORPHAN_AFTER_MS + 60_000;
+
+  it("gerar vídeo: débito feito e nenhum clipe criado → cada cena falha com o estorno dela", async () => {
+    const ad = await readyAd();
+    const antes = await saldo();
+    // Simula a queda logo depois do débito e da transição (como em startVideo).
+    await db.rpc("debitar_creditos", { p_marca_id: marcaId, p_acao: "gerar_video", p_quantidade_itens: 1, p_referencia_tipo: "anuncio", p_referencia_id: ad.id, p_criado_por: actor.id });
+    expect(await transition(ad.id, "aguardando_aprovacao", "gerando_clipes")).toBe(true);
+    await refreshAd(ad.id, later());
+    const total = await preco("gerar_video");
+    expect(await saldo()).toBe(antes - total + 3 * Math.floor(total / 3));
+    expect(await status(ad.id)).toBe("aguardando_aprovacao");
+    const { data: clipes } = await db.from("clipes").select("status").in("cena_id", ad.cenas.map((c) => c.id));
+    expect(clipes!.map((c) => c.status)).toEqual(["falhou", "falhou", "falhou"]);
+    // A varredura de novo não estorna duas vezes.
+    await refreshAd(ad.id, later());
+    expect(await saldo()).toBe(antes - total + 3 * Math.floor(total / 3));
+  });
+
+  it("refazer cena: débito feito e o clipe nunca criado → estorno do refazer", async () => {
+    const ad = await readyAd();
+    const from = hf.submitted.length;
+    await startVideo(actor, ad.id);
+    for (const s of hf.submitted.slice(from)) await deliver(webhookCompleted, s.requestId);
+    expect(["montando", "pronto"]).toContain(await status(ad.id));
+    await db.from("anuncios").update({ status: "pronto", montagem_iniciada_em: null }).eq("id", ad.id);
+    const antes = await saldo();
+    await db.rpc("debitar_creditos", { p_marca_id: marcaId, p_acao: "refazer_clipe", p_quantidade_itens: 1, p_referencia_tipo: "clipe", p_referencia_id: randomUUID(), p_criado_por: actor.id });
+    expect(await transition(ad.id, "pronto", "gerando_clipes")).toBe(true);
+    await refreshAd(ad.id, later());
+    expect(await saldo()).toBe(antes);
+    expect(await status(ad.id)).not.toBe("gerando_clipes");
   });
 });
