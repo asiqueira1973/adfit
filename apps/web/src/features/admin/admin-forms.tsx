@@ -49,7 +49,7 @@ export type BrandKit = {
   nome: string;
   instagram: string | null;
   cor_destaque: string | null;
-  cta_padrao: string;
+  cta_padrao: string | null;
   tom_de_voz: string | null;
   idioma_anuncios: "pt_br" | "en";
 };
@@ -87,7 +87,7 @@ export function BrandKitEditor({ t, kit, onDone }: { t: T; kit: BrandKit; onDone
       <TextField label={t.admin.kitNome} name="nome" defaultValue={kit.nome} required maxLength={80} />
       <TextField label={t.admin.kitInstagram} name="instagram" defaultValue={kit.instagram ?? ""} hint={t.admin.kitInstagramDica} maxLength={31} />
       <TextField label={t.admin.kitCor} name="cor_destaque" defaultValue={kit.cor_destaque ?? ""} placeholder="#C6F432" maxLength={7} />
-      <TextField label={t.admin.kitCta} name="cta_padrao" defaultValue={kit.cta_padrao} required maxChars={40} />
+      <TextField label={t.admin.kitCta} name="cta_padrao" defaultValue={kit.cta_padrao ?? ""} maxChars={40} />
       <TextArea label={t.admin.kitTom} name="tom_de_voz" defaultValue={kit.tom_de_voz ?? ""} rows={2} maxChars={200} />
       <Segmented name="idioma_anuncios" label={t.admin.kitIdiomaAnuncios} value={idioma} onChange={(v) => setIdioma(v as "pt_br" | "en")} options={[{ value: "pt_br", label: t.idiomas.pt_br }, { value: "en", label: t.idiomas.en }]} />
       <div className="flex gap-2">

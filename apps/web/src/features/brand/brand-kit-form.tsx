@@ -29,14 +29,14 @@ export function ClosingPreview({ name, logoUrl, color, cta, offer, logoAlt }: { 
         ) : (
           <span className="text-[22px] font-bold text-white drop-shadow">{name}</span>
         )}
-        <span className="text-[13px] font-bold leading-tight drop-shadow" style={{ color: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#FFFFFF" }}>{cta}</span>
+        {cta.trim() && <span className="text-[13px] font-bold leading-tight drop-shadow" style={{ color: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#FFFFFF" }}>{cta}</span>}
         {offer && <span className="text-[11px] font-semibold text-white drop-shadow">{offer}</span>}
       </div>
     </div>
   );
 }
 
-export type BrandKit = { id: string; nome: string; instagram: string | null; cor_destaque: string | null; cta_padrao: string; tom_de_voz: string | null; idioma_anuncios: "pt_br" | "en" };
+export type BrandKit = { id: string; nome: string; instagram: string | null; cor_destaque: string | null; cta_padrao: string | null; tom_de_voz: string | null; idioma_anuncios: "pt_br" | "en" };
 
 /**
  * Formulário [Marca] Marca (seção 10, épico 8.3): nome, @, cor de destaque, CTA (40), tom de voz
@@ -48,7 +48,7 @@ export function BrandKitForm({ kit, logoUrl, t }: { kit: BrandKit; logoUrl: stri
   const router = useRouter();
   const [name, setName] = useState(kit.nome);
   const [color, setColor] = useState(kit.cor_destaque ?? "#FFFFFF");
-  const [cta, setCta] = useState(kit.cta_padrao);
+  const [cta, setCta] = useState(kit.cta_padrao ?? "");
   const [idioma, setIdioma] = useState(kit.idioma_anuncios);
   const [msg, setMsg] = useState<{ tone: "success" | "danger"; text: string }>();
   const [pending, start] = useTransition();
@@ -87,7 +87,7 @@ export function BrandKitForm({ kit, logoUrl, t }: { kit: BrandKit; logoUrl: stri
             <input aria-label={t.marca.corHex} value={color} onChange={(e) => setColor(e.target.value)} maxLength={7} className="w-32 rounded-[10px] border border-hairline bg-bg px-3 py-2.5 font-mono text-[15px]" />
           </div>
         </div>
-        <TextField label={t.marca.cta} maxChars={40} value={cta} onChange={(e) => setCta(e.target.value)} required hint={idioma === "en" && cta === "Compre pelo link da bio" ? t.marca.sugestaoCtaEn : undefined} />
+        <TextField label={t.marca.cta} maxChars={40} value={cta} onChange={(e) => setCta(e.target.value)} hint={idioma === "en" && cta === "Compre pelo link da bio" ? t.marca.sugestaoCtaEn : undefined} />
         <TextField label={t.marca.tom} name="tom_de_voz" defaultValue={kit.tom_de_voz ?? ""} hint={t.marca.tomDica} maxLength={200} />
         <Segmented name="idioma_anuncios" label={t.marca.idiomaVideos} value={idioma} onChange={(v) => setIdioma(v as "pt_br" | "en")} options={[{ value: "pt_br", label: t.idiomas.pt_br }, { value: "en", label: t.idiomas.en }]} />
         {msg && <Banner tone={msg.tone}>{msg.text}</Banner>}

@@ -162,3 +162,6 @@ Diverge da regra 11.8 ("faixa AAC silenciosa"). Os clipes são gerados com `gene
 
 ## MD-12 — Imagens das cenas no Marketing Studio 2.5 Flare (01/11/2026)
 O Grok Imagine 2.0 barrou como nsfw toda variação de "mulher correndo de top" (anúncios do top azul-marinho; 8 variações testadas direto na Higgsfield: com e sem close da ficha, "sports top" × "sports bra", sem ângulo baixo, sem descrição de corpo, modelo mais jovem, academia). O `marketing-studio/image/flare` gerou as mesmas cenas com a modelo e a peça fiéis. Config nova `modelo_quadro` (cenas) e `preco_usd_por_quadro` (0,20 estimado; preço por tokens, conferir no extrato). A ficha segue no Grok (`modelo_imagem`). Soul Cinema e Seedream 5.0 Pro (usados no app/skill) não servem pela API: o Soul Cinema da API é só texto (sem referência da peça) e o Seedream não está no catálogo da API.
+
+## MD-13 — Chamada final (CTA) opcional (01/11/2026, pedido do Alexandre)
+`marcas.cta_padrao` aceita null (o limite de 40 continua). Sem CTA, o fecho mostra o logo (ou o nome) e a oferta logo abaixo. Formulários do kit (marca e admin) sem "obrigatório"; vazio grava null.

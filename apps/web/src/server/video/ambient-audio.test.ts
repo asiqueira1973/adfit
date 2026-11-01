@@ -60,4 +60,20 @@ describe("som ambiente (MD-11)", () => {
     expect(meanVolume(out, 6, 9)).toBeLessThan(-80);
     expect(meanVolume(out, 11, 13)).toBeGreaterThan(-40);
   }, 120_000);
+
+  it("estalo no começo do clipe (relato de 01/11/2026, cena 1 da orla) sai abafado; o ambiente continua", async () => {
+    // Clipe com ruído baixo (ambiente) e um estalo forte entre 0,3 s e 0,4 s.
+    const pop = join(dir, "pop.mp4");
+    execFileSync(ffmpegPath(), ["-y", "-f", "lavfi", "-i", "testsrc=size=720x1280:rate=24:duration=5.2", "-f", "lavfi", "-i", "anoisesrc=d=5.2:a=0.01:c=pink,volume='if(between(t,0.3,0.4),60,1)':eval=frame", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", pop], { stdio: "ignore" });
+    const out = join(dir, "pop-out.mp4");
+    await assembleVideo({ clips: [pop, clipWithAudio("p2.mp4"), clipWithAudio("p3.mp4")], out, formato: "vertical_9_16", textos: [null, null, null], logoPng: null, marca: "M", cta: null, cor: null, oferta: null });
+    const peak = (f: string, from: number, to: number) => {
+      const r = spawnSync(ffmpegPath(), ["-ss", String(from), "-to", String(to), "-i", f, "-af", "volumedetect", "-vn", "-f", "null", "-"], { encoding: "utf8" });
+      return Number(`${r.stdout}${r.stderr}`.match(/max_volume: (-?[\d.]+) dB/)?.[1] ?? "0");
+    };
+    // O estalo cai pelo menos 15 dB em relação ao clipe original.
+    expect(peak(pop, 0, 1) - peak(out, 0, 1)).toBeGreaterThanOrEqual(15);
+    // O som ambiente depois do começo continua presente.
+    expect(meanVolume(out, 2, 4)).toBeGreaterThan(-60);
+  }, 120_000);
 });

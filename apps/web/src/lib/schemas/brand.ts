@@ -18,7 +18,8 @@ export const brandKitSchema = z.object({
   nome: z.string().trim().min(1).max(80),
   instagram: instagram.optional(),
   cor_destaque: cor.optional(),
-  cta_padrao: z.string().trim().min(1).max(40).optional(),
+  // MD-13: chamada final opcional (vazio → null).
+  cta_padrao: textoOpcional(40).optional(),
   tom_de_voz: textoOpcional(200).optional(),
   idioma_anuncios: z.enum(["pt_br", "en"]).optional(),
 });

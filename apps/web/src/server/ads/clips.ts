@@ -274,7 +274,7 @@ export async function runMontage(anuncioId: string): Promise<void> {
 
   const work = mkdtempSync(join(tmpdir(), "adfit-ad-"));
   try {
-    const marca = ad.marcas as unknown as { nome: string; instagram: string | null; logo_path: string | null; cta_padrao: string; cor_destaque: string | null };
+    const marca = ad.marcas as unknown as { nome: string; instagram: string | null; logo_path: string | null; cta_padrao: string | null; cor_destaque: string | null };
     const { data: cenas } = await db.from("cenas").select("ordem, texto_tela, clipes!cenas_clipe_atual_id_fkey(video_path)").eq("anuncio_id", anuncioId).order("ordem");
     if (!cenas || cenas.length !== 3) throw new Error("cenas_incompletas");
     const clips = await Promise.all(

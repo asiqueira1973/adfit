@@ -118,7 +118,7 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
     .maybeSingle();
   if (!ad || ad.status !== "gerando_roteiro") return;
   const produto = ad.produtos as { nome: string; categoria: string; genero_alvo: string; descricao: string | null };
-  const marca = ad.marcas as { nome: string; instagram: string | null; cta_padrao: string; tom_de_voz: string | null; idioma_anuncios: "pt_br" | "en" };
+  const marca = ad.marcas as { nome: string; instagram: string | null; cta_padrao: string | null; tom_de_voz: string | null; idioma_anuncios: "pt_br" | "en" };
   const fichaPath = (ad.fichas_produto as { imagem_path: string | null }).imagem_path;
   const idiomaCriador = ((ad.perfis as { idioma: "pt_br" | "en" } | null)?.idioma ?? "pt_br") as "pt_br" | "en";
   const ai = deps.ai ?? aiClient();

@@ -55,7 +55,8 @@ export async function createBrand(input: BrandKitInput): Promise<string> {
       nome: input.nome,
       instagram: input.instagram ?? null,
       cor_destaque: input.cor_destaque ?? null,
-      cta_padrao: input.cta_padrao ?? undefined,
+      // MD-13: vazio grava null (sem CTA); ausente usa o padrão do banco.
+      cta_padrao: input.cta_padrao,
       tom_de_voz: input.tom_de_voz ?? null,
       idioma_anuncios: input.idioma_anuncios ?? undefined,
     })

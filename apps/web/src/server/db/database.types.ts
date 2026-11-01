@@ -245,14 +245,14 @@ isOneToOne: false
                   ]
                 },"marcas": {
                   Row: {
-                    "ativa": boolean,"atualizado_em": string,"cor_destaque": string | null,"criado_em": string,"cta_padrao": string,"id": string,"idioma_anuncios": Database["public"]['Enums']["idioma"],"instagram": string | null,"logo_path": string | null,"nome": string,"saldo_creditos": number,"tom_de_voz": string | null
+                    "ativa": boolean,"atualizado_em": string,"cor_destaque": string | null,"criado_em": string,"cta_padrao": string | null,"id": string,"idioma_anuncios": Database["public"]['Enums']["idioma"],"instagram": string | null,"logo_path": string | null,"nome": string,"saldo_creditos": number,"tom_de_voz": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "ativa"?: boolean,"atualizado_em"?: string,"cor_destaque"?: string | null,"criado_em"?: string,"cta_padrao"?: string,"id"?: string,"idioma_anuncios"?: Database["public"]['Enums']["idioma"],"instagram"?: string | null,"logo_path"?: string | null,"nome": string,"saldo_creditos"?: number,"tom_de_voz"?: string | null
+                    "ativa"?: boolean,"atualizado_em"?: string,"cor_destaque"?: string | null,"criado_em"?: string,"cta_padrao"?: string | null,"id"?: string,"idioma_anuncios"?: Database["public"]['Enums']["idioma"],"instagram"?: string | null,"logo_path"?: string | null,"nome": string,"saldo_creditos"?: number,"tom_de_voz"?: string | null
                   }
                   Update: {
-                    "ativa"?: boolean,"atualizado_em"?: string,"cor_destaque"?: string | null,"criado_em"?: string,"cta_padrao"?: string,"id"?: string,"idioma_anuncios"?: Database["public"]['Enums']["idioma"],"instagram"?: string | null,"logo_path"?: string | null,"nome"?: string,"saldo_creditos"?: number,"tom_de_voz"?: string | null
+                    "ativa"?: boolean,"atualizado_em"?: string,"cor_destaque"?: string | null,"criado_em"?: string,"cta_padrao"?: string | null,"id"?: string,"idioma_anuncios"?: Database["public"]['Enums']["idioma"],"instagram"?: string | null,"logo_path"?: string | null,"nome"?: string,"saldo_creditos"?: number,"tom_de_voz"?: string | null
                   }
                   Relationships: [
                     

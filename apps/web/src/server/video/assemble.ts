@@ -50,7 +50,8 @@ export type AssembleInput = {
   /** Logo da marca já em PNG (null = mostra o nome da marca no fecho). */
   logoPng: string | null;
   marca: string;
-  cta: string;
+  /** Chamada final; null = fecho sem CTA (MD-13). */
+  cta: string | null;
   /** `cor_destaque` (#RRGGBB) do CTA; null = branco (11.8). */
   cor: string | null;
   oferta: string | null;
@@ -75,8 +76,9 @@ const CLOSING_START = 12.5;
  *   (desenhado em PNG por `renderTextImage` e sobreposto — o ffmpeg da Vercel não tem drawtext, B-8);
  *   área segura vertical entre 15% e 70% da altura; horizontal com margem de 6%;
  * - fecho de 12,5 s a 15 s: escurecimento de 40%, logo centralizado (40% da largura no vertical,
- *   20% no horizontal), CTA abaixo na cor de destaque (branco se nula) e oferta abaixo do CTA;
- * - som ambiente dos clipes (MD-11; clipe sem áudio entra mudo), fade de 0,5 s no fim; AAC 128k;
+ *   20% no horizontal), CTA abaixo na cor de destaque (branco se nula; opcional, MD-13) e oferta abaixo;
+ * - som ambiente dos clipes (MD-11; clipe sem áudio entra mudo), entrada suave de 0,6 s por cena e
+ *   compressor contra estalos do áudio gerado, fade de 0,5 s no fim; AAC 128k;
  *   H.264 High, CRF 20, preset veryfast, +faststart.
  * Recebe: AssembleInput. Devolve: nada (grava `out`). Lança se o ffmpeg falhar.
  */
@@ -108,10 +110,12 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
     // Som ambiente dos clipes (emenda MD-11): 5 s de cada, na ordem; clipe sem áudio entra mudo.
     // Fade de 0,5 s no fim. Sem música, voz ou narração (o prompt do clipe proíbe).
     for (let i = 0; i < 3; i++) {
-      const source = ffprobeInfo(input.clips[i]).audio ? `[${i}:a]atrim=0:${SCENE},asetpts=PTS-STARTPTS,aresample=48000,apad=whole_dur=${SCENE}` : `aevalsrc=0|0:d=${SCENE}:s=48000`;
+      // Entrada suave de 0,6 s: o Seedance às vezes gera um estalo no começo do clipe (relato de 01/11/2026).
+      const source = ffprobeInfo(input.clips[i]).audio ? `[${i}:a]atrim=0:${SCENE},asetpts=PTS-STARTPTS,aresample=48000,apad=whole_dur=${SCENE},afade=t=in:d=0.6:curve=cub` : `aevalsrc=0|0:d=${SCENE}:s=48000`;
       filters.push(`${source},aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[ca${i}]`);
     }
-    filters.push(`[ca0][ca1][ca2]concat=n=3:v=0:a=1,afade=t=out:st=${TOTAL - 0.5}:d=0.5[aout]`);
+    // Compressor segura picos repentinos no resto do clipe sem apagar o ambiente.
+    filters.push(`[ca0][ca1][ca2]concat=n=3:v=0:a=1,acompressor=threshold=0.05:ratio=12:attack=1:release=150,afade=t=out:st=${TOTAL - 0.5}:d=0.5[aout]`);
     let last = "base";
     const chain = (f: string) => {
       const next = `s${filters.length}`;
@@ -155,11 +159,16 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       below = centerY + name.height / 2;
     }
     const ctaSize = vertical ? 54 : 48;
-    const cta = await addImage([input.cta], ctaSize, /^#[0-9a-f]{6}$/i.test(input.cor ?? "") ? input.cor! : "#FFFFFF");
-    overlayImage(cta.index, below + 40, CLOSING_START, TOTAL, false);
+    // CTA opcional (MD-13): sem ele, a oferta sobe para logo abaixo do logo/nome.
+    let next = below + 40;
+    if (input.cta?.trim()) {
+      const cta = await addImage([input.cta], ctaSize, /^#[0-9a-f]{6}$/i.test(input.cor ?? "") ? input.cor! : "#FFFFFF");
+      overlayImage(cta.index, next, CLOSING_START, TOTAL, false);
+      next += cta.height + 12;
+    }
     if (input.oferta) {
       const oferta = await addImage([input.oferta], Math.round(ctaSize * 0.75), "#FFFFFF");
-      overlayImage(oferta.index, below + 40 + cta.height + 12, CLOSING_START, TOTAL, false);
+      overlayImage(oferta.index, next, CLOSING_START, TOTAL, false);
     }
 
     const args = [

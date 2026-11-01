@@ -25,3 +25,6 @@ A refação parte do prompt base da última versão; a v1 do top tinha sido gera
 
 ## B-12 — Aviso "Preparando a ficha" fora da tela (01/11/2026)
 Ao tocar em Refazer (embaixo), o aviso aparecia no topo do painel, fora da tela. Agora o painel rola para a tela ao começar e ao terminar.
+
+## B-13 — Estalo no começo do som da cena (01/11/2026)
+Vídeo da orla: pico de −4 dB aos 0,3 s da cena 1 (resto do ambiente ~−40 dB), gerado pelo Seedance. Montagem: entrada suave de 0,6 s no som de cada cena + compressor (threshold 0,05, ratio 12). No áudio real, o pico caiu para −18 dB. Teste: `server/video/ambient-audio.test.ts` ("estalo…").
