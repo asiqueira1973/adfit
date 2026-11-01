@@ -201,7 +201,7 @@ Imagens das cenas no modelo `modelo_quadro` (Marketing Studio Flare, MD-12); a f
 4. **Montagem** (`server/video/assemble.ts`, ffmpeg-static na função da Vercel): cada clipe em 2 planos de 2,5 s, o 2º com zoom de 12% (MD-10); texto da cena em PNG (Inter Bold via opentype.js — o ffmpeg Linux não tem drawtext, B-8); som ambiente dos clipes com entrada suave e compressor (B-13); fecho opcional (MD-15) como cartela desfocada e escurecida com logo/nome, CTA opcional (MD-13) e oferta (MD-14); H.264 High 30 fps CRF 20, AAC, faststart. Grava `video/v<n>.mp4` e vai a `pronto`.
 5. **Retentativas e órfãos:** `refreshAd` (polling da tela e varredura a cada 5 min — `/api/cron/varredura`) refaz montagem parada há mais de 10 min (até 3 tentativas) e, com `gerando_clipes` parado há mais de 6 min sem clipe gerando, estorna débitos sem clipe (`sweepOrphanClips`, B-14).
 6. **Ajustes grátis:** editar texto com o vídeo pronto, usar outra versão de clipe → `versao_montagem++` e remonta. `refazer_clipe` (15) gera nova versão da cena (atalhos de refação + `refacao.v2`).
-7. **Download:** URL assinada de 60 min com o nome da regra 8.7 e um registro em `downloads_anuncio`.
+7. **Download:** URL assinada de 60 min com o nome da regra 8.7; download do lojista (não do admin) gera um registro em `downloads_anuncio`.
 
 ## 7. Divergências em relação ao spec
 
