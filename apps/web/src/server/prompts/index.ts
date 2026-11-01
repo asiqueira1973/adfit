@@ -7,7 +7,9 @@ import { join } from "node:path";
  * e atualizar aqui). A versão usada fica registrada em `geracoes.entrada.prompt_versao`.
  */
 export const PROMPT_VERSIONS = {
-  ficha: "ficha.v1",
+  // v2 (01/11/2026, aprovado pelo Alexandre): fotos como fonte da verdade, logo copiado das fotos
+  // ou painel 3 com o tecido quando não há logo, rugas sem perder textura. v1 fica guardado.
+  ficha: "ficha.v2",
   refacao: "refacao.v1",
 } as const;
 
