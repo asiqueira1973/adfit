@@ -15,7 +15,7 @@ Bug: teste que reproduz → ver falhar → commit → `touch .claude/fix-mode` �
 - Next.js 16 (App Router, Cache Components, `proxy.ts` no lugar de middleware): ler `node_modules/next/dist/docs/` antes de usar API nova.
 
 ## Arquitetura (seção 4.4)
-`/api/anuncios` debita → Claude (roteiro) → Higgsfield (3 quadros) → webhook → Storage → Claude QC → usuário aprova → `/gerar-video` debita → Higgsfield (3 clipes) → webhook → `montando` → worker ffmpeg → `pronto`.
+`/api/anuncios` debita → Claude (roteiro) → Higgsfield (3 quadros, `modelo_quadro`) → webhook → Storage → Claude QC → usuário aprova → `/gerar-video` debita → Higgsfield (3 clipes Seedance com som ambiente) → webhook → `montando` → função da Vercel com ffmpeg-static (D-23, não há worker) → `pronto`. Varredura a cada 5 min (`/api/cron/varredura`) destrava montagem, retentativas e órfãos.
 Compra: `/api/creditos/checkout` → Stripe Checkout → webhook `/api/webhooks/stripe` **e** `/creditos/obrigado` → `fulfillCheckout` → `creditar_pagamento` (idempotente por Checkout Session).
 
 ## Comandos (22.1, na raiz)
@@ -55,4 +55,10 @@ O app terá pt-BR e inglês (emenda MD-1 em `docs/mudancas-de-escopo.md`); nenhu
 - Analytics (MD-8): use `track()` de `src/server/analytics/track.ts` nos pontos-chave novos (vídeo gerado, download…); nunca bloqueia, nunca manda prompt/URL assinada; `distinct_id` = e-mail.
 - Foto de entrada: sempre `toJpeg()` pelo conteúdo antes de mandar a modelo de IA (já houve `.jpg` que era HEIF).
 - Fecho do vídeo (MD-14): cartela com a cena desfocada e escurecida; o logo nunca pode cobrir a peça.
+- Toda ação que gera na Higgsfield chama `assertProviderAvailable()` antes do débito (saldo da API esgotado → `servico_indisponivel`, nada cobrado).
+- Cenas com top/sutiã esportivo: o Grok barra como nsfw; imagens de cena vão no `modelo_quadro` (Flare). A ficha segue no `modelo_imagem` (Grok).
+- Custo real de geração vem do extrato da Higgsfield (estimativa − devolução), não do `/estimate`; atualize `preco_usd_*` e o `custo_usd` das gerações já gravadas.
+- Stripe Brasil: cartão brasileiro só paga em BRL — pacote novo precisa de Price em BRL e em USD (MD-16); `price_…`, nunca `prod_…`.
+- GitHub Actions: `run:` com `Authorization: Bearer …` sem aspas quebra o YAML (`: ` vira chave); use bloco `run: |` e o segredo via `env`.
+- Depois de migration, regenere `schema.sql` (`supabase db dump --local --schema public -f schema.sql`) no mesmo commit.
 - Quando o agente errar a mesma coisa duas vezes, a correção entra aqui.

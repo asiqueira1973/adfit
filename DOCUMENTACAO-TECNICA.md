@@ -109,6 +109,9 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 - **Lançar créditos**: valor pago digitado em qualquer formato ("1.234,56", "US$ 65.00") → centavos (`src/lib/money.ts`); moeda BRL/USD/EUR.
 - **Convidar**: recusa e-mail já em `perfis` ou no Auth; `inviteUserByEmail` com `redirectTo` para `/auth/confirm?next=/definir-senha`; se o perfil falhar, o usuário do Auth é removido.
 - **Pausar marca**: `marcas.ativa = false` → faixa "Conta pausada" em todas as telas da marca, botões cobrados desabilitados (contexto `BrandStatusProvider` com saldo e pausa reais) e `debitar_creditos` recusa (`marca_inativa`).
+- **Saldo da Higgsfield esgotado** (`server/higgsfield/provider-health.ts`): a geração finalizada mais recente foi erro de saldo (`not_enough_credits` / "credit balance is too low") há menos de 2 h → faixa vermelha em todas as telas do admin e `assertProviderAvailable()` barra ficha, anúncio, vídeo e refações **antes do débito** (`servico_indisponivel`, 503, "Nada foi cobrado"). Uma geração concluída depois limpa o aviso. Na tela do anúncio, a etapa que falhou explica que os créditos voltaram.
+- **Pagamentos na tela Créditos**: o lojista vê só `pago`, `reembolsado` e `falhou`; tentativas `iniciado`/`expirado` ficam só no admin (aba Pagamentos da marca).
+- **Atalhos de refação**: ficha, imagem e cena em vídeo têm botões com os problemas comuns (`lib/redo-shortcuts.ts`); cada um vira uma linha fixa em inglês acrescentada pelo código (`server/prompts/redo-shortcuts.ts`), além do texto livre que passa pelo `refacao.v2`.
 - **Idioma (MD-1)**: antes do login, `Accept-Language`; no 1º acesso, gravado em `perfis.idioma`; troca no menu do perfil e no rodapé do admin.
 
 ## 6. Pipelines
