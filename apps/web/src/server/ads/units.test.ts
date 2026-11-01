@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { CLAUSULA_IMAGEM } from "../prompts/clauses";
 import type { AiClient, Script } from "../claude/types";
-import { buildFramePrompt, FRAME_DRESS_LINE, FRAME_REFERENCE_LINE, qcApproved } from "./frames";
+import { buildFramePrompt, FRAME_DRESS_LINE, FRAME_REFERENCE_LINE, FRAME_SAFE_RETRY_LINE, qcApproved, stripBodyTerms } from "./frames";
 import { defaultModelGender } from "@/features/ads/new-ad-wizard";
 import { buildScriptSystem, fitScreenText, sanitizeScreenTexts } from "./script";
+import { PROMPT_VERSIONS } from "../prompts";
 
 /** Peças puras do 8.5: prompt do quadro (C.2 + roteiro.v2), QC (11.5) e texto da tela (11.7, seção 20). */
 describe("prompt do quadro", () => {
@@ -24,6 +25,21 @@ describe("prompt do quadro", () => {
   });
 });
 
+describe("proteção contra o filtro de conteúdo (1º teste real: cena 3 barrada como nsfw)", () => {
+  it("remove do prompt da cena os trechos que descrevem partes do corpo, sem tocar na peça", () => {
+    const p = stripBodyTerms("Medium shot in a gym, woman standing after finishing a set, hands on hips, chest rising from breathing, looking to the side, wearing the black racerback sports bra with white wave logo and plain black leggings, no text.");
+    expect(p).toBe("Medium shot in a gym, woman standing after finishing a set, looking to the side, wearing the black racerback sports bra with white wave logo and plain black leggings, no text.");
+    expect(stripBodyTerms("Tight shot of her curves, sexy pose. Low angle of the barbell.")).toBe("Low angle of the barbell.");
+  });
+  it("o prompt montado já sai sem os termos; a nova tentativa depois de nsfw acrescenta o enquadramento discreto", () => {
+    const p = buildFramePrompt("Hero shot, chest slightly lifted, confident gaze, gym", "Model");
+    expect(p).not.toMatch(/chest|lifted/i);
+    const retry = buildFramePrompt("Hero shot, confident gaze, gym", "Model", null, true);
+    expect(retry).toContain(FRAME_SAFE_RETRY_LINE);
+    expect(retry.endsWith(CLAUSULA_IMAGEM)).toBe(true);
+  });
+});
+
 describe("aprovação do QC (11.5, calculada pelo código)", () => {
   const ok = { fidelidade_peca: 7, logo_visivel_correto: 6, anatomia: 6, texto_espurio: false, conteudo_improprio: false, motivo: "" };
   it("aprova no limite e reprova abaixo de cada limite ou com texto espúrio/impróprio", () => {
@@ -36,10 +52,10 @@ describe("aprovação do QC (11.5, calculada pelo código)", () => {
   });
 });
 
-describe("roteiro.v2", () => {
+describe("roteiro em uso (PROMPT_VERSIONS)", () => {
   it("preenche os placeholders, inclui as tabelas C.5 e o idioma do texto", () => {
     const { versao, texto } = buildScriptSystem({ genero_modelo: "mulher", faixa_etaria: "de_30_a_45", formato: "horizontal_16_9", tom_de_voz: null, idioma_texto: "en", idioma_descricao: "pt_br" });
-    expect(versao).toBe("roteiro.v2");
+    expect(versao).toBe(PROMPT_VERSIONS.roteiro);
     expect(texto).not.toMatch(/\{[a-z_]+\}/);
     expect(texto).toContain("Modelo: mulher, aparência de 30 a 45 anos");
     expect(texto).toContain("Proporção horizontal 16:9");
@@ -47,6 +63,8 @@ describe("roteiro.v2", () => {
     expect(texto).toContain("| hyrox |");
     expect(texto).toContain("| cinematográfico |");
     expect(texto).toContain("campo `modelo`");
+    // roteiro.v3: nada de descrever partes do corpo (filtro de conteúdo da Higgsfield).
+    expect(texto).toContain("nunca por partes do corpo");
   });
 });
 
