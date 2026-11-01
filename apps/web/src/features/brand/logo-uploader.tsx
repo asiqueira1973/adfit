@@ -24,7 +24,8 @@ export function LogoUploader({
 }: {
   marcaId: string;
   currentUrl: string | null;
-  saveUrl: string;
+  /** Rota de admin que grava logo_path; sem ela, grava direto em `marcas` pela RLS (tela Marca). */
+  saveUrl?: string;
   labels: { enviar: string; trocar: string; dica: string; erro: string; enviando: string; semLogo: string; erroGenerico: string };
 }) {
   const router = useRouter();
@@ -40,8 +41,14 @@ export function LogoUploader({
       const path = `${marcaId}/logo/${Date.now()}.${ext}`;
       const { error: upErr } = await createBrowserSupabase().storage.from("marcas").upload(path, file, { contentType: file.type });
       if (upErr) return setError(labels.erroGenerico);
-      const r = await callApi("PATCH", saveUrl, { logo_path: path });
-      if (!r.ok) return setError(r.mensagem || labels.erroGenerico);
+      if (saveUrl) {
+        const r = await callApi("PATCH", saveUrl, { logo_path: path });
+        if (!r.ok) return setError(r.mensagem || labels.erroGenerico);
+      } else {
+        // Usuário da marca: grava pela política marcas_update_kit (seção 6.4).
+        const { error } = await createBrowserSupabase().from("marcas").update({ logo_path: path }).eq("id", marcaId);
+        if (error) return setError(labels.erroGenerico);
+      }
       router.refresh();
     });
   }

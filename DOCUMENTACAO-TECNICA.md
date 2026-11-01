@@ -1,6 +1,6 @@
 # AdFit — Documentação técnica
 
-Descreve o sistema **como está implementado** (seção 19 do `docs/spec.md`). Atualizada no mesmo commit de toda mudança de schema, função, política, prompt ou lógica de tela. Estado atual: épicos 8.0, design, 8.1, 8.2 e 8.9.
+Descreve o sistema **como está implementado** (seção 19 do `docs/spec.md`). Atualizada no mesmo commit de toda mudança de schema, função, política, prompt ou lógica de tela. Estado atual: épicos 8.0, design, 8.1, 8.2, 8.9 e 8.3.
 
 ## 1. Modelo de dados
 
@@ -71,6 +71,10 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | [Marca] Comprar créditos | `pacotes_creditos` (só ativos, por `ordem`), `marcas.ativa` | `POST /api/creditos/checkout` |
 | [Marca] Compra concluída (`/creditos/obrigado`) | `pagamentos`, `marcas` | `fulfillCheckout` → `creditar_pagamento` (servidor) |
 | [Admin] Configurações | `precos_acoes`, `pacotes_creditos`, `configuracoes` (service_role) | `PUT /api/admin/configuracoes`, `POST /api/admin/pacotes`, `PATCH /api/admin/pacotes/:id` |
+| [Marca] Marca | `marcas` (kit), URL assinada do logo | `marcas` direto pela RLS `marcas_update_kit`; Storage `marcas/<marca>/logo/*` |
+| [Marca] Produtos | `produtos` (não arquivados) + `fotos_produto` + `fichas_produto` (selo), URLs assinadas | — |
+| [Marca] Novo produto | — | `produtos` (RLS `produtos_insert`), Storage `produtos/<marca>/<produto>/originais/*`, `fotos_produto` (RLS `fotos_insert`), `POST /api/fotos/:id/converter` (HEIC) |
+| [Marca] Produto | `produtos`, `fotos_produto`, `precos_acoes` | `fotos_produto` delete (RLS `fotos_delete`), `produtos.arquivado` (RLS `produtos_update`) |
 | Demais telas | ainda com dados fictícios do design (`src/features/fixtures`) | ligadas nos épicos seguintes |
 
 ## 5. Lógica por tela (até o 8.1)
@@ -81,6 +85,8 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 - **Convite**: link do e-mail → `/auth/confirm` (verifyOtp) → `/definir-senha` (mín. 8 caracteres + confirmação) → Início.
 - **Sair**: `POST /sair` (POST para o prefetch de links nunca deslogar ninguém).
 - **Rotas de admin (`src/app/api/admin/*`)**: `requireAdminApi()` (401 sem sessão, 403 se não for admin ativo), corpo validado com Zod (`src/server/admin/schemas.ts`), lógica em `src/server/admin/*` com service_role. Erros do banco viram `{ erro, mensagem }` (`src/server/api/http.ts`): `saldo_negativo` → "O ajuste deixaria o saldo negativo." (422), `compra_exige_valor`, `observacao_obrigatoria`, `email_existente` (409)…
+- **Fotos de produto (8.3)**: validação no navegador (JPG/PNG/HEIC/WEBP ≤ 10 MB, `src/lib/photo-rules.ts`; erro com a copy da seção 15); envio direto ao Storage com progresso (XHR com o token do usuário, `src/lib/storage-upload.ts`); `fotos_produto.storage_path` guarda o caminho com o bucket na frente (`produtos/<marca>/<produto>/originais/<uuid>.<ext>`, seção 7.3); HEIC → `POST /api/fotos/:id/converter` baixa do Storage, converte com `heic-convert`, grava `.jpg`, atualiza o caminho e apaga o `.heic`. Limite de 4 fotos na interface e no trigger `trg_fotos_produto_limite`.
+- **Kit da marca (8.3)**: a própria marca grava nome, @, cor, CTA, tom e idioma dos vídeos direto pela RLS, validado com o mesmo schema do admin; o logo usa o mesmo `LogoUploader` do admin em modo marca.
 - **Logo do kit**: `LogoUploader` (PNG/SVG/JPG ≤ 5 MB) envia direto do navegador ao bucket `marcas` em `<marca>/logo/<timestamp>.<ext>` (política `storage_adfit_insert`) e grava `logo_path` via `PATCH` (só aceita caminho da própria marca); prévia por URL assinada de 60 min. Reaproveitado na tela Marca do usuário (8.3).
 - **Erros de marca pausada**: `marca_inativa` → 423 "Conta pausada. Fale com o suporte: {contato_suporte}".
 - **Lançar créditos**: valor pago digitado em qualquer formato ("1.234,56", "US$ 65.00") → centavos (`src/lib/money.ts`); moeda BRL/USD/EUR.
@@ -136,5 +142,6 @@ Entra nos épicos 8.4–8.7.
 | D-11 | `cancel_url = /creditos?compra=cancelada` (spec: `/creditos`) | A tela precisa saber que voltou de um cancelamento para mostrar "Compra cancelada. Nada foi cobrado." |
 | D-12 | `estornar_pagamento` acrescenta a nota em `observacao` (migration 20261101000800) | A versão original sobrescrevia a nota de um reembolso parcial anterior (bug achado por teste). |
 | D-13 | Checkout envia `customer_email` e `locale` do usuário | E-mail pré-preenchido e página da Stripe no idioma do usuário (MD-1). |
+| D-14 | Conversão HEIC → JPG por `POST /api/fotos/:id/converter` depois do envio direto ao Storage | A Vercel limita o corpo das funções a 4,5 MB; fotos vão até 10 MB. A rota não está na seção 13. |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
 | MD-2 | Crédito "Feito pela Dab Lab" | Emenda do Alexandre. |

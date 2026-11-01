@@ -1,23 +1,23 @@
 import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/feedback";
 import { NewProductForm } from "@/features/products/new-product-form";
-import { readFlags } from "@/features/fixtures/flags";
+import { brandContext } from "@/server/brand/context";
 
-/**
- * Tela [Marca] Novo produto (seção 10). Estados de design: `?estado=enviando|erro|vazio`.
- */
-export default function NewProductPage({ searchParams }: PageProps<"/produtos/novo">) {
+/** Tela [Marca] Novo produto (seção 10; critério 8.3). */
+export default function NewProductPage() {
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-6">
-      <PageHeader title="Novo produto" subtitle="Pode ser foto de celular, no cabide ou em cima da mesa." />
-      <Suspense>
-        <Form searchParams={searchParams} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<div className="mx-auto h-80 max-w-xl animate-pulse rounded-[14px] bg-surface" />}>
+      <Content />
+    </Suspense>
   );
 }
 
-async function Form({ searchParams }: { searchParams: PageProps<"/produtos/novo">["searchParams"] }) {
-  const flags = readFlags(await searchParams);
-  return <NewProductForm initialState={flags.estado} />;
+async function Content() {
+  const { profile, t } = await brandContext();
+  return (
+    <div className="mx-auto flex max-w-xl flex-col gap-6">
+      <PageHeader title={t.produtos.novoProduto} subtitle={t.produtos.novoSubtitulo} />
+      <NewProductForm marcaId={profile.marcaId} t={t} />
+    </div>
+  );
 }

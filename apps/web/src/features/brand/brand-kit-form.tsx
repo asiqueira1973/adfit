@@ -1,27 +1,32 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
-import { Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Banner } from "@/components/ui/feedback";
 import { TextField } from "@/components/ui/field";
-import { fxBrand } from "@/features/fixtures";
+import { Segmented } from "@/components/ui/segmented";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
+import type { Dictionary } from "@/lib/i18n";
+import { brandKitSchema } from "@/server/admin/schemas";
 
 /**
  * Prévia ao vivo do fecho do vídeo (seção 10 e regra 11.8): clipe escurecido 40%, logo
- * centralizado (largura 40% no vertical) ou o nome da marca sem logo, CTA na cor de destaque
+ * centralizado (40% da largura no vertical) ou o nome da marca sem logo, CTA na cor de destaque
  * (branco se nula) e oferta abaixo. Recebe: dados do kit. Devolve: a prévia 9:16.
  */
-export function ClosingPreview({ name, logo, color, cta, offer }: { name: string; logo: string | null; color: string; cta: string; offer?: string }) {
+export function ClosingPreview({ name, logoUrl, color, cta, offer }: { name: string; logoUrl: string | null; color: string; cta: string; offer?: string }) {
   return (
     <div className="relative aspect-[9/16] w-full overflow-hidden rounded-[14px] bg-black">
-      <Image src="/fixtures/cena-3.jpg" alt="" fill sizes="220px" className="object-cover" />
+      {/* eslint-disable-next-line @next/next/no-img-element -- imagem ilustrativa de fundo */}
+      <img src="/fixtures/cena-3.jpg" alt="" className="absolute inset-0 size-full object-cover" />
       <div className="absolute inset-0 bg-black/40" />
-      <div className="absolute inset-x-[6%] top-[15%] bottom-[30%] flex flex-col items-center justify-center gap-[6%] text-center">
-        {logo ? (
-          <div className="relative aspect-[3/1] w-[40%]"><Image src={logo} alt="Logo" fill className="object-contain" /></div>
+      <div className="absolute inset-x-[6%] bottom-[30%] top-[15%] flex flex-col items-center justify-center gap-[6%] text-center">
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- URL assinada temporária do Storage
+          <img src={logoUrl} alt="Logo" className="max-h-[20%] w-[40%] object-contain" />
         ) : (
-          <span className="text-[clamp(16px,6cqw,28px)] font-bold text-white drop-shadow">{name}</span>
+          <span className="text-[22px] font-bold text-white drop-shadow">{name}</span>
         )}
         <span className="text-[13px] font-bold leading-tight drop-shadow" style={{ color: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#FFFFFF" }}>{cta}</span>
         {offer && <span className="text-[11px] font-semibold text-white drop-shadow">{offer}</span>}
@@ -30,41 +35,66 @@ export function ClosingPreview({ name, logo, color, cta, offer }: { name: string
   );
 }
 
+export type BrandKit = { id: string; nome: string; instagram: string | null; cor_destaque: string | null; cta_padrao: string; tom_de_voz: string | null; idioma_anuncios: "pt_br" | "en" };
+
 /**
- * Formulário [Marca] Marca (seção 10 e épico 8.3): logo (PNG/SVG/JPG até 5 MB), nome, @, cor de
- * destaque, CTA (40) e tom de voz, com prévia ao vivo. Fase de design: não salva.
+ * Formulário [Marca] Marca (seção 10, épico 8.3): nome, @, cor de destaque, CTA (40), tom de voz
+ * e idioma do texto dos vídeos (MD-1), com prévia ao vivo. Grava direto em `marcas` pela política
+ * marcas_update_kit (seção 6.4); valida com o mesmo schema do admin. O logo é enviado à parte.
+ * Recebe: kit atual, URL do logo e textos.
  */
-export function BrandKitForm() {
-  const [name, setName] = useState(fxBrand.nome);
-  const [color, setColor] = useState(fxBrand.cor_destaque);
-  const [cta, setCta] = useState(fxBrand.cta_padrao);
+export function BrandKitForm({ kit, logoUrl, t }: { kit: BrandKit; logoUrl: string | null; t: Dictionary }) {
+  const router = useRouter();
+  const [name, setName] = useState(kit.nome);
+  const [color, setColor] = useState(kit.cor_destaque ?? "#FFFFFF");
+  const [cta, setCta] = useState(kit.cta_padrao);
+  const [idioma, setIdioma] = useState(kit.idioma_anuncios);
+  const [msg, setMsg] = useState<{ tone: "success" | "danger"; text: string }>();
+  const [pending, start] = useTransition();
+
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const parsed = brandKitSchema.safeParse({
+      nome: name,
+      instagram: String(f.get("instagram") ?? ""),
+      cor_destaque: color,
+      cta_padrao: cta,
+      tom_de_voz: String(f.get("tom_de_voz") ?? ""),
+      idioma_anuncios: idioma,
+    });
+    if (!parsed.success) {
+      const field = parsed.error.issues[0]?.path[0];
+      return setMsg({ tone: "danger", text: field === "instagram" ? t.erros.instagramInvalido : field === "cor_destaque" ? t.erros.corInvalida : t.erros.validacao });
+    }
+    start(async () => {
+      const { error } = await createBrowserSupabase().from("marcas").update(parsed.data).eq("id", kit.id);
+      setMsg(error ? { tone: "danger", text: t.erros.generico } : { tone: "success", text: t.marca.salvo });
+      if (!error) router.refresh();
+    });
+  }
+
   return (
     <div className="grid gap-8 md:grid-cols-[1fr_240px]">
-      <form className="flex flex-col gap-5">
-        <div className="flex items-center gap-4">
-          <div className="flex size-20 items-center justify-center rounded-[14px] border border-dashed border-text-2/40 bg-surface text-[12px] text-text-2">Sem logo</div>
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[10px] bg-surface px-4 text-[15px] font-semibold">
-            <Upload className="size-4" /> Enviar logo
-            <input type="file" accept="image/png,image/svg+xml,image/jpeg" className="sr-only" />
-          </label>
-        </div>
-        <p className="-mt-3 text-[13px] text-text-2">PNG, SVG ou JPG até 5 MB. Fundo transparente fica melhor.</p>
-        <TextField label="Nome da marca" value={name} onChange={(e) => setName(e.target.value)} />
-        <TextField label="Instagram" defaultValue={fxBrand.instagram} hint="Sem o @." />
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        <TextField label={t.marca.nome} value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} />
+        <TextField label={t.marca.instagram} name="instagram" defaultValue={kit.instagram ?? ""} hint={t.marca.instagramDica} maxLength={31} />
         <div className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-medium text-text-2">Cor de destaque</span>
+          <span className="text-[13px] font-medium text-text-2">{t.marca.cor}</span>
           <div className="flex items-center gap-3">
-            <input type="color" aria-label="Escolher cor" value={color} onChange={(e) => setColor(e.target.value.toUpperCase())} className="size-11 cursor-pointer rounded-[10px] border border-hairline bg-transparent p-1" />
-            <input aria-label="Cor em hexadecimal" value={color} onChange={(e) => setColor(e.target.value)} className="w-32 rounded-[10px] border border-hairline bg-bg px-3 py-2.5 font-mono text-[15px]" />
+            <input type="color" aria-label={t.marca.corEscolher} value={/^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#FFFFFF"} onChange={(e) => setColor(e.target.value.toUpperCase())} className="size-11 cursor-pointer rounded-[10px] border border-hairline bg-transparent p-1" />
+            <input aria-label={t.marca.corHex} value={color} onChange={(e) => setColor(e.target.value)} maxLength={7} className="w-32 rounded-[10px] border border-hairline bg-bg px-3 py-2.5 font-mono text-[15px]" />
           </div>
         </div>
-        <TextField label="Chamada final (CTA)" maxChars={40} value={cta} onChange={(e) => setCta(e.target.value)} />
-        <TextField label="Tom de voz (opcional)" defaultValue={fxBrand.tom_de_voz} hint="Como os textos do vídeo devem soar." />
-        <Button type="submit">Salvar</Button>
+        <TextField label={t.marca.cta} maxChars={40} value={cta} onChange={(e) => setCta(e.target.value)} required hint={idioma === "en" && cta === "Compre pelo link da bio" ? t.marca.sugestaoCtaEn : undefined} />
+        <TextField label={t.marca.tom} name="tom_de_voz" defaultValue={kit.tom_de_voz ?? ""} hint={t.marca.tomDica} maxLength={200} />
+        <Segmented name="idioma_anuncios" label={t.marca.idiomaVideos} value={idioma} onChange={(v) => setIdioma(v as "pt_br" | "en")} options={[{ value: "pt_br", label: t.idiomas.pt_br }, { value: "en", label: t.idiomas.en }]} />
+        {msg && <Banner tone={msg.tone}>{msg.text}</Banner>}
+        <Button type="submit" disabled={pending}>{pending ? t.marca.salvando : t.marca.salvar}</Button>
       </form>
       <div className="flex flex-col gap-2 md:sticky md:top-20 md:self-start">
-        <span className="text-[13px] font-medium text-text-2">Fim do vídeo</span>
-        <div className="mx-auto w-[220px] md:w-full"><ClosingPreview name={name} logo={fxBrand.logo} color={color} cta={cta} offer="20% OFF esta semana" /></div>
+        <span className="text-[13px] font-medium text-text-2">{t.marca.fimDoVideo}</span>
+        <div className="mx-auto w-[220px] md:w-full"><ClosingPreview name={name} logoUrl={logoUrl} color={color} cta={cta} offer={t.marca.ofertaExemplo} /></div>
       </div>
     </div>
   );
