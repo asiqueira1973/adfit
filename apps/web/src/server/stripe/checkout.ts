@@ -1,4 +1,5 @@
 import "server-only";
+import { track } from "../analytics/track";
 import { createAdminClient } from "../db/supabase";
 import { publicServerEnv } from "../env";
 import { BusinessError } from "../api/http";
@@ -45,5 +46,6 @@ export async function createCheckout(profile: Profile & { marcaId: string }, pac
 
   await db.from("pagamentos").update({ stripe_checkout_session_id: session.id }).eq("id", pagamento.id);
   if (!session.url) throw new Error("Checkout Session sem URL");
+  await track({ nome: "adfit_compra_iniciada", distinctId: profile.email, tela: "Comprar créditos", descricao: "abriu o pagamento de um pacote de créditos", propriedades: { pacote: pacote.nome, creditos: pacote.creditos, valor_centavos: pacote.preco_centavos, moeda: pacote.moeda } });
   return { url: session.url, pagamentoId: pagamento.id };
 }

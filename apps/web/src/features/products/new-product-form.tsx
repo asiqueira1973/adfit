@@ -1,5 +1,6 @@
 "use client";
 
+import { trackClient } from "@/lib/track-client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
@@ -63,6 +64,7 @@ export function NewProductForm({ marcaId, t }: { marcaId: string; t: Dictionary 
       return setError(t.erros.generico);
     }
     let falhou = false;
+    trackClient("adfit_produto_criado", "Novo produto", { produto_id: produto.id, fotos: picked.length });
     for (const [i, p] of picked.entries()) {
       try {
         await uploadProductPhoto(marcaId, produto.id, p.file, i + 1, (pct, phase) => update(p.key, { pct, phase }));

@@ -52,4 +52,6 @@ O app terá pt-BR e inglês (emenda MD-1 em `docs/mudancas-de-escopo.md`); nenhu
 - `configuracoes.valor` é jsonb: grave a string pura (`"modelo"`), nunca `JSON.stringify(...)` antes do supabase-js (vira string com aspas dentro).
 - Prompts `.md` são lidos do disco em tempo de execução (`loadPrompt`); `next.config.ts` os inclui no trace com `outputFileTracingIncludes`.
 - Gerações: nunca grave URL assinada em `geracoes.entrada` (expira e vaza); grave os caminhos e assine na submissão.
+- Analytics (MD-8): use `track()` de `src/server/analytics/track.ts` nos pontos-chave novos (vídeo gerado, download…); nunca bloqueia, nunca manda prompt/URL assinada; `distinct_id` = e-mail.
+- Foto de entrada: sempre `toJpeg()` pelo conteúdo antes de mandar a modelo de IA (já houve `.jpg` que era HEIF).
 - Quando o agente errar a mesma coisa duas vezes, a correção entra aqui.

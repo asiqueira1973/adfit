@@ -14,10 +14,11 @@ import { buildScriptSystem, sanitizeScreenTexts } from "./script";
 import { isBusy, transition, type AdStatus } from "./stateMachine";
 import { hasForbiddenTerm } from "@/lib/forbidden-terms";
 import { validateScreenText } from "@/lib/text-rules";
+import { emailOf, track } from "../analytics/track";
 import { getDictionary, type Locale } from "@/lib/i18n";
 
 /** Quem pede: usuário da marca (só a própria) ou admin (seção 13: rotas "marca/admin"). */
-export type AdActor = { id: string; papel: "admin_plataforma" | "usuario_marca"; marcaId: string | null; idioma: Locale };
+export type AdActor = { id: string; papel: "admin_plataforma" | "usuario_marca"; marcaId: string | null; idioma: Locale; email?: string };
 
 /** Corpo de `POST /api/anuncios` (opções da 11.4 + `produto_id`; limites da 11.7). */
 export const createAdSchema = z
@@ -95,6 +96,7 @@ export async function createAd(actor: AdActor, input: CreateAdInput, deps: { ai?
   }
 
   await runLater(() => runAdPipeline(anuncioId, deps));
+  await track({ nome: "adfit_anuncio_criado", distinctId: actor.email ?? "", tela: "Novo anúncio", descricao: "criou um anúncio (roteiro + 3 cenas)", propriedades: { anuncio_id: anuncioId, cenario: input.cenario, modalidade: input.modalidade, estilo: input.estilo, formato: input.formato, com_texto: input.com_texto } });
   return { anuncioId };
 }
 
@@ -120,7 +122,10 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
   const ai = deps.ai ?? aiClient();
 
   const fail = async (erro: string) => {
-    if (await transition(anuncioId, "gerando_roteiro", "falhou", { erro: erro.slice(0, 500) })) await refundAd(anuncioId, "Falha técnica ao criar o roteiro");
+    if (await transition(anuncioId, "gerando_roteiro", "falhou", { erro: erro.slice(0, 500) })) {
+      await refundAd(anuncioId, "Falha técnica ao criar o roteiro");
+      await track({ nome: "adfit_anuncio_falhou", distinctId: (await emailOf(ad.criado_por)) ?? "", tela: "Anúncio", descricao: "o roteiro do anúncio falhou (créditos estornados)", propriedades: { anuncio_id: anuncioId, etapa: "roteiro" } });
+    }
   };
 
   // 1. Roteiro (Anexo C.2 / roteiro.v2).

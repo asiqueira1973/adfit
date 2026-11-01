@@ -4,6 +4,7 @@ import { isResponse, requireAdminApi } from "@/server/api/guards";
 import { errorResponse, validationError } from "@/server/api/http";
 import { inviteUser } from "@/server/admin/users";
 import { inviteUserSchema } from "@/server/admin/schemas";
+import { track } from "@/server/analytics/track";
 
 /**
  * POST /api/admin/usuarios — convida usuário de marca (seções 6.1 e 13; MD-7: login só com Google).
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return validationError(parsed.error, getDictionary(actor.idioma));
   try {
     const r = await inviteUser(parsed.data, actor.idioma);
+    await track({ nome: "adfit_convite_enviado", distinctId: actor.email, tela: "Admin · Usuários", descricao: "admin deu acesso a um usuário de marca", propriedades: { marca_id: parsed.data.marca_id, email_enviado: r.emailEnviado } });
     return NextResponse.json({ id: r.id, email_enviado: r.emailEnviado, link: r.link }, { status: 201 });
   } catch (e) {
     return errorResponse(e, actor.idioma);

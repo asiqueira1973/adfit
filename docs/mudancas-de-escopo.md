@@ -104,3 +104,26 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
   - Os modelos de e-mail do Supabase (convite/recuperação) deixam de ser usados pelo AdFit.
   - Quem não tem conta Google não entra. Se acontecer, dá para acrescentar o link de acesso por e-mail.
   - **Conflita com:** seção 6.1 (e-mail e senha) e 6.2 (redefinir senha).
+
+## MD-8 — Analytics de produto com o Visão de Produto (01/11/2026, Alexandre)
+- **Decisão:** mandar eventos dos pontos-chave do app para o Visão de Produto (`https://api.visaodeproduto.com.br/functions/v1/ingest`, cabeçalho `x-api-key`).
+- **Chave:** `VISAO_API_KEY`, só no servidor (`.env.local` e Vercel, sensível). O navegador nunca a vê.
+- **Eventos** (prefixo `adfit_`; `distinct_id` = e-mail da pessoa; `propriedades.ambiente` = production/preview/local):
+
+| Evento | Onde | Propriedades |
+|---|---|---|
+| `adfit_login` | tela Entrar (navegador → `POST /api/eventos`) | papel |
+| `adfit_produto_criado` | Novo produto (navegador → `POST /api/eventos`) | produto_id, fotos |
+| `adfit_ficha_solicitada` | `requestSheet` | produto_id, refacao, versao |
+| `adfit_ficha_aprovada` | `approveSheet` | produto_id, ficha_id |
+| `adfit_anuncio_criado` | `createAd` | anuncio_id, cenario, modalidade, estilo, formato, com_texto |
+| `adfit_anuncio_cenas_prontas` | `checkAdProgress` → `aguardando_aprovacao` | anuncio_id, cenas_prontas |
+| `adfit_anuncio_falhou` | roteiro ou as 3 cenas falharam (com estorno) | anuncio_id, etapa |
+| `adfit_compra_iniciada` | `createCheckout` | pacote, creditos, valor_centavos, moeda |
+| `adfit_compra_concluida` | `fulfillCheckout`, 1ª confirmação (id do evento = movimentação, deduplicado) | creditos, valor_centavos, moeda |
+| `adfit_feedback_enviado` | `sendFeedback` | tipo, tela_origem |
+| `adfit_convite_enviado` | `POST /api/admin/usuarios` | marca_id, email_enviado |
+
+- **Regras:** o envio roda depois da resposta (`after`), com timeout de 4 s, e erro só vai para o log; analytics nunca atrapalha a ação. Nada de prompt, URL assinada ou dado de cartão.
+- **Privacidade (seção 20 / 25.7):** o e-mail do usuário vai para o Visão de Produto (ferramenta da Dab Lab) como identificador. A política de privacidade precisa citar isso, junto com Stripe, Higgsfield e Anthropic.
+- **Próximos eventos naturais** (8.6–8.8): vídeo gerado, vídeo baixado, refação de cena.

@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { createAdminClient, createUserClient } from "../db/supabase";
 import type { Profile } from "../auth/profile";
+import { track } from "../analytics/track";
 
 /** Corpo do envio de feedback (emenda MD-6). */
 export const feedbackSchema = z
@@ -20,6 +21,7 @@ export async function sendFeedback(profile: Profile, body: z.infer<typeof feedba
   const supabase = await createUserClient();
   const { error } = await supabase.from("feedbacks").insert({ usuario_id: profile.id, marca_id: profile.marcaId, tipo: body.tipo, texto: body.texto, tela: body.tela ?? null });
   if (error) throw error;
+  await track({ nome: "adfit_feedback_enviado", distinctId: profile.email, tela: "Fale com a gente", descricao: body.tipo === "problema" ? "relatou um problema" : "mandou uma sugestão", propriedades: { tipo: body.tipo, tela_origem: body.tela ?? null } });
 }
 
 /**

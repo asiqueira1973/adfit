@@ -8,6 +8,7 @@ import { AD_BUCKET } from "@/lib/storage-paths";
 import { chainGeneration, getGeneration, submitGeneration, type GenerationDeps, type GenerationInput, type GenerationRow, type GenerationTarget } from "../higgsfield/process";
 import { aiClient, runLater } from "./runtime";
 import { transition } from "./stateMachine";
+import { emailOf, track } from "../analytics/track";
 
 /** Frases fixas da montagem do quadro (Anexo C.2 + roteiro.v2 aprovado em 01/11/2026). */
 export const FRAME_REFERENCE_LINE = "Reference image 1 is the garment reference sheet.";
@@ -186,11 +187,18 @@ export async function checkAdProgress(anuncioId: string): Promise<void> {
       await db.from("cenas").update({ quadro_atual_id: l.quadro.id }).eq("id", l.cena.id);
     }
   }
+  const criador = async () => (await emailOf((await db.from("anuncios").select("criado_por").eq("id", anuncioId).single()).data?.criado_por)) ?? "";
   if (latest.some((l) => l.quadro.status === "pronto")) {
-    await transition(anuncioId, "gerando_quadros", "aguardando_aprovacao");
+    if (await transition(anuncioId, "gerando_quadros", "aguardando_aprovacao")) {
+      const prontas = latest.filter((l) => l.quadro.status === "pronto").length;
+      await track({ nome: "adfit_anuncio_cenas_prontas", distinctId: await criador(), tela: "Anúncio", descricao: "as cenas do anúncio ficaram prontas para escolher", propriedades: { anuncio_id: anuncioId, cenas_prontas: prontas } });
+    }
     return;
   }
-  if (await transition(anuncioId, "gerando_quadros", "falhou", { erro: "os_3_quadros_falharam" })) await refundAd(anuncioId, "Falha técnica nos 3 quadros do anúncio");
+  if (await transition(anuncioId, "gerando_quadros", "falhou", { erro: "os_3_quadros_falharam" })) {
+    await refundAd(anuncioId, "Falha técnica nos 3 quadros do anúncio");
+    await track({ nome: "adfit_anuncio_falhou", distinctId: await criador(), tela: "Anúncio", descricao: "as 3 cenas do anúncio falharam (créditos estornados)", propriedades: { anuncio_id: anuncioId, etapa: "cenas" } });
+  }
 }
 
 /**

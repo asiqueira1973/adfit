@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { PUBLIC_ENV } from "@/lib/public-env";
+import { trackClient } from "@/lib/track-client";
 
 type GoogleId = {
   initialize(config: { client_id: string; callback: (r: { credential: string }) => void; nonce: string; use_fedcm_for_prompt?: boolean; ux_mode?: "popup" }): void;
@@ -64,6 +65,7 @@ export function GoogleButton({ locale, errorLabel, noAccessLabel }: { locale: st
               setError(/signup|not allowed|disabled/i.test(e.message) ? noAccessLabel : errorLabel);
               return;
             }
+            trackClient("adfit_login", "Entrar");
             // O proxy manda cada perfil para a sua página inicial (ou recusa quem não tem perfil).
             router.replace("/");
             router.refresh();

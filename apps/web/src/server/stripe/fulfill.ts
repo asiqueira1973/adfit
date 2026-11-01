@@ -1,4 +1,5 @@
 import "server-only";
+import { emailOf, track } from "../analytics/track";
 import { createAdminClient } from "../db/supabase";
 import { getStripe, type StripeApi } from "./client";
 
@@ -25,7 +26,7 @@ export async function fulfillCheckout(sessionId: string, stripe: StripeApi = get
   const db = createAdminClient();
   const { data: pag } = await db
     .from("pagamentos")
-    .select("id, marca_id, creditos, status, stripe_checkout_session_id, pacotes_creditos(stripe_price_id)")
+    .select("id, marca_id, creditos, status, criado_por, valor_centavos, moeda, stripe_checkout_session_id, pacotes_creditos(stripe_price_id)")
     .eq("id", pagamentoId)
     .maybeSingle();
   if (!pag || (pag.stripe_checkout_session_id && pag.stripe_checkout_session_id !== session.id)) return { status: "desconhecido" };
@@ -47,5 +48,9 @@ export async function fulfillCheckout(sessionId: string, stripe: StripeApi = get
     p_moeda: session.currency ?? "",
   });
   if (error) throw error;
+  // Só na primeira confirmação; o id do evento é o da movimentação (reenvio não duplica no painel).
+  if (pag.status !== "pago" && movimentacaoId) {
+    await track({ id: String(movimentacaoId), nome: "adfit_compra_concluida", distinctId: (await emailOf(pag.criado_por)) ?? "", tela: "Compra concluída", descricao: "pagamento aprovado e créditos adicionados", propriedades: { creditos: pag.creditos, valor_centavos: pag.valor_centavos, moeda: pag.moeda } });
+  }
   return { status: "pago", pagamentoId: pag.id, marcaId: pag.marca_id, creditos: pag.creditos, movimentacaoId };
 }

@@ -7,9 +7,10 @@ import { createClaudeAdjuster } from "../claude/client";
 import type { PromptAdjuster } from "../claude/types";
 import { failGeneration, generationDeps, getGeneration, submitGeneration, type GenerationDeps, type GenerationInput } from "../higgsfield/process";
 import { buildFirstSheetPrompt, buildRedoSheetPrompt, type SheetPrompt } from "./prompt";
+import { track } from "../analytics/track";
 
 /** Quem pede a ação: usuário da marca (só a própria marca) ou admin (qualquer marca) — seção 13. */
-export type SheetActor = { id: string; papel: "admin_plataforma" | "usuario_marca"; marcaId: string | null };
+export type SheetActor = { id: string; papel: "admin_plataforma" | "usuario_marca"; marcaId: string | null; email?: string };
 
 let testAdjuster: PromptAdjuster | null = null;
 
@@ -145,6 +146,7 @@ export async function requestSheet(
 
   // 5. Submissão (erro aqui segue a política de retentativa/estorno dentro de submitGeneration).
   await submitGeneration(geracao.id, generation);
+  await track({ nome: "adfit_ficha_solicitada", distinctId: actor.email ?? "", tela: "Produto", descricao: isRedo ? "pediu para refazer a ficha da peça" : "pediu a primeira ficha da peça", propriedades: { produto_id: produto.id, refacao: isRedo, versao } });
   return { fichaId };
 }
 
@@ -161,6 +163,7 @@ export async function approveSheet(actor: SheetActor, fichaId: string): Promise<
   assertOwner(actor, ficha.marca_id, "ficha_inexistente");
   const { data, error } = await db.rpc("aprovar_ficha", { p_ficha_id: fichaId });
   if (error) throw error;
+  await track({ nome: "adfit_ficha_aprovada", distinctId: actor.email ?? "", tela: "Produto", descricao: "aprovou a ficha da peça (produto pronto para anúncio)", propriedades: { produto_id: String(data), ficha_id: fichaId } });
   return { produtoId: data as string };
 }
 
