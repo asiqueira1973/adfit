@@ -1,0 +1,15 @@
+{
+  "name": "adfit",
+  "private": true,
+  "workspaces": ["apps/web", "apps/worker"],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "typecheck": "npm run typecheck -w apps/web && npm run typecheck -w apps/worker",
+    "lint": "npm run lint -w apps/web && npm run lint -w apps/worker",
+    "test": "npm run test:db && npm test -w apps/web && npm test -w apps/worker",
+    "test:db": "node scripts/test-db.mjs",
+    "build": "npm run build -w apps/web && npm run build -w apps/worker",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build"
+  },
+  "engines": { "node": ">=22" }
+}
