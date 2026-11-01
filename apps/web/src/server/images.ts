@@ -16,3 +16,14 @@ export async function toJpeg(bytes: Uint8Array): Promise<Buffer> {
     return Buffer.from(out as ArrayBuffer);
   }
 }
+
+/**
+ * Bug B-9: a ficha tem 3 painéis iguais lado a lado (prompt ficha.v2: frente, costas, close da marca).
+ * O close da gola por dentro faz o Grok barrar a cena por conteúdo; a nova tentativa pós-nsfw usa só
+ * frente e costas. Recebe: imagem da ficha. Devolve: JPEG com os 2/3 da esquerda.
+ */
+export async function dropCloseUpPanel(sheet: Uint8Array): Promise<Buffer> {
+  const image = sharp(sheet);
+  const { width = 0, height = 0 } = await image.metadata();
+  return image.extract({ left: 0, top: 0, width: Math.round((width * 2) / 3), height }).jpeg({ quality: 92 }).toBuffer();
+}

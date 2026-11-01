@@ -33,6 +33,8 @@ export type GenerationInput = {
   referencias: string[];
   aspect_ratio: ImageRequest["aspectRatio"];
   resumo_refacao?: string | null;
+  /** Nova tentativa pós-nsfw de quadro: ficha sem o painel do close (bug B-9). */
+  sem_close?: boolean;
 };
 
 export type GenerationRow = {
@@ -84,7 +86,7 @@ export async function submitGeneration(geracaoId: string, deps = generationDeps(
   if (!g || g.status !== "na_fila") return;
   try {
     const entrada = g.entrada as GenerationInput;
-    const imageUrls = await referenceUrls(g.marca_id, entrada.referencias, deps.hf);
+    const imageUrls = await referenceUrls(g.marca_id, entrada.referencias, deps.hf, { dropCloseUp: !!entrada.sem_close });
     const body =
       g.tipo === "clipe_video"
         ? buildVideoBody(g.modelo, { prompt: entrada.prompt, imageUrl: imageUrls[0], seconds: 5 })
@@ -256,12 +258,13 @@ export async function failGeneration(
 
 /**
  * Entrada da retentativa: igual à original, exceto quadro barrado por conteúdo (nsfw), que sai com
- * enquadramento aberto e discreto — repetir o mesmo prompt seria barrado de novo (1º teste real).
+ * enquadramento aberto e discreto — repetir o mesmo prompt seria barrado de novo (1º teste real) —
+ * e com a ficha sem o painel do close, que sozinho dispara o filtro do Grok (bug B-9).
  */
-function retryInput(g: GenerationRow, status: "falhou" | "bloqueada_nsfw"): GenerationInput {
+export function retryInput(g: GenerationRow, status: "falhou" | "bloqueada_nsfw"): GenerationInput {
   const entrada = g.entrada as GenerationInput & { prompt_cena?: string; modelo?: string; motivo_qc?: string | null };
   if (status !== "bloqueada_nsfw" || g.tipo !== "quadro_chave" || !entrada.prompt_cena || !entrada.modelo) return entrada;
-  return { ...entrada, prompt: buildFramePrompt(entrada.prompt_cena, entrada.modelo, entrada.motivo_qc, true) };
+  return { ...entrada, prompt: buildFramePrompt(entrada.prompt_cena, entrada.modelo, entrada.motivo_qc, true), sem_close: true };
 }
 
 /**
