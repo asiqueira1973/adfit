@@ -22,6 +22,9 @@ Compra: `/api/creditos/checkout` → Stripe Checkout → webhook `/api/webhooks/
 `npm run typecheck` · `npm run lint` · `npm test` (pgTAP no Supabase local + Vitest) · `npm run build` · `npm run verify` (os quatro).
 Saída saudável do verify: termina com a tabela de rotas do `next build` e `worker@… build` sem erro, código 0.
 
+## Idiomas
+O app terá pt-BR e inglês (emenda MD-1 em `docs/mudancas-de-escopo.md`); nenhum texto de interface fora de `src/lib/copy.ts` e `src/lib/labels.ts`.
+
 ## Pegadinhas
 - Nunca exibir prompt, nome de modelo ou custo USD para `usuario_marca`.
 - Webhook da Higgsfield chega repetido: tudo idempotente por `request_id`.

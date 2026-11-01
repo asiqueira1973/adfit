@@ -93,3 +93,6 @@ Fala para câmera, narração, trilha, 30 s, Pix, assinatura mensal, autocadastr
 - Pagamento: Vitest + `stripe listen` com cartão 4242 (repetido e concorrente).
 - Geração: dublês gravados + 1 teste real por épico de geração.
 - Deploy: `curl -I https://<app>.vercel.app/entrar` = 200.
+
+## Idiomas (MD-1, registrado em 31/10/2026)
+O app precisa existir em português **e inglês** (ver `docs/mudancas-de-escopo.md`). Diverge da seção 17. Escopo, momento e forma de escolher o idioma: a definir com o Alexandre antes do épico 8.1.
