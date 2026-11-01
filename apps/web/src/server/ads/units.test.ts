@@ -20,7 +20,7 @@ describe("prompt do quadro", () => {
   });
   it("regeneração do QC leva o motivo antes da cláusula", () => {
     const p = buildFramePrompt("Scene", "Model", "Logo is missing on the chest");
-    expect(p).toContain("Fix from the previous attempt: Logo is missing on the chest");
+    expect(p).toContain("Fix from the previous attempt: Logo is missing on the front");
     expect(p.endsWith(CLAUSULA_IMAGEM)).toBe(true);
   });
 });

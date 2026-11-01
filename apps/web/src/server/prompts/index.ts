@@ -12,7 +12,9 @@ export const PROMPT_VERSIONS = {
   ficha: "ficha.v2",
   refacao: "refacao.v1",
   // v2 (aprovado em 01/11/2026): mesma modelo nas 3 cenas (campo `modelo`) e texto no idioma da marca (MD-1).
-  roteiro: "roteiro.v2",
+  // v3 (aprovado em 01/11/2026, depois do 1º teste real): modelo descrita por ação/postura/roupa, nunca por
+  // partes do corpo — "chest slightly lifted" fez a Higgsfield barrar a cena 3 como nsfw duas vezes.
+  roteiro: "roteiro.v3",
   qcQuadro: "qc-quadro.v1",
   // v2: revisão no idioma do texto (MD-1) e formato de saída explícito.
   qcTexto: "qc-texto.v2",

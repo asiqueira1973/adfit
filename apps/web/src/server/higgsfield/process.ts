@@ -7,7 +7,7 @@ import { createHiggsfieldClient, downloadResult } from "./client";
 import { referenceUrls } from "./inputs";
 import { buildImageBody, type ImageRequest } from "./models";
 import type { Downloader, GenerationClient, HfResult } from "./types";
-import { frameTarget } from "../ads/frames";
+import { buildFramePrompt, frameTarget } from "../ads/frames";
 
 /** Dependências externas da geração (seção 22: dublês nos testes). */
 export type GenerationDeps = { hf: GenerationClient; download: Downloader };
@@ -240,11 +240,21 @@ export async function failGeneration(
   // Sem prompt (falhou no preparo, ex.: Claude) não há o que retentar.
   const hasPrompt = !!(g.entrada as GenerationInput | null)?.prompt;
   if (g.tentativa < MAX_ATTEMPTS && hasPrompt) {
-    const retryId = await chainGeneration(g, target, { tentativa: g.tentativa + 1, entrada: g.entrada as GenerationInput });
+    const retryId = await chainGeneration(g, target, { tentativa: g.tentativa + 1, entrada: retryInput(g, status) });
     if (retryId) await submitGeneration(retryId, deps);
     return;
   }
   await target.afterFinalFailure(g);
+}
+
+/**
+ * Entrada da retentativa: igual à original, exceto quadro barrado por conteúdo (nsfw), que sai com
+ * enquadramento aberto e discreto — repetir o mesmo prompt seria barrado de novo (1º teste real).
+ */
+function retryInput(g: GenerationRow, status: "falhou" | "bloqueada_nsfw"): GenerationInput {
+  const entrada = g.entrada as GenerationInput & { prompt_cena?: string; modelo?: string; motivo_qc?: string | null };
+  if (status !== "bloqueada_nsfw" || g.tipo !== "quadro_chave" || !entrada.prompt_cena || !entrada.modelo) return entrada;
+  return { ...entrada, prompt: buildFramePrompt(entrada.prompt_cena, entrada.modelo, entrada.motivo_qc, true) };
 }
 
 /**

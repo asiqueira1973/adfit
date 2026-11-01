@@ -5,6 +5,7 @@ import { createAdminClient } from "../db/supabase";
 import { businessCodeOf } from "../api/http";
 import type { AiClient, FrameQc, Script } from "../claude/types";
 import { CLAUSULA_IMAGEM } from "../prompts/clauses";
+import { PROMPT_VERSIONS } from "../prompts";
 import { setGenerationDepsForTests, type GenerationDeps } from "../higgsfield/process";
 import { handleHiggsfieldWebhook } from "../higgsfield/webhook";
 import webhookCompleted from "../higgsfield/__fixtures__/webhook-completed.json";
@@ -143,7 +144,7 @@ describe("8.5 — criar anúncio", () => {
 
     const ad = await adRow(anuncioId);
     expect(ad.status).toBe("gerando_quadros");
-    expect(ad.prompt_versao).toBe("roteiro.v2+quadro.v2");
+    expect(ad.prompt_versao).toBe(`${PROMPT_VERSIONS.roteiro}+quadro.v2`);
     expect((ad.roteiro as Script).cenas).toHaveLength(3);
     const { data: cenas } = await db.from("cenas").select("ordem, texto_tela").eq("anuncio_id", anuncioId).order("ordem");
     // Texto com termo proibido gerado pelo Claude vira a descrição neutra (seção 20).
@@ -207,7 +208,7 @@ describe("8.5 — quadros e QC", () => {
     ai.qcQueue = [BAD, GOOD, BAD, BAD, GOOD];
     await completeAll(0); // 3 primeiros: cena A reprova (regenera), cena B aprova, cena C reprova (regenera)
     expect(hf.submitted).toHaveLength(5);
-    expect(String(hf.submitted[3].body.prompt)).toContain("Fix from the previous attempt: Logo is missing on the chest");
+    expect(String(hf.submitted[3].body.prompt)).toContain("Fix from the previous attempt: Logo is missing on the front");
     await completeAll(3); // regenerações: A reprova de novo (aviso), C aprova
     expect(await saldo()).toBe(antes - 2);
     expect((await adRow(anuncioId)).status).toBe("aguardando_aprovacao");

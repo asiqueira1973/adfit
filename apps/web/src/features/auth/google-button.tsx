@@ -22,7 +22,7 @@ export function GoogleButton({ label, loadingLabel, errorLabel }: { label: strin
           setError(false);
           const { error: e } = await createBrowserSupabase().auth.signInWithOAuth({
             provider: "google",
-            options: { redirectTo: `${window.location.origin}/auth/confirm?next=/` },
+            options: { redirectTo: `${window.location.origin}/auth/confirm` },
           });
           if (e) {
             setPending(false);

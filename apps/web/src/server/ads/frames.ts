@@ -13,19 +13,53 @@ import { transition } from "./stateMachine";
 export const FRAME_REFERENCE_LINE = "Reference image 1 is the garment reference sheet.";
 export const FRAME_DRESS_LINE = "Dress the model in the garment shown in the sheet; do not reproduce the sheet layout, panels or grey background.";
 
+/** Linha da nova tentativa depois de bloqueio por conteúdo (nsfw): enquadramento aberto e discreto. */
+export const FRAME_SAFE_RETRY_LINE = "Wider shot with modest sports-advertising framing; the full outfit is visible in a relaxed, natural pose.";
+
+/**
+ * Termos de partes do corpo e de sensualização que os filtros de conteúdo dos modelos de imagem
+ * barram (1º teste real: "chest slightly lifted" / "chest rising" → nsfw duas vezes). Proteção do
+ * código, que não depende do Claude obedecer ao roteiro.v3 (mesmo espírito das cláusulas fixas, seção 20).
+ */
+const BODY_TERMS = /\b(chest|bust|busty|breasts?|cleavage|hips?|glutes?|butt|buttocks|booty|thighs?|abs|abdomen|belly|stomach|waist|curves?|curvy|tight|sexy|sensual|seductive|revealing|lifted)\b/i;
+
+/**
+ * Remove os trechos (separados por vírgula) que contêm termos de BODY_TERMS; frase que fica vazia
+ * some. Não mexe no resto do texto. Recebe: prompt. Devolve: prompt limpo.
+ */
+export function stripBodyTerms(text: string): string {
+  // Posição do logo é informação da peça: "logo … on the chest" / "chest logo" viram "front".
+  const normalized = text
+    .replace(/\b(logo|mark|print|brand mark)\b([^,.]*?)\b(on|across|at)\s+(the\s+)?(center of the\s+)?chest\b/gi, "$1$2$3 the front")
+    .replace(/\bchest\s+(logo|mark|print)\b/gi, "front $1");
+  return normalized
+    .split(/(?<=\.)\s+/)
+    .map((sentence) => {
+      const end = sentence.endsWith(".") ? "." : "";
+      const parts = sentence.replace(/\.$/, "").split(/,\s*/).filter((part) => !BODY_TERMS.test(part));
+      return parts.length ? `${parts.join(", ")}${end}` : "";
+    })
+    .filter(Boolean)
+    .join(" ");
+}
+
 /**
  * Monta o prompt do quadro pelo CÓDIGO (Anexo C.2, "Montagem do prompt do quadro" + roteiro.v2):
  * `prompt_quadro` + a modelo única do anúncio + referência à ficha + "vista a peça" + motivo do QC
- * (só na regeneração automática, regra 11.5) + `CLAUSULA_IMAGEM` sempre no fim.
- * Recebe: prompt da cena, descrição da modelo e motivo opcional. Devolve: o prompt final.
+ * (só na regeneração automática, regra 11.5) + enquadramento discreto (só na nova tentativa depois
+ * de nsfw) + `CLAUSULA_IMAGEM` sempre no fim. Partes do corpo saem do texto (stripBodyTerms).
+ * Recebe: prompt da cena, descrição da modelo, motivo opcional e se é nova tentativa pós-nsfw.
+ * Devolve: o prompt final.
  */
-export function buildFramePrompt(promptQuadro: string, modelo: string, motivoQc?: string | null): string {
+export function buildFramePrompt(promptQuadro: string, modelo: string, motivoQc?: string | null, safeRetry = false): string {
+  const motivo = motivoQc ? stripBodyTerms(motivoQc.trim()) : "";
   return [
-    promptQuadro.replace(CLAUSULA_IMAGEM, "").trim(),
-    `The model (same person in every scene): ${modelo.trim()}`,
+    stripBodyTerms(promptQuadro.replace(CLAUSULA_IMAGEM, "").trim()),
+    `The model (same person in every scene): ${stripBodyTerms(modelo.trim())}`,
     FRAME_REFERENCE_LINE,
     FRAME_DRESS_LINE,
-    motivoQc ? `Fix from the previous attempt: ${motivoQc.trim()}` : null,
+    motivo ? `Fix from the previous attempt: ${motivo}` : null,
+    safeRetry ? FRAME_SAFE_RETRY_LINE : null,
     CLAUSULA_IMAGEM,
   ]
     .filter(Boolean)
