@@ -186,7 +186,8 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
   if (!(await transition(anuncioId, "gerando_roteiro", "gerando_quadros", { roteiro: { ...script, cenas: cenasRoteiro } as never, prompt_versao: promptVersao }))) return;
 
   // 4. Quadros v1 das 3 cenas, submetidos em paralelo (critério 8.5).
-  const { modelo_imagem } = await readConfig(["modelo_imagem"]);
+  // Imagens das cenas no modelo próprio (MD-12: Marketing Studio Flare).
+  const { modelo_quadro } = await readConfig(["modelo_quadro"]);
   const { data: consumo } = await db.from("movimentacoes_creditos").select("id").eq("referencia_id", anuncioId).eq("tipo", "consumo").maybeSingle();
   const generation = deps.generation ?? generationDeps();
   await Promise.all(
@@ -203,7 +204,7 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
       };
       const { data: g, error: gErr } = await db
         .from("geracoes")
-        .insert({ marca_id: ad.marca_id, tipo: "quadro_chave", modelo: String(modelo_imagem), entrada: entrada as never, cobranca_id: consumo?.id ?? null })
+        .insert({ marca_id: ad.marca_id, tipo: "quadro_chave", modelo: String(modelo_quadro), entrada: entrada as never, cobranca_id: consumo?.id ?? null })
         .select("id")
         .single();
       if (gErr) throw gErr;

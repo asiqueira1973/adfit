@@ -281,7 +281,8 @@ export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: Re
   }
   // Atalhos: linhas fixas acrescentadas pelo código, mesmo se o Claude falhar.
   promptCena = appendShortcutLines(promptCena, redo.linhas);
-  const { modelo_imagem } = await readConfig(["modelo_imagem"]);
+  // Imagens das cenas no modelo próprio (MD-12: Marketing Studio Flare).
+  const { modelo_quadro } = await readConfig(["modelo_quadro"]);
   const fichaPath = (ad.fichas_produto as unknown as { imagem_path: string }).imagem_path;
   const entrada = {
     prompt: buildFramePrompt(promptCena, modelo),
@@ -293,7 +294,7 @@ export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: Re
     modelo,
     resumo_refacao: resumo,
   };
-  const { data: g, error: gErr } = await db.from("geracoes").insert({ marca_id: cena.marca_id, tipo: "quadro_chave", modelo: String(modelo_imagem), entrada: entrada as never, cobranca_id: cobrancaId }).select("id").single();
+  const { data: g, error: gErr } = await db.from("geracoes").insert({ marca_id: cena.marca_id, tipo: "quadro_chave", modelo: String(modelo_quadro), entrada: entrada as never, cobranca_id: cobrancaId }).select("id").single();
   if (gErr) throw gErr;
   const { error: qErr } = await db.from("quadros").insert({ id: quadroId, cena_id: cena.id, marca_id: cena.marca_id, versao: (last?.versao ?? 0) + 1, status: "gerando", geracao_id: g.id, instrucao_refacao: redo.registro || null });
   if (qErr) throw qErr;

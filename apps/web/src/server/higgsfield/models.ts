@@ -15,6 +15,11 @@ const IMAGE_MODELS: Record<string, ImageAdapter> = {
     build: (r) => ({ prompt: r.prompt, image_urls: r.imageUrls.slice(0, 10), aspect_ratio: r.aspectRatio, resolution: "2k" }),
   },
   // Qwen Image 3 Edit: 1 a 3 referências; 1k/2k. Sem reescrita do prompt (o prompt já é técnico).
+  // MD-12: imagens das cenas (o Grok barrava como nsfw toda cena de corrida de top). Até 16 referências.
+  "marketing-studio/image/flare": {
+    maxRefs: 16,
+    build: (r) => ({ prompt: r.prompt, image_urls: r.imageUrls.slice(0, 16), aspect_ratio: r.aspectRatio, resolution: "2k", quality: "high", enhance_prompt: false }),
+  },
   "alibaba/qwen-image-3/edit": {
     maxRefs: 3,
     build: (r) => ({ prompt: r.prompt, image_urls: r.imageUrls.slice(0, 3), aspect_ratio: r.aspectRatio, resolution: "2k", prompt_extend: false, enable_thinking: false }),

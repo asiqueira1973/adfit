@@ -4,6 +4,8 @@ import { createAdminClient } from "./db/supabase";
 /** Chaves de `configuracoes` usadas pelo servidor (regra 11.6 + MD-3/MD-4). */
 export type ConfigKey =
   | "modelo_imagem"
+  | "modelo_quadro"
+  | "preco_usd_por_quadro"
   | "modelo_video"
   | "resolucao_video"
   | "preco_usd_por_segundo_video"

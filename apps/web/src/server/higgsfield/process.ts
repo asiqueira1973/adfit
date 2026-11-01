@@ -162,10 +162,11 @@ async function sheetTarget(g: GenerationRow): Promise<GenerationTarget | null> {
 
 /** Custo USD de uma geração concluída (seção 7.3): imagem = `preco_usd_por_imagem`; clipe = 5 s × preço/s. */
 async function generationCost(g: GenerationRow): Promise<number> {
-  const { preco_usd_por_imagem, preco_usd_por_segundo_video } = await readConfig(["preco_usd_por_imagem", "preco_usd_por_segundo_video"]);
+  const { preco_usd_por_imagem, preco_usd_por_quadro, preco_usd_por_segundo_video } = await readConfig(["preco_usd_por_imagem", "preco_usd_por_quadro", "preco_usd_por_segundo_video"]);
   // Clipe: 5 s × preço por segundo (11.6; MD-4: Seedance 2.5 1080p).
   if (g.tipo === "clipe_video") return Math.round(Number(preco_usd_por_segundo_video) * 5 * 10000) / 10000;
-  return Number(preco_usd_por_imagem);
+  // Imagem da cena no modelo próprio (MD-12); ficha no modelo de imagem (MD-4).
+  return Number(g.tipo === "quadro_chave" ? preco_usd_por_quadro : preco_usd_por_imagem);
 }
 
 /**
