@@ -27,6 +27,7 @@ export function SceneCard({
   textError,
   textWarning,
   locked,
+  comTexto,
   t,
 }: {
   cena: SceneView;
@@ -36,6 +37,7 @@ export function SceneCard({
   textError: string | null;
   textWarning: boolean;
   locked: boolean;
+  comTexto: boolean;
   t: Pick<Dictionary, "anuncios" | "opcoes" | "copy">;
 }) {
   const a = t.anuncios;
@@ -81,7 +83,9 @@ export function SceneCard({
           </div>
         )}
 
-        {cena.ordem !== 3 ? (
+        {cena.ordem !== 3 && !comTexto ? (
+          <p className="text-[13px] text-text-2">{a.semTexto}</p>
+        ) : cena.ordem !== 3 ? (
           <TextArea
             label={a.textoTela}
             rows={2}

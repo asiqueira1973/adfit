@@ -370,6 +370,7 @@ export const en: Dictionary = {
     cenaFalhou: "We couldn't create this scene. Trying again is free.",
     imagemCena: "Scene {n} image",
     textoTela: "On-screen text",
+    semTexto: "No on-screen text (you chose this when creating the ad).",
     textoTelaDica: "Up to 2 lines of 32 characters.",
     salvarTextos: "Save texts",
     salvando: "Saving…",

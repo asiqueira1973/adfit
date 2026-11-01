@@ -28,7 +28,7 @@ export function AdScreen({
   videoPrice,
   t,
 }: {
-  ad: { id: string; status: Status; formato: string; cenas: SceneView[] };
+  ad: { id: string; status: Status; formato: string; comTexto: boolean; cenas: SceneView[] };
   videoPrice: number;
   t: Pick<Dictionary, "anuncios" | "opcoes" | "copy" | "erros">;
 }) {
@@ -63,7 +63,7 @@ export function AdScreen({
     return last.status === "falhou" && !c.quadros.some((q) => q.status === "pronto") ? "falhou" : "feito";
   };
   const errors = Object.fromEntries(ad.cenas.map((c) => [c.id, c.ordem !== 3 && texts[c.id] ? validateScreenText(texts[c.id]) : null]));
-  const dirty = ad.cenas.some((c) => (texts[c.id] ?? "") !== (initialTexts[c.id] ?? ""));
+  const dirty = ad.comTexto && ad.cenas.some((c) => (texts[c.id] ?? "") !== (initialTexts[c.id] ?? ""));
   const canSave = ad.status === "aguardando_aprovacao" && dirty && !Object.values(errors).some(Boolean);
 
   async function saveTexts() {
@@ -108,6 +108,7 @@ export function AdScreen({
               textError={errors[c.id] ?? null}
               textWarning={hasForbiddenTerm(texts[c.id])}
               locked={busy || saving}
+              comTexto={ad.comTexto}
               t={t}
             />
           ))}

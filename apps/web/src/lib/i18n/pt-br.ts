@@ -369,6 +369,7 @@ export const ptBR = {
     cenaFalhou: "Não conseguimos criar esta cena. Tentar de novo não custa nada.",
     imagemCena: "Imagem da cena {n}",
     textoTela: "Texto na tela",
+    semTexto: "Sem texto na tela (você escolheu assim ao criar o anúncio).",
     textoTelaDica: "Até 2 linhas de 32 caracteres.",
     salvarTextos: "Salvar textos",
     salvando: "Salvando…",

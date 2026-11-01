@@ -38,7 +38,7 @@ async function AdContent({ params }: Pick<PageProps<"/anuncios/[id]">, "params">
       <PageHeader title={view.titulo} />
       <AdScreen
         key={`${view.status}:${view.cenas.map((c) => `${c.textoTela ?? ""}|${c.quadros.map((q) => q.status).join("")}`).join(";")}`}
-        ad={{ id: view.id, status: view.status, formato: view.formato, cenas: view.cenas }}
+        ad={{ id: view.id, status: view.status, formato: view.formato, comTexto: view.comTexto, cenas: view.cenas }}
         videoPrice={prices.find((p) => p.acao === "gerar_video")?.creditos ?? 0}
         t={{ anuncios: t.anuncios, opcoes: t.opcoes, copy: t.copy, erros: t.erros }}
       />
