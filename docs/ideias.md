@@ -35,3 +35,8 @@ Novas opções de "Onde" no Novo anúncio, sempre com **nomes genéricos** (nunc
 - imagens dos cartões em `public/images/cenarios/` (geradas na Higgsfield, como na 16.3);
 - o roteiro recebe a descrição do cenário;
 - a cláusula de imagem já proíbe logos e textos inventados; para estes cenários, reforçar "no signage, no brand names".
+
+## O-1 — Observação: consistência da modelo entre as cenas (01/11/2026)
+- **Visto uma vez:** anúncio do top azul-marinho na orla — cabelo cacheado solto nas cenas 1 e 2, preso na cena 3. Na ocasião a cena 3 saiu do Grok e as outras do Flare (antes do MD-12), o que pode explicar a diferença sozinho.
+- **Se repetir** (com as 3 cenas no mesmo modelo): mudança genérica — o roteiro fixa penteado e acessórios na descrição da `modelo`, e o código acrescenta em toda cena "same person, same hairstyle and same accessories in every scene" (nova versão do roteiro + cláusula).
+- **Até lá:** só observar nos próximos anúncios.
