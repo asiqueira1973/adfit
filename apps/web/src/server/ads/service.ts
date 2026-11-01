@@ -269,9 +269,9 @@ export async function refreshAd(anuncioId: string, now = Date.now()): Promise<vo
   if (!ad) return;
   const age = now - new Date(ad.atualizado_em).getTime();
 
+  // Mesmo com cenas gravadas (função encerrada antes da transição), o roteiro não foi salvo:
+  // falha e estorna — nunca deixar o anúncio preso com crédito debitado.
   if (ad.status === "gerando_roteiro" && age > AD_ORPHAN_AFTER_MS) {
-    const { count } = await db.from("cenas").select("id", { count: "exact", head: true }).eq("anuncio_id", anuncioId);
-    if (count) return;
     if (await transition(anuncioId, "gerando_roteiro", "falhou", { erro: "roteiro_orfao" })) await refundAd(anuncioId, "Falha técnica ao criar o roteiro");
     return;
   }
