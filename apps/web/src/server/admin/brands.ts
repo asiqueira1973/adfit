@@ -90,11 +90,13 @@ export async function updateBrand(id: string, input: UpdateBrandInput): Promise<
 }
 
 /**
- * URL assinada (60 min, seção 6.4) do logo da marca para prévia. Recebe: caminho no bucket `marcas`.
- * Devolve: a URL, ou null sem logo.
+ * URL assinada (60 min, seção 6.4) do logo da marca para prévia.
+ * Recebe: caminho no bucket `marcas` e a marca dona. Só assina dentro de `<marca>/logo/`
+ * (defesa além do CHECK marcas_logo_caminho_chk: a service_role ignora as políticas de Storage).
+ * Devolve: a URL, ou null sem logo ou com caminho fora da pasta da marca.
  */
-export async function signedLogoUrl(path: string | null): Promise<string | null> {
-  if (!path) return null;
+export async function signedLogoUrl(path: string | null, marcaId: string): Promise<string | null> {
+  if (!path || !path.startsWith(`${marcaId}/logo/`) || path.includes("..")) return null;
   const { data } = await createAdminClient().storage.from("marcas").createSignedUrl(path, 3600);
   return data?.signedUrl ?? null;
 }

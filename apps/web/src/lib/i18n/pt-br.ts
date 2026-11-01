@@ -261,6 +261,8 @@ export const ptBR = {
     salvando: "Salvando…",
     formatos: "JPG, PNG, HEIC ou WEBP até 10 MB.",
     fotoObrigatoria: "Adicione pelo menos uma foto da peça.",
+    fotoFalhou: "Uma das fotos não subiu. O produto foi salvo — abra e envie de novo.",
+    abrirProduto: "Abrir produto",
     fotosOriginais: "Fotos originais",
     arquivar: "Arquivar produto",
     fichaTitulo: "Ficha do produto",

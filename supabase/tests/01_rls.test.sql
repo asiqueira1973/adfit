@@ -48,7 +48,7 @@ select is((select count(*) from marcas), 0::bigint, 'usuário sem perfil não l�
 -- ---------- Admin ----------
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000ad","role":"authenticated"}', true);
 select is((select count(*) from marcas where id in ('aaaaaaaa-0000-0000-0000-000000000000', 'bbbbbbbb-0000-0000-0000-000000000000')), 2::bigint, 'admin lê todas as marcas');
-select is((select count(*) from geracoes), 2::bigint, 'admin lê geracoes');
+select is((select count(*) from geracoes where marca_id in ('aaaaaaaa-0000-0000-0000-000000000000', 'bbbbbbbb-0000-0000-0000-000000000000')), 2::bigint, 'admin lê geracoes das duas marcas');
 select is((select count(*) from pacotes_creditos where nome = 'Pacote antigo'), 1::bigint, 'admin vê pacote inativo');
 
 -- ---------- Anônimo ----------

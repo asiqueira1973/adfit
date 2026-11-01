@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 import { ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Banner, ProgressBar } from "@/components/ui/feedback";
@@ -26,6 +27,7 @@ export function NewProductForm({ marcaId, t }: { marcaId: string; t: Dictionary 
   const [picked, setPicked] = useState<Picked[]>([]);
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
+  const [createdId, setCreatedId] = useState<string>();
 
   function onFiles(files: FileList | null) {
     if (!files) return;
@@ -69,7 +71,13 @@ export function NewProductForm({ marcaId, t }: { marcaId: string; t: Dictionary 
         update(p.key, { phase: "erro" });
       }
     }
-    if (falhou) setError(t.copy.uploadErroFormato);
+    if (falhou) {
+      // Mostra o erro e deixa a pessoa ir para o produto, onde pode reenviar a foto.
+      setError(t.produtos.fotoFalhou);
+      setCreatedId(produto.id);
+      setSaving(false);
+      return;
+    }
     router.push(`/produtos/${produto.id}`);
     router.refresh();
   }
@@ -107,7 +115,11 @@ export function NewProductForm({ marcaId, t }: { marcaId: string; t: Dictionary 
             </label>
           )}
         </div>
-        {error ? <Banner tone="danger">{error}</Banner> : <p className="text-[13px] text-text-2">{t.copy.uploadAvisoPessoa} {t.produtos.formatos}</p>}
+        {error ? (
+          <Banner tone="danger" action={createdId ? <Link href={`/produtos/${createdId}`} className="shrink-0 font-semibold text-brand-text">{t.produtos.abrirProduto}</Link> : undefined}>{error}</Banner>
+        ) : (
+          <p className="text-[13px] text-text-2">{t.copy.uploadAvisoPessoa} {t.produtos.formatos}</p>
+        )}
       </section>
 
       <section className="flex flex-col gap-4">
@@ -117,7 +129,7 @@ export function NewProductForm({ marcaId, t }: { marcaId: string; t: Dictionary 
         <TextArea label={t.produtos.descricao} name="descricao" rows={3} maxLength={500} placeholder={t.produtos.descricaoPlaceholder} />
       </section>
 
-      <Button type="submit" disabled={saving}>{saving ? t.produtos.salvando : t.produtos.salvar}</Button>
+      <Button type="submit" disabled={saving || !!createdId}>{saving ? t.produtos.salvando : t.produtos.salvar}</Button>
     </form>
   );
 }

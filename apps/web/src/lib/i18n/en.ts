@@ -262,6 +262,8 @@ export const en: Dictionary = {
     salvando: "Saving…",
     formatos: "JPG, PNG, HEIC or WEBP up to 10 MB.",
     fotoObrigatoria: "Add at least one photo of the piece.",
+    fotoFalhou: "One photo didn't upload. The product was saved — open it and try again.",
+    abrirProduto: "Open product",
     fotosOriginais: "Original photos",
     arquivar: "Archive product",
     fichaTitulo: "Product sheet",

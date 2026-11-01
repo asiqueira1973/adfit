@@ -8,14 +8,14 @@ import { TextField } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import type { Dictionary } from "@/lib/i18n";
-import { brandKitSchema } from "@/server/admin/schemas";
+import { brandKitSchema } from "@/lib/schemas/brand";
 
 /**
  * Prévia ao vivo do fecho do vídeo (seção 10 e regra 11.8): clipe escurecido 40%, logo
  * centralizado (40% da largura no vertical) ou o nome da marca sem logo, CTA na cor de destaque
  * (branco se nula) e oferta abaixo. Recebe: dados do kit. Devolve: a prévia 9:16.
  */
-export function ClosingPreview({ name, logoUrl, color, cta, offer }: { name: string; logoUrl: string | null; color: string; cta: string; offer?: string }) {
+export function ClosingPreview({ name, logoUrl, color, cta, offer, logoAlt }: { name: string; logoUrl: string | null; color: string; cta: string; offer?: string; logoAlt: string }) {
   return (
     <div className="relative aspect-[9/16] w-full overflow-hidden rounded-[14px] bg-black">
       {/* eslint-disable-next-line @next/next/no-img-element -- imagem ilustrativa de fundo */}
@@ -24,7 +24,7 @@ export function ClosingPreview({ name, logoUrl, color, cta, offer }: { name: str
       <div className="absolute inset-x-[6%] bottom-[30%] top-[15%] flex flex-col items-center justify-center gap-[6%] text-center">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- URL assinada temporária do Storage
-          <img src={logoUrl} alt="Logo" className="max-h-[20%] w-[40%] object-contain" />
+          <img src={logoUrl} alt={logoAlt} className="max-h-[20%] w-[40%] object-contain" />
         ) : (
           <span className="text-[22px] font-bold text-white drop-shadow">{name}</span>
         )}
@@ -94,7 +94,7 @@ export function BrandKitForm({ kit, logoUrl, t }: { kit: BrandKit; logoUrl: stri
       </form>
       <div className="flex flex-col gap-2 md:sticky md:top-20 md:self-start">
         <span className="text-[13px] font-medium text-text-2">{t.marca.fimDoVideo}</span>
-        <div className="mx-auto w-[220px] md:w-full"><ClosingPreview name={name} logoUrl={logoUrl} color={color} cta={cta} offer={t.marca.ofertaExemplo} /></div>
+        <div className="mx-auto w-[220px] md:w-full"><ClosingPreview name={name} logoUrl={logoUrl} color={color} cta={cta} offer={t.marca.ofertaExemplo} logoAlt={t.admin.kitLogo} /></div>
       </div>
     </div>
   );

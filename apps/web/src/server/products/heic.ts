@@ -20,8 +20,12 @@ export async function convertHeicPhoto(
   converter: (input: { buffer: Buffer; format: "JPEG"; quality: number }) => Promise<ArrayBuffer> = convert,
 ): Promise<string> {
   const db = createAdminClient();
-  const { data: foto } = await db.from("fotos_produto").select("id, marca_id, storage_path").eq("id", fotoId).maybeSingle();
+  const { data: foto } = await db.from("fotos_produto").select("id, marca_id, produto_id, storage_path").eq("id", fotoId).maybeSingle();
   if (!foto || (actor.papel !== "admin_plataforma" && foto.marca_id !== actor.marcaId)) throw new BusinessError("foto_inexistente");
+  // O arquivo precisa estar na pasta do próprio produto (a service_role ignora as políticas de Storage).
+  if (!foto.storage_path.startsWith(`${PHOTO_BUCKET}/${foto.marca_id}/${foto.produto_id}/originais/`) || foto.storage_path.includes("..")) {
+    throw new BusinessError("foto_inexistente");
+  }
   if (!/\.heic$/i.test(foto.storage_path)) return foto.storage_path;
 
   const bucket = db.storage.from(PHOTO_BUCKET);

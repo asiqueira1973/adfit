@@ -599,6 +599,24 @@ $$;
 ALTER FUNCTION "public"."pegar_proximo_anuncio_para_montar"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."pode_gravar_original"("p_nome" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select (storage.foldername(p_nome))[3] = 'originais'
+     and ((storage.foldername(p_nome))[1] = public.minha_marca_id()::text or public.eh_admin())
+     and exists (
+       select 1 from public.produtos p
+       where p.id::text = (storage.foldername(p_nome))[2]
+         and p.marca_id::text = (storage.foldername(p_nome))[1]
+         and p.ficha_aprovada_id is null
+     );
+$$;
+
+
+ALTER FUNCTION "public"."pode_gravar_original"("p_nome" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."proteger_saldo_marca"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -732,6 +750,7 @@ CREATE TABLE IF NOT EXISTS "public"."fotos_produto" (
     "storage_path" "text" NOT NULL,
     "ordem" smallint DEFAULT 1 NOT NULL,
     "criado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "fotos_produto_caminho_chk" CHECK (("storage_path" ~ (((('^produtos/'::"text" || ("marca_id")::"text") || '/'::"text") || ("produto_id")::"text") || '/originais/[^/]+$'::"text"))),
     CONSTRAINT "fotos_produto_ordem_check" CHECK ((("ordem" >= 1) AND ("ordem" <= 4)))
 );
 
@@ -777,6 +796,7 @@ CREATE TABLE IF NOT EXISTS "public"."marcas" (
     CONSTRAINT "marcas_cor_destaque_check" CHECK (("cor_destaque" ~ '^#[0-9A-Fa-f]{6}$'::"text")),
     CONSTRAINT "marcas_cta_padrao_check" CHECK (("char_length"("cta_padrao") <= 40)),
     CONSTRAINT "marcas_instagram_check" CHECK (("instagram" ~ '^[A-Za-z0-9._]{1,30}$'::"text")),
+    CONSTRAINT "marcas_logo_caminho_chk" CHECK ((("logo_path" IS NULL) OR ("logo_path" ~ (('^'::"text" || ("id")::"text") || '/logo/[^/]+$'::"text")))),
     CONSTRAINT "marcas_saldo_creditos_check" CHECK (("saldo_creditos" >= 0))
 );
 
@@ -1556,6 +1576,12 @@ GRANT ALL ON FUNCTION "public"."minha_marca_id"() TO "service_role";
 
 REVOKE ALL ON FUNCTION "public"."pegar_proximo_anuncio_para_montar"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."pegar_proximo_anuncio_para_montar"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."pode_gravar_original"("p_nome" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."pode_gravar_original"("p_nome" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."pode_gravar_original"("p_nome" "text") TO "service_role";
 
 
 

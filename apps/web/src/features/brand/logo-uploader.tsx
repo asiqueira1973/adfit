@@ -58,7 +58,7 @@ export function LogoUploader({
       <div className="flex items-center gap-4">
         <div className="flex size-20 items-center justify-center overflow-hidden rounded-[14px] border border-dashed border-text-2/40 bg-surface text-[12px] text-text-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada temporária do Storage */}
-          {currentUrl ? <img src={currentUrl} alt="Logo" className="max-h-full max-w-full object-contain" /> : labels.semLogo}
+          {currentUrl ? <img src={currentUrl} alt="" className="max-h-full max-w-full object-contain" /> : labels.semLogo}
         </div>
         <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[10px] bg-surface px-4 text-[15px] font-semibold">
           <Upload className="size-4" /> {pending ? labels.enviando : currentUrl ? labels.trocar : labels.enviar}

@@ -4,8 +4,14 @@ import { objectPath, PHOTO_BUCKET } from "@/lib/storage-paths";
 
 export type ProductStatus = "sem_ficha" | "gerando" | "pronto";
 
-/** URLs assinadas de 60 min (seção 6.4) para vários caminhos de um bucket. */
-async function signMany(bucket: string, paths: string[]): Promise<Record<string, string>> {
+/**
+ * URLs assinadas de 60 min (seção 6.4) para caminhos do bucket `produtos` de UMA marca.
+ * Só assina o que está em `produtos/<marca>/` (defesa além do CHECK fotos_produto_caminho_chk,
+ * porque a service_role ignora as políticas de Storage). Recebe: marca e caminhos completos.
+ */
+async function signMany(marcaId: string, paths: string[]): Promise<Record<string, string>> {
+  const bucket = PHOTO_BUCKET;
+  paths = paths.filter((p) => p.startsWith(`${bucket}/${marcaId}/`) && !p.includes(".."));
   if (!paths.length) return {};
   const { data } = await createAdminClient().storage.from(bucket).createSignedUrls(paths.map((p) => objectPath(p, bucket)), 3600);
   const out: Record<string, string> = {};
@@ -39,8 +45,8 @@ export async function listProducts(marcaId: string, categoria?: string) {
     return { id: p.id, nome: p.nome, categoria: p.categoria, status, fichaPath: aprovada?.imagem_path ?? null, fotoPath: fotos[0]?.storage_path ?? null };
   });
   const [fichaUrls, fotoUrls] = await Promise.all([
-    signMany(PHOTO_BUCKET, rows.flatMap((r) => (r.fichaPath ? [r.fichaPath] : []))),
-    signMany(PHOTO_BUCKET, rows.flatMap((r) => (r.fotoPath ? [r.fotoPath] : []))),
+    signMany(marcaId, rows.flatMap((r) => (r.fichaPath ? [r.fichaPath] : []))),
+    signMany(marcaId, rows.flatMap((r) => (r.fotoPath ? [r.fotoPath] : []))),
   ]);
   return rows.map((r) => ({ ...r, imagem: (r.fichaPath && fichaUrls[r.fichaPath]) || (r.fotoPath && fotoUrls[r.fotoPath]) || null }));
 }
@@ -58,6 +64,6 @@ export async function getProduct(id: string) {
     .maybeSingle();
   if (!data || data.arquivado) return null;
   const fotos = [...((data.fotos_produto ?? []) as Array<{ id: string; storage_path: string; ordem: number }>)].sort((a, b) => a.ordem - b.ordem);
-  const urls = await signMany(PHOTO_BUCKET, fotos.map((f) => f.storage_path));
+  const urls = await signMany(data.marca_id, fotos.map((f) => f.storage_path));
   return { ...data, fotos: fotos.map((f) => ({ ...f, url: urls[f.storage_path] ?? null })) };
 }

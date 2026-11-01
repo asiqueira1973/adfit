@@ -20,7 +20,7 @@ async function Content() {
   const supabase = await createUserClient();
   const { data: kit } = await supabase.from("marcas").select("id, nome, instagram, logo_path, cor_destaque, cta_padrao, tom_de_voz, idioma_anuncios").eq("id", profile.marcaId).single();
   if (!kit) return null;
-  const logoUrl = await signedLogoUrl(kit.logo_path);
+  const logoUrl = await signedLogoUrl(kit.logo_path, kit.id);
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t.marca.titulo} subtitle={t.marca.subtitulo} />

@@ -49,12 +49,15 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | `lancar_creditos(marca, tipo, qtd, valor_pago, obs, autor, [moeda])` | Lançamento manual do admin (compra/bônus/ajuste) com as validações da 11.2.6 (D-2). |
 | `creditar_pagamento(pagamento, payment_intent, valor, moeda)` | Credita compra da Stripe uma única vez; repetido devolve a mesma movimentação. |
 | `estornar_pagamento(pagamento)` | Reembolso total: `reembolsado` + ajuste negativo até o saldo; diferença em `observacao`. Idempotente. |
+| `pode_gravar_original(nome)` | Usada nas políticas de Storage: o objeto `<marca>/<produto>/originais/*` é de produto da marca do usuário (ou admin) e sem ficha aprovada. |
 | `pegar_proximo_anuncio_para_montar()` | Fila do worker com `for update skip locked`; ignora montagem em andamento (< 10 min) e anúncios com 3 tentativas (D-3). |
 | `definir_atualizado_em()` | Atualiza `atualizado_em` (triggers `trg_*_atualizado_em`). |
 
 **Triggers:** `trg_movimentacoes_imutaveis` (update/delete no livro-razão → erro), `trg_fotos_produto_limite` (5ª foto → erro), `trg_marcas_proteger_saldo` (saldo só muda dentro das funções, via `app.alterando_saldo`), `trg_marcas_atualizado_em`, `trg_produtos_atualizado_em`, `trg_anuncios_atualizado_em`, `trg_pacotes_creditos_atualizado_em`, `trg_pagamentos_atualizado_em`.
 
 **Políticas (RLS):** nomes e regras da seção 6.4 (`marcas_select`, `marcas_update_kit`, `perfis_select`, `produtos_*`, `fotos_*`, `fichas_select`, `anuncios_select`, `anuncios_update_basico`, `cenas_select`, `quadros_select`, `clipes_select`, `geracoes_select_admin`, `movimentacoes_select`, `precos_select`, `pacotes_select`, `pagamentos_select`, `configuracoes_select_admin`). As colunas que o cliente pode escrever são limitadas por GRANT de coluna (ex.: em `marcas`, só o kit + `idioma_anuncios`; `saldo_creditos` e `ativa` nunca).
+
+**Caminhos amarrados (migration 20261101000900):** CHECK `fotos_produto_caminho_chk` (`produtos/<marca_id>/<produto_id>/originais/<arquivo>`) e `marcas_logo_caminho_chk` (`<marca_id>/logo/<arquivo>`); função `pode_gravar_original(nome)` nas políticas de escrita do bucket `produtos` (produto da própria marca, sem ficha aprovada). O servidor só assina/baixa/converte com service_role dentro da pasta da marca dona (`signMany`, `signedLogoUrl`, `convertHeicPhoto`).
 
 **Storage:** buckets privados `marcas` (5 MB, PNG/SVG/JPG), `produtos` (10 MB, JPG/PNG/HEIC/WEBP), `anuncios`. Políticas `storage_adfit_select/insert/update/delete`: 1º segmento do caminho = marca do usuário (ou admin); cliente só escreve em `marcas/<marca>/logo/*` e `produtos/<marca>/<produto>/originais/*`.
 
