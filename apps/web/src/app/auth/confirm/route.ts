@@ -6,7 +6,9 @@ const TYPES: EmailOtpType[] = ["invite", "recovery", "email", "magiclink", "sign
 
 /**
  * GET /auth/confirm — destino dos links de convite e de recuperação (seções 6.1 e 6.2).
- * Recebe: `token_hash`, `type` e `next` (caminho interno) — ou `code` (fluxo PKCE).
+ * Também é a volta do "Entrar com Google" (MD-5).
+ * Recebe: `token_hash`, `type` e `next` (caminho interno) — ou `code` (fluxo PKCE); `error` quando o
+ * Google/Supabase recusou (ex.: e-mail sem convite, cadastro desligado) → /entrar?erro=sem_acesso.
  * Faz: valida o token no Supabase, criando a sessão em cookie. Devolve: redirect para `next`
  * (só caminhos internos) ou para /entrar?erro=link_invalido.
  */
@@ -19,6 +21,8 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type") as EmailOtpType | null;
+
+  if (url.searchParams.get("error")) return NextResponse.redirect(new URL("/entrar?erro=sem_acesso", request.url));
 
   let ok = false;
   if (code) {

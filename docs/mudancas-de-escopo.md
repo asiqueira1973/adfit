@@ -57,13 +57,18 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 - **Retenção:** a Higgsfield guarda os resultados por 7 dias (`expires_at`). Copiamos tudo para o Storage antes de marcar `pronto`, como o spec já manda.
 - **Stripe:** os Prices de teste foram recriados como avulsos em USD (`price_1UWyAc…` = Pacote 60, `price_1UWyAe…` = Pacote 150) e os pacotes antigos foram desativados no banco local. Para produção, o Alexandre cria os dois Prices na conta live e roda o `seed:admin` remoto com `SEED_STRIPE_PRICE_PACOTE_60/150`.
 
-## MD-5 — Login com Google (01/11/2026, Alexandre) — a detalhar
+## MD-5 — Login com Google (01/11/2026, Alexandre) — implementado
 - **Decisão:** entrar com a conta Google, por ser mais fácil que e-mail e senha.
 - **Proposta:**
   - O cadastro continua só por convite (princípio da seção 6). O botão "Entrar com Google" só funciona para e-mails já convidados; sem perfil, vale a mesma recusa de hoje.
   - E-mail e senha continuam como alternativa.
   - O provedor Google é ativado no projeto Supabase compartilhado, com o cliente OAuth criado pelo Alexandre no Google Cloud.
 - **Conflita com:** a seção 6.1 (login por e-mail e senha) e a seção 28 (fora do escopo: nada; o autocadastro continua fora).
+- **Implementação:**
+  - Botão "Entrar com Google" acima do formulário de e-mail e senha.
+  - OAuth com PKCE pelo Supabase; a volta cai em `/auth/confirm`, que troca o código pela sessão, e o `error` do OAuth leva a `/entrar?erro=sem_acesso`.
+  - Cliente OAuth no Google Cloud (projeto AdFit). Provedor ligado no projeto Supabase remoto pelo Alexandre e no local via `supabase/.env` (fora do git).
+- **Atenção (projeto compartilhado):** se o projeto remoto permitir cadastro (outros apps), uma conta Google sem convite pode ser criada em `auth.users`. Ela não tem perfil no AdFit, então o proxy encerra a sessão e mostra "sem acesso".
 
 ## MD-6 — Feedback do usuário (01/11/2026, Alexandre) — a detalhar
 - **Decisão:** o usuário consegue mandar problemas e sugestões de melhoria de dentro do app.
