@@ -10,7 +10,7 @@ import { costSuffix, formatDate, formatMoney, signedCredits } from "@/lib/format
 import type { Dictionary } from "@/lib/i18n";
 import { brandContext } from "@/server/brand/context";
 import { listActionPrices, listActivePackages, listBrandLedger, listBrandPayments } from "@/server/brand/credits";
-import { adEstimate } from "@/lib/pricing";
+import { adEstimate, packagesForLocale } from "@/lib/pricing";
 
 const PAYMENT_TONE: Record<string, Tone> = { iniciado: "processing", pago: "success", falhou: "danger", expirado: "neutral", reembolsado: "warning" };
 
@@ -40,7 +40,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/creditos">[
   const { compra } = await searchParams;
   const [ledger, prices, payments, packs] = await Promise.all([listBrandLedger(profile.marcaId), listActionPrices(), listBrandPayments(profile.marcaId), listActivePackages()]);
   // Custo médio de um anúncio e valor do crédito pelos pacotes (pedido do Alexandre, 01/11/2026).
-  const est = adEstimate(prices, packs);
+  const est = adEstimate(prices, packagesForLocale(packs, profile.idioma));
   const money = (c: number) => formatMoney(c, est.moeda!, intl);
   const range = (min: number | null, max: number | null) => (min === null || max === null ? null : min === max ? money(min) : `${money(min)}–${money(max)}`);
   const costLabels = t.custo;

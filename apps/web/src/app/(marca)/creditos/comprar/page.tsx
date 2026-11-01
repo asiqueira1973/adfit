@@ -6,6 +6,7 @@ import { fill } from "@/lib/copy";
 import { brandContext } from "@/server/brand/context";
 import { listActionPrices, listActivePackages } from "@/server/brand/credits";
 import { typicalAdCost } from "@/lib/format";
+import { packagesForLocale } from "@/lib/pricing";
 import { getSupportContact } from "@/server/brand/queries";
 
 /**
@@ -22,8 +23,10 @@ export default function BuyCreditsPage() {
 }
 
 async function Content() {
-  const { brand, t, intl } = await brandContext();
-  const [packages, prices] = await Promise.all([listActivePackages(), listActionPrices()]);
+  const { profile, brand, t, intl } = await brandContext();
+  const [allPackages, prices] = await Promise.all([listActivePackages(), listActionPrices()]);
+  // Moeda pelo idioma (MD-16): pt-BR paga em reais (conta Stripe brasileira), inglês em dólar.
+  const packages = packagesForLocale(allPackages, profile.idioma);
   const adCost = typicalAdCost(Object.fromEntries(prices.map((p) => [p.acao, p.creditos])));
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6">

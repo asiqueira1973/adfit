@@ -17,3 +17,17 @@ export function adEstimate(
   const creditoMax = Math.max(...perCredit);
   return { creditos, moeda, creditoMin, creditoMax, anuncioMin: creditos * creditoMin, anuncioMax: creditos * creditoMax };
 }
+
+/** Moeda preferida de cada idioma do app (MD-16). */
+const LOCALE_CURRENCY: Record<string, string> = { pt_br: "brl", en: "usd" };
+
+/**
+ * Pacotes na moeda do idioma (MD-16, 01/11/2026): a conta Stripe brasileira só cobra cartão
+ * brasileiro em BRL; pt-BR vê os pacotes em reais e inglês os em dólar. Sem pacote nessa moeda,
+ * mostra todos. Recebe: pacotes (na ordem) e idioma. Devolve: os pacotes a mostrar.
+ */
+export function packagesForLocale<T extends { moeda: string }>(packs: T[], locale: string): T[] {
+  const currency = LOCALE_CURRENCY[locale];
+  const same = packs.filter((p) => p.moeda.toLowerCase() === currency);
+  return same.length ? same : packs;
+}

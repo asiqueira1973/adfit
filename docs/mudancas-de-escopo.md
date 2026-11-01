@@ -171,3 +171,6 @@ Diverge da 11.8 ("escurecimento de 40%" com logo por cima da cena). No vídeo da
 
 ## MD-15 — Fecho opcional por anúncio (01/11/2026, pedido do Alexandre)
 Coluna `anuncios.com_fecho` (padrão `true`). No assistente, "Logo e chamada no final: Sim/Não". Sem fecho, o vídeo tem só as 3 cenas (6 planos, som ambiente) — sem cartela, logo, CTA ou oferta; o lojista põe os próprios textos no Reels. Teste: `server/video/closing-card.test.ts` e `server/ads/ads.integration.test.ts`.
+
+## MD-16 — Pacotes na moeda do idioma (01/11/2026)
+A conta Stripe é brasileira (Dab Lab) e só cobra cartão emitido no Brasil em BRL — o checkout em USD falhou com "Seu cartão não aceita essa moeda" em todos os cartões do Alexandre. Cada pacote existe em duas moedas (`pacotes_creditos` com Price próprio em BRL e em USD); a tela Comprar e a tabela de preços mostram os pacotes na moeda do idioma do usuário (pt-BR → BRL, inglês → USD; sem pacote nessa moeda, mostra todos). Pilotos: 60 créditos R$ 199 / US$ 36; 150 créditos R$ 449 / US$ 81. Teste: `src/lib/pricing.test.ts`.
