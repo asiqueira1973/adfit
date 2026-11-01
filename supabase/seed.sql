@@ -26,7 +26,7 @@ insert into public.configuracoes (chave, valor, descricao) values
   ('cotacoes_para_brl', '{"usd": 5.50, "eur": 6.00}', 'Cotações para converter receita de pagamentos em BRL'),
   ('modelo_claude_roteiro', '"claude-sonnet-5-5"', 'Modelo Claude do roteiro e da refação'),
   ('modelo_claude_qc', '"claude-sonnet-5-5"', 'Modelo Claude do controle de qualidade'),
-  ('contato_suporte', '"a_definir"', 'WhatsApp/e-mail do admin exibido em "Conta pausada" e suporte')
+  ('contato_suporte', '"alexandre@dablab.com.br"', 'WhatsApp/e-mail do admin exibido em "Conta pausada" e suporte')
 on conflict (chave) do nothing;
 
 -- Marca piloto (seção 7.6), sem saldo.
