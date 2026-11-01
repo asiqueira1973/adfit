@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import ffmpegStatic from "ffmpeg-static";
+import { renderTextImage } from "./text-image";
 
 const run = promisify(execFile);
 
@@ -53,6 +54,8 @@ export type AssembleInput = {
   /** `cor_destaque` (#RRGGBB) do CTA; null = branco (11.8). */
   cor: string | null;
   oferta: string | null;
+  /** Só para testes: recebe os argumentos do ffmpeg antes de rodar. */
+  onCommand?: (args: string[]) => void;
 };
 
 const SCENE = 5;
@@ -63,7 +66,8 @@ const CLOSING_START = 12.5;
  * Monta o anúncio final com ffmpeg seguindo a regra 11.8 à risca:
  * - cenas 1, 2, 3 de 5 s cada, corte seco; clipe em outra proporção é recortado ao centro;
  * - 1080×1920 (vertical) ou 1920×1080 (horizontal), 30 fps;
- * - texto da cena em Inter Bold branco com sombra de 2 px a 50%, de 0,3 s a 4,7 s, fade de 0,2 s;
+ * - texto da cena em Inter Bold branco com sombra de 2 px a 50%, de 0,3 s a 4,7 s, fade de 0,2 s
+ *   (desenhado em PNG por `renderTextImage` e sobreposto — o ffmpeg da Vercel não tem drawtext, B-8);
  *   área segura vertical entre 15% e 70% da altura; horizontal com margem de 6%;
  * - fecho de 12,5 s a 15 s: escurecimento de 40%, logo centralizado (40% da largura no vertical,
  *   20% no horizontal), CTA abaixo na cor de destaque (branco se nula) e oferta abaixo do CTA;
@@ -73,18 +77,19 @@ const CLOSING_START = 12.5;
 export async function assembleVideo(input: AssembleInput): Promise<void> {
   const vertical = input.formato === "vertical_9_16";
   const [W, H] = vertical ? [1080, 1920] : [1920, 1080];
-  const font = fontPath().replace(/\\/g, "/").replace(/:/g, "\\:");
   const work = mkdtempSync(join(tmpdir(), "adfit-mont-"));
   try {
-    // Textos vão por arquivo (textfile + expansion=none): nada de escapar aspas, %, : ou \.
-    let n = 0;
-    const textFile = (text: string) => {
-      const p = join(work, `t${n++}.txt`);
-      writeFileSync(p, text);
-      return p.replace(/\\/g, "/").replace(/:/g, "\\:");
-    };
-    const shadow = "fontcolor=white:shadowcolor=black@0.5:shadowx=2:shadowy=2";
     const filters: string[] = [];
+    // Textos viram PNG transparentes sobrepostos com overlay (bug B-8: sem drawtext no ffmpeg da Vercel).
+    // Entradas: 0–2 clipes, 3 logo (ou 2×2 preto), 4 áudio mudo, 5… imagens de texto.
+    const images: string[] = [];
+    const addImage = async (lines: string[], size: number, color: string) => {
+      const img = await renderTextImage(lines, size, color);
+      const file = join(work, `txt${images.length}.png`);
+      writeFileSync(file, img.png);
+      images.push(file);
+      return { index: 4 + images.length, ...img };
+    };
 
     // 1. Normaliza e junta os clipes (recorte ao centro, 5 s exatos, 30 fps).
     for (let i = 0; i < 3; i++) {
@@ -97,30 +102,31 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       filters.push(`[${last}]${f}[${next}]`);
       last = next;
     };
+    /** Sobrepõe a imagem `index` centralizada na horizontal, com topo em `y`, entre `from` e `to` (fade opcional). */
+    const overlayImage = (index: number, y: number, from: number, to: number, fade: boolean) => {
+      const src = `i${index}`;
+      const fades = fade ? `,fade=t=in:st=${from}:d=0.2:alpha=1,fade=t=out:st=${(to - 0.2).toFixed(2)}:d=0.2:alpha=1` : "";
+      filters.push(`[${index}:v]format=rgba${fades}[${src}]`);
+      const next = `s${filters.length}`;
+      filters.push(`[${last}][${src}]overlay=x=(W-w)/2:y=${Math.round(y)}:enable='between(t,${from},${to})'[${next}]`);
+      last = next;
+    };
 
-    // 2. Texto da cena (cenas 1 e 2), uma linha por drawtext, centralizadas.
+    // 2. Texto da cena (cenas 1 e 2): de 0,3 s a 4,7 s, fade de 0,2 s, centralizado na área segura.
     const textSize = vertical ? 58 : 56;
-    const lineGap = Math.round(textSize * 1.3);
     const textCenterY = vertical ? Math.round(H * 0.6) : Math.round(H * 0.78);
-    input.textos.forEach((texto, i) => {
-      if (!texto || i === 2) return;
-      const start = i * SCENE;
-      const a = start + 0.3;
-      const b = start + 4.7;
-      const alpha = `if(lt(t,${a + 0.2}),(t-${a})/0.2,if(gt(t,${b - 0.2}),(${b}-t)/0.2,1))`;
-      const lines = texto.split("\n").slice(0, 2);
-      lines.forEach((line, j) => {
-        const y = textCenterY - ((lines.length - 1) * lineGap) / 2 + j * lineGap - textSize / 2;
-        chain(`drawtext=fontfile='${font}':textfile='${textFile(line)}':expansion=none:fontsize=${textSize}:${shadow}:x=(w-text_w)/2:y=${Math.round(y)}:enable='between(t,${a},${b})':alpha='${alpha}'`);
-      });
-    });
+    for (const [i, texto] of input.textos.entries()) {
+      if (!texto || i === 2) continue;
+      const img = await addImage(texto.split("\n").slice(0, 2), textSize, "#FFFFFF");
+      overlayImage(img.index, textCenterY - img.height / 2, i * SCENE + 0.3, i * SCENE + 4.7, true);
+    }
 
-    // 3. Fecho: escurecimento de 40%, logo (ou nome), CTA e oferta.
+    // 3. Fecho: escurecimento de 40%, logo (ou nome da marca), CTA na cor de destaque e oferta.
     const closing = `enable='gte(t,${CLOSING_START})'`;
     chain(`drawbox=x=0:y=0:w=iw:h=ih:color=black@0.4:t=fill:${closing}`);
     const logoW = Math.round(W * (vertical ? 0.4 : 0.2));
     const centerY = Math.round(H * 0.45);
-    let below = centerY;
+    let below: number;
     if (input.logoPng) {
       filters.push(`[3:v]scale=${logoW}:-1[logo]`);
       const next = `s${filters.length}`;
@@ -128,15 +134,16 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       last = next;
       below = centerY + Math.round(logoW / 2.5);
     } else {
-      const size = vertical ? 76 : 72;
-      chain(`drawtext=fontfile='${font}':textfile='${textFile(input.marca)}':expansion=none:fontsize=${size}:${shadow}:x=(w-text_w)/2:y=${centerY - size / 2}:${closing}`);
-      below = centerY + size;
+      const name = await addImage([input.marca], vertical ? 76 : 72, "#FFFFFF");
+      overlayImage(name.index, centerY - name.height / 2, CLOSING_START, TOTAL, false);
+      below = centerY + name.height / 2;
     }
     const ctaSize = vertical ? 54 : 48;
-    const ctaColor = /^#[0-9a-f]{6}$/i.test(input.cor ?? "") ? `0x${input.cor!.slice(1)}` : "white";
-    chain(`drawtext=fontfile='${font}':textfile='${textFile(input.cta)}':expansion=none:fontsize=${ctaSize}:fontcolor=${ctaColor}:shadowcolor=black@0.5:shadowx=2:shadowy=2:x=(w-text_w)/2:y=${below + 40}:${closing}`);
+    const cta = await addImage([input.cta], ctaSize, /^#[0-9a-f]{6}$/i.test(input.cor ?? "") ? input.cor! : "#FFFFFF");
+    overlayImage(cta.index, below + 40, CLOSING_START, TOTAL, false);
     if (input.oferta) {
-      chain(`drawtext=fontfile='${font}':textfile='${textFile(input.oferta)}':expansion=none:fontsize=${Math.round(ctaSize * 0.75)}:${shadow}:x=(w-text_w)/2:y=${below + 40 + ctaSize + 24}:${closing}`);
+      const oferta = await addImage([input.oferta], Math.round(ctaSize * 0.75), "#FFFFFF");
+      overlayImage(oferta.index, below + 40 + cta.height + 12, CLOSING_START, TOTAL, false);
     }
 
     const args = [
@@ -152,6 +159,7 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       String(TOTAL),
       "-i",
       "anullsrc=r=48000:cl=stereo",
+      ...images.flatMap((f) => ["-loop", "1", "-framerate", "30", "-t", String(TOTAL), "-i", f]),
       "-filter_complex",
       filters.join(";"),
       "-map",
@@ -180,6 +188,7 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       "+faststart",
       input.out,
     ];
+    input.onCommand?.(args);
     try {
       await run(ffmpegPath(), args, { maxBuffer: 16 * 1024 * 1024 });
     } catch (e) {

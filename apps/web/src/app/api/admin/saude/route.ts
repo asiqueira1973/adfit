@@ -17,5 +17,13 @@ export async function GET() {
   } catch (e) {
     ffmpeg = `erro: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}`;
   }
-  return NextResponse.json({ ffmpeg, fonte: existsSync(fontPath()), caminho_fonte: fontPath(), cwd: process.cwd() });
+  // Filtros que a montagem usa (B-8: o build Linux não tem drawtext; a montagem não depende dele).
+  let filtros: Record<string, boolean> = {};
+  try {
+    const list = execFileSync(ffmpegPath(), ["-hide_banner", "-filters"], { encoding: "utf8" });
+    filtros = Object.fromEntries(["overlay", "drawbox", "fade", "concat", "scale", "crop", "trim", "format"].map((f) => [f, new RegExp(`\\s${f}\\s`).test(list)]));
+  } catch {
+    // ffmpeg indisponível: já aparece no campo ffmpeg.
+  }
+  return NextResponse.json({ ffmpeg, filtros, fonte: existsSync(fontPath()), caminho_fonte: fontPath() });
 }
