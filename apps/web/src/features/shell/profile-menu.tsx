@@ -1,12 +1,12 @@
-import Link from "next/link";
-import { LogOut, Store } from "lucide-react";
+import { LogOut, MessageSquare, Store } from "lucide-react";
 import { MADE_BY } from "@/lib/constants";
 import { fill } from "@/lib/copy";
 import type { Dictionary, Locale } from "@/lib/i18n";
 import { LanguageSwitch } from "./language-switch";
+import { MenuLink } from "./menu-link";
 
 /**
- * Menu do perfil (seção 10): avatar com iniciais que abre "Marca", idioma (MD-1), "Sair" e o
+ * Menu do perfil (seção 10): avatar com iniciais que abre "Marca", "Enviar feedback" (MD-6), idioma (MD-1), "Sair" e o
  * crédito da Dab Lab (MD-2). Usa <details> nativo; "Sair" é um formulário POST.
  * Recebe: nome do usuário e da marca, idioma e dicionário. Devolve: o menu.
  */
@@ -22,9 +22,12 @@ export function ProfileMenu({ userName, brandName, locale, t }: { userName: stri
           <div className="text-[15px] font-semibold">{userName}</div>
           <div className="text-[13px] text-text-2">{brandName}</div>
         </div>
-        <Link href="/marca" className="flex min-h-11 items-center gap-3 px-4 text-[15px] hover:bg-surface">
+        <MenuLink href="/marca" className="flex min-h-11 items-center gap-3 px-4 text-[15px] hover:bg-surface">
           <Store className="size-4.5 text-text-2" /> {t.nav.marca}
-        </Link>
+        </MenuLink>
+        <MenuLink href="/feedback" withOrigin className="flex min-h-11 items-center gap-3 px-4 text-[15px] hover:bg-surface">
+          <MessageSquare className="size-4.5 text-text-2" /> {t.feedback.menu}
+        </MenuLink>
         <LanguageSwitch current={locale} label={t.nav.idioma} names={t.idiomas} />
         <form action="/sair" method="post">
           <button type="submit" className="flex min-h-11 w-full items-center gap-3 px-4 text-[15px] text-danger hover:bg-surface">

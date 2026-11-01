@@ -133,6 +133,32 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"feedbacks": {
+                  Row: {
+                    "atualizado_em": string,"criado_em": string,"id": string,"marca_id": string | null,"status": Database["public"]['Enums']["feedback_status"],"tela": string | null,"texto": string,"tipo": Database["public"]['Enums']["feedback_tipo"],"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "atualizado_em"?: string,"criado_em"?: string,"id"?: string,"marca_id"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"tela"?: string | null,"texto": string,"tipo": Database["public"]['Enums']["feedback_tipo"],"usuario_id": string
+                  }
+                  Update: {
+                    "atualizado_em"?: string,"criado_em"?: string,"id"?: string,"marca_id"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"tela"?: string | null,"texto"?: string,"tipo"?: Database["public"]['Enums']["feedback_tipo"],"usuario_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "feedbacks_marca_id_fkey"
+      columns: ["marca_id"]
+isOneToOne: false
+      referencedRelation: "marcas"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "feedbacks_usuario_id_fkey"
+      columns: ["usuario_id"]
+isOneToOne: false
+      referencedRelation: "perfis"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"fichas_produto": {
                   Row: {
                     "criado_em": string,"geracao_id": string | null,"id": string,"imagem_path": string | null,"instrucao_refacao": string | null,"marca_id": string,"produto_id": string,"status": Database["public"]['Enums']["status_ficha"],"versao": number
@@ -445,7 +471,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "acao_cobravel": "gerar_ficha"|"refazer_ficha"|"gerar_roteiro_quadros"|"refazer_quadro"|"gerar_video"|"refazer_clipe"|"remontar_texto","categoria_peca": "top"|"legging"|"shorts"|"camiseta"|"regata"|"jaqueta"|"conjunto"|"outro","cenario": "academia"|"box_crossfit"|"estudio_funcional"|"ao_ar_livre_urbano"|"ao_ar_livre_natureza"|"pista_de_corrida","estilo_video": "energetico"|"cinematografico"|"lifestyle","faixa_etaria": "de_20_a_30"|"de_30_a_45"|"acima_de_45","formato_video": "vertical_9_16"|"horizontal_16_9","genero_alvo": "feminino"|"masculino"|"unissex","genero_modelo": "mulher"|"homem","idioma": "pt_br"|"en","modalidade": "musculacao"|"crossfit"|"hyrox"|"corrida"|"funcional"|"yoga_pilates","papel_usuario": "admin_plataforma"|"usuario_marca","status_anuncio": "gerando_roteiro"|"gerando_quadros"|"aguardando_aprovacao"|"gerando_clipes"|"montando"|"pronto"|"falhou","status_ficha": "gerando"|"aguardando_aprovacao"|"aprovada"|"descartada"|"falhou","status_geracao": "na_fila"|"processando"|"concluida"|"falhou"|"bloqueada_nsfw","status_item": "gerando"|"pronto"|"descartado"|"falhou","status_pagamento": "iniciado"|"pago"|"falhou"|"expirado"|"reembolsado","tipo_geracao": "ficha_produto"|"quadro_chave"|"clipe_video","tipo_movimentacao": "compra"|"bonus"|"consumo"|"estorno"|"ajuste_manual"
+            "acao_cobravel": "gerar_ficha"|"refazer_ficha"|"gerar_roteiro_quadros"|"refazer_quadro"|"gerar_video"|"refazer_clipe"|"remontar_texto","categoria_peca": "top"|"legging"|"shorts"|"camiseta"|"regata"|"jaqueta"|"conjunto"|"outro","cenario": "academia"|"box_crossfit"|"estudio_funcional"|"ao_ar_livre_urbano"|"ao_ar_livre_natureza"|"pista_de_corrida","estilo_video": "energetico"|"cinematografico"|"lifestyle","faixa_etaria": "de_20_a_30"|"de_30_a_45"|"acima_de_45","feedback_status": "novo"|"visto"|"resolvido","feedback_tipo": "problema"|"sugestao","formato_video": "vertical_9_16"|"horizontal_16_9","genero_alvo": "feminino"|"masculino"|"unissex","genero_modelo": "mulher"|"homem","idioma": "pt_br"|"en","modalidade": "musculacao"|"crossfit"|"hyrox"|"corrida"|"funcional"|"yoga_pilates","papel_usuario": "admin_plataforma"|"usuario_marca","status_anuncio": "gerando_roteiro"|"gerando_quadros"|"aguardando_aprovacao"|"gerando_clipes"|"montando"|"pronto"|"falhou","status_ficha": "gerando"|"aguardando_aprovacao"|"aprovada"|"descartada"|"falhou","status_geracao": "na_fila"|"processando"|"concluida"|"falhou"|"bloqueada_nsfw","status_item": "gerando"|"pronto"|"descartado"|"falhou","status_pagamento": "iniciado"|"pago"|"falhou"|"expirado"|"reembolsado","tipo_geracao": "ficha_produto"|"quadro_chave"|"clipe_video","tipo_movimentacao": "compra"|"bonus"|"consumo"|"estorno"|"ajuste_manual"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -561,7 +587,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "acao_cobravel": ["gerar_ficha", "refazer_ficha", "gerar_roteiro_quadros", "refazer_quadro", "gerar_video", "refazer_clipe", "remontar_texto"],"categoria_peca": ["top", "legging", "shorts", "camiseta", "regata", "jaqueta", "conjunto", "outro"],"cenario": ["academia", "box_crossfit", "estudio_funcional", "ao_ar_livre_urbano", "ao_ar_livre_natureza", "pista_de_corrida"],"estilo_video": ["energetico", "cinematografico", "lifestyle"],"faixa_etaria": ["de_20_a_30", "de_30_a_45", "acima_de_45"],"formato_video": ["vertical_9_16", "horizontal_16_9"],"genero_alvo": ["feminino", "masculino", "unissex"],"genero_modelo": ["mulher", "homem"],"idioma": ["pt_br", "en"],"modalidade": ["musculacao", "crossfit", "hyrox", "corrida", "funcional", "yoga_pilates"],"papel_usuario": ["admin_plataforma", "usuario_marca"],"status_anuncio": ["gerando_roteiro", "gerando_quadros", "aguardando_aprovacao", "gerando_clipes", "montando", "pronto", "falhou"],"status_ficha": ["gerando", "aguardando_aprovacao", "aprovada", "descartada", "falhou"],"status_geracao": ["na_fila", "processando", "concluida", "falhou", "bloqueada_nsfw"],"status_item": ["gerando", "pronto", "descartado", "falhou"],"status_pagamento": ["iniciado", "pago", "falhou", "expirado", "reembolsado"],"tipo_geracao": ["ficha_produto", "quadro_chave", "clipe_video"],"tipo_movimentacao": ["compra", "bonus", "consumo", "estorno", "ajuste_manual"]
+            "acao_cobravel": ["gerar_ficha", "refazer_ficha", "gerar_roteiro_quadros", "refazer_quadro", "gerar_video", "refazer_clipe", "remontar_texto"],"categoria_peca": ["top", "legging", "shorts", "camiseta", "regata", "jaqueta", "conjunto", "outro"],"cenario": ["academia", "box_crossfit", "estudio_funcional", "ao_ar_livre_urbano", "ao_ar_livre_natureza", "pista_de_corrida"],"estilo_video": ["energetico", "cinematografico", "lifestyle"],"faixa_etaria": ["de_20_a_30", "de_30_a_45", "acima_de_45"],"feedback_status": ["novo", "visto", "resolvido"],"feedback_tipo": ["problema", "sugestao"],"formato_video": ["vertical_9_16", "horizontal_16_9"],"genero_alvo": ["feminino", "masculino", "unissex"],"genero_modelo": ["mulher", "homem"],"idioma": ["pt_br", "en"],"modalidade": ["musculacao", "crossfit", "hyrox", "corrida", "funcional", "yoga_pilates"],"papel_usuario": ["admin_plataforma", "usuario_marca"],"status_anuncio": ["gerando_roteiro", "gerando_quadros", "aguardando_aprovacao", "gerando_clipes", "montando", "pronto", "falhou"],"status_ficha": ["gerando", "aguardando_aprovacao", "aprovada", "descartada", "falhou"],"status_geracao": ["na_fila", "processando", "concluida", "falhou", "bloqueada_nsfw"],"status_item": ["gerando", "pronto", "descartado", "falhou"],"status_pagamento": ["iniciado", "pago", "falhou", "expirado", "reembolsado"],"tipo_geracao": ["ficha_produto", "quadro_chave", "clipe_video"],"tipo_movimentacao": ["compra", "bonus", "consumo", "estorno", "ajuste_manual"]
           }
         }
 } as const

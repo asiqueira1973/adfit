@@ -70,12 +70,17 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
   - Cliente OAuth no Google Cloud (projeto AdFit). Provedor ligado no projeto Supabase remoto pelo Alexandre e no local via `supabase/.env` (fora do git).
 - **Atenção (projeto compartilhado):** se o projeto remoto permitir cadastro (outros apps), uma conta Google sem convite pode ser criada em `auth.users`. Ela não tem perfil no AdFit, então o proxy encerra a sessão e mostra "sem acesso".
 
-## MD-6 — Feedback do usuário (01/11/2026, Alexandre) — a detalhar
+## MD-6 — Feedback do usuário (01/11/2026, Alexandre) — implementado
 - **Decisão:** o usuário consegue mandar problemas e sugestões de melhoria de dentro do app.
 - **Proposta:**
   - Item "Enviar feedback" no menu do perfil, com tipo (problema ou sugestão), texto e a tela atual anexada automaticamente.
   - Nova tabela `feedbacks` com RLS: o usuário da marca só cria e lê os próprios; o admin lê todos.
   - Tela [Admin] Feedbacks com status (novo, visto, resolvido).
+- **Implementação:**
+  - Migration `20261101001200_feedbacks.sql`: enums `feedback_tipo` e `feedback_status`, e tabela `feedbacks`.
+  - RLS: `feedbacks_select`, `feedbacks_insert` (só em nome próprio, a própria marca e status `novo`) e `feedbacks_update_admin`. Por GRANT de coluna, o cliente só escreve o conteúdo e o admin só o status; ninguém apaga.
+  - Rotas `POST /api/feedback` e `PATCH /api/admin/feedbacks/:id`. Telas `/feedback` (menu do perfil, com `?de=<tela>`) e `/admin/feedbacks`.
+  - Teste pgTAP `07_feedbacks`. O `03_esquema` passou a incluir a tabela e os enums da emenda.
 
 ## I-1 — Plano de mídia a partir de uma pasta (backlog, ver `docs/ideias.md`)
 - Reforço do Alexandre: sugerir o plano **não consome crédito**; só o que for gerado de fato é cobrado.

@@ -85,6 +85,25 @@ CREATE TYPE "public"."faixa_etaria" AS ENUM (
 ALTER TYPE "public"."faixa_etaria" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."feedback_status" AS ENUM (
+    'novo',
+    'visto',
+    'resolvido'
+);
+
+
+ALTER TYPE "public"."feedback_status" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."feedback_tipo" AS ENUM (
+    'problema',
+    'sugestao'
+);
+
+
+ALTER TYPE "public"."feedback_tipo" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."formato_video" AS ENUM (
     'vertical_9_16',
     'horizontal_16_9'
@@ -757,6 +776,24 @@ CREATE TABLE IF NOT EXISTS "public"."configuracoes" (
 ALTER TABLE "public"."configuracoes" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."feedbacks" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "usuario_id" "uuid" NOT NULL,
+    "marca_id" "uuid",
+    "tipo" "public"."feedback_tipo" NOT NULL,
+    "texto" "text" NOT NULL,
+    "tela" "text",
+    "status" "public"."feedback_status" DEFAULT 'novo'::"public"."feedback_status" NOT NULL,
+    "criado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "atualizado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "feedbacks_tela_check" CHECK (("char_length"("tela") <= 300)),
+    CONSTRAINT "feedbacks_texto_check" CHECK ((("char_length"("texto") >= 1) AND ("char_length"("texto") <= 2000)))
+);
+
+
+ALTER TABLE "public"."feedbacks" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."fichas_produto" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "produto_id" "uuid" NOT NULL,
@@ -1007,6 +1044,11 @@ ALTER TABLE ONLY "public"."configuracoes"
 
 
 
+ALTER TABLE ONLY "public"."feedbacks"
+    ADD CONSTRAINT "feedbacks_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."fichas_produto"
     ADD CONSTRAINT "fichas_produto_pkey" PRIMARY KEY ("id");
 
@@ -1145,6 +1187,18 @@ CREATE INDEX "clipes_quadro_id_idx" ON "public"."clipes" USING "btree" ("quadro_
 
 
 
+CREATE INDEX "feedbacks_marca_id_idx" ON "public"."feedbacks" USING "btree" ("marca_id");
+
+
+
+CREATE INDEX "feedbacks_status_criado_em_idx" ON "public"."feedbacks" USING "btree" ("status", "criado_em" DESC);
+
+
+
+CREATE INDEX "feedbacks_usuario_id_idx" ON "public"."feedbacks" USING "btree" ("usuario_id");
+
+
+
 CREATE INDEX "fichas_produto_geracao_id_idx" ON "public"."fichas_produto" USING "btree" ("geracao_id");
 
 
@@ -1222,6 +1276,10 @@ CREATE INDEX "quadros_marca_id_idx" ON "public"."quadros" USING "btree" ("marca_
 
 
 CREATE OR REPLACE TRIGGER "trg_anuncios_atualizado_em" BEFORE UPDATE ON "public"."anuncios" FOR EACH ROW EXECUTE FUNCTION "public"."definir_atualizado_em"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_feedbacks_atualizado_em" BEFORE UPDATE ON "public"."feedbacks" FOR EACH ROW EXECUTE FUNCTION "public"."definir_atualizado_em"();
 
 
 
@@ -1310,6 +1368,16 @@ ALTER TABLE ONLY "public"."clipes"
 
 ALTER TABLE ONLY "public"."clipes"
     ADD CONSTRAINT "clipes_quadro_id_fkey" FOREIGN KEY ("quadro_id") REFERENCES "public"."quadros"("id");
+
+
+
+ALTER TABLE ONLY "public"."feedbacks"
+    ADD CONSTRAINT "feedbacks_marca_id_fkey" FOREIGN KEY ("marca_id") REFERENCES "public"."marcas"("id");
+
+
+
+ALTER TABLE ONLY "public"."feedbacks"
+    ADD CONSTRAINT "feedbacks_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "public"."perfis"("id");
 
 
 
@@ -1447,6 +1515,23 @@ ALTER TABLE "public"."configuracoes" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "configuracoes_select_admin" ON "public"."configuracoes" FOR SELECT TO "authenticated" USING (( SELECT "public"."eh_admin"() AS "eh_admin"));
+
+
+
+ALTER TABLE "public"."feedbacks" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "feedbacks_insert" ON "public"."feedbacks" FOR INSERT TO "authenticated" WITH CHECK ((("usuario_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT ("marca_id" IS DISTINCT FROM ( SELECT "public"."minha_marca_id"() AS "minha_marca_id"))) AND ("status" = 'novo'::"public"."feedback_status") AND (EXISTS ( SELECT 1
+   FROM "public"."perfis" "p"
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "p"."ativo")))));
+
+
+
+CREATE POLICY "feedbacks_select" ON "public"."feedbacks" FOR SELECT TO "authenticated" USING ((("usuario_id" = ( SELECT "auth"."uid"() AS "uid")) OR ( SELECT "public"."eh_admin"() AS "eh_admin")));
+
+
+
+CREATE POLICY "feedbacks_update_admin" ON "public"."feedbacks" FOR UPDATE TO "authenticated" USING (( SELECT "public"."eh_admin"() AS "eh_admin")) WITH CHECK (( SELECT "public"."eh_admin"() AS "eh_admin"));
 
 
 
@@ -1766,6 +1851,36 @@ GRANT SELECT ON TABLE "public"."clipes" TO "authenticated";
 
 GRANT ALL ON TABLE "public"."configuracoes" TO "service_role";
 GRANT SELECT ON TABLE "public"."configuracoes" TO "authenticated";
+
+
+
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."feedbacks" TO "anon";
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."feedbacks" TO "authenticated";
+GRANT ALL ON TABLE "public"."feedbacks" TO "service_role";
+
+
+
+GRANT INSERT("usuario_id") ON TABLE "public"."feedbacks" TO "authenticated";
+
+
+
+GRANT INSERT("marca_id") ON TABLE "public"."feedbacks" TO "authenticated";
+
+
+
+GRANT INSERT("tipo") ON TABLE "public"."feedbacks" TO "authenticated";
+
+
+
+GRANT INSERT("texto") ON TABLE "public"."feedbacks" TO "authenticated";
+
+
+
+GRANT INSERT("tela") ON TABLE "public"."feedbacks" TO "authenticated";
+
+
+
+GRANT UPDATE("status") ON TABLE "public"."feedbacks" TO "authenticated";
 
 
 

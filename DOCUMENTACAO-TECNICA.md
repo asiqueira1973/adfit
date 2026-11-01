@@ -21,6 +21,7 @@ Banco Postgres (Supabase), schema `public`, nomes em português `snake_case` exa
 | `pacotes_creditos` | Pacotes à venda, cada um com o Price da Stripe. |
 | `pagamentos` | Uma linha por Checkout Session da Stripe. |
 | `precos_acoes` | Preço em créditos de cada ação (regra 11.1). |
+| `feedbacks` | Problemas e sugestões enviados pelos usuários (MD-6); cada um lê os próprios, o admin lê todos e muda o status. |
 | `configuracoes` | Chave-valor da regra 11.6 (modelos, preços USD, cotações, contato de suporte). |
 
 Enums: os da seção 7.2, na mesma ordem, mais `idioma` (`pt_br`, `en`) — emenda MD-1.
@@ -79,6 +80,8 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | [Marca] Novo anúncio | `produtos` com ficha aprovada (URL assinada da ficha), `precos_acoes` | `POST /api/anuncios` |
 | [Marca] Anúncio | `anuncios`, `cenas`, `quadros` (sem colunas técnicas; service_role com posse conferida) | `GET /api/anuncios/:id` (polling), `PATCH /api/anuncios/:id/textos` |
 | [Marca] Anúncios | `anuncios` + quadro atual da cena 1 | — |
+| Fale com a gente (`/feedback`) | — | `POST /api/feedback` (RLS `feedbacks_insert`) |
+| [Admin] Feedbacks | `feedbacks` + `perfis`, `marcas` (service_role) | `PATCH /api/admin/feedbacks/:id` |
 | [Admin] Configurações | `precos_acoes`, `pacotes_creditos`, `configuracoes` (service_role) | `PUT /api/admin/configuracoes`, `POST /api/admin/pacotes`, `PATCH /api/admin/pacotes/:id` |
 | [Marca] Marca | `marcas` (kit), URL assinada do logo | `marcas` direto pela RLS `marcas_update_kit`; Storage `marcas/<marca>/logo/*` |
 | [Marca] Produtos | `produtos` (não arquivados) + `fotos_produto` + `fichas_produto` (selo), URLs assinadas | — |
@@ -212,5 +215,7 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
 | D-22 | `PATCH /api/anuncios/:id/textos` não aceita `cta` | `anuncios` não tem coluna de CTA (seção 7.3); o CTA do fecho vem de `marcas.cta_padrao`, editado na tela Marca. |
 | MD-3 | Modelos Claude: `claude-sonnet-5` (roteiro, refação, QC de imagem) e `claude-haiku-4-5` (QC de texto, nova chave `modelo_claude_qc_texto`) | O spec citava `claude-sonnet-5-5`/`claude-haiku-5-5`, que não existem; decisão do Alexandre. |
 | MD-4 | Imagem: Grok Imagine 2.0 (`xai/grok-imagine-image-2.0`); vídeo: Seedance 2.5 1080p (`bytedance/seedance-2.5/image-to-video`); `gerar_video` = 51, `refazer_clipe` = 17; pacotes de 60 por US$ 36 e de 150 por US$ 81 | Nano Banana não existe na Higgsfield API; o Seedance foi escolhido pela qualidade e custa ~US$ 17 por vídeo, então os preços foram revistos para margem ≥ 30% (decisão do Alexandre, 25.5 e 25.1). |
+| MD-5 | Login com Google (só e-mails já convidados) | Emenda do Alexandre; o OAuth volta por `/auth/confirm`. |
+| MD-6 | Feedback do usuário (tabela `feedbacks`, telas `/feedback` e `/admin/feedbacks`) | Emenda do Alexandre. |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
 | MD-2 | Crédito "Feito pela Dab Lab" | Emenda do Alexandre. |
