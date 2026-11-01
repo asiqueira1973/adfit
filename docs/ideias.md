@@ -18,7 +18,7 @@ item de spec só depois de revisadas (seção 28 continua valendo).
   planejamento** — um serviço contínuo (o que postar, quando e com qual peça), não só a geração
   de um vídeo avulso. A I-1 é o primeiro passo nessa direção.
 
-## M-1 — Mais cenários para os anúncios (01/11/2026, Alexandre) — melhoria registrada
+## M-1 (feito em 01/11/2026: orla_praia, academia_praia, parque_urbano, calcadao_rio, academia_ampla) — Mais cenários para os anúncios (01/11/2026, Alexandre) — melhoria registrada
 Novas opções de "Onde" no Novo anúncio, sempre com **nomes genéricos** (nunca o nome real do lugar) e **sem logos nem marcas** visíveis nas imagens:
 
 | Valor sugerido | Nome na tela (pt / en) | Inspiração (não aparece no app) | Notas para o prompt |

@@ -13,6 +13,7 @@ import { checkClipsProgress, downloadName, MONTAGE_STALE_MS, requestMontage, run
 import { aiClient, runLater } from "./runtime";
 import { buildScriptSystem, sanitizeScreenTexts } from "./script";
 import { isBusy, transition, type AdStatus } from "./stateMachine";
+import { SCENARIO_BRIEFS } from "./scenarios";
 import { hasForbiddenTerm } from "@/lib/forbidden-terms";
 import { validateScreenText } from "@/lib/text-rules";
 import { emailOf, track } from "../analytics/track";
@@ -25,7 +26,7 @@ export type AdActor = { id: string; papel: "admin_plataforma" | "usuario_marca";
 export const createAdSchema = z
   .object({
     produto_id: z.string().uuid(),
-    cenario: z.enum(["academia", "box_crossfit", "estudio_funcional", "ao_ar_livre_urbano", "ao_ar_livre_natureza", "pista_de_corrida"]),
+    cenario: z.enum(["academia", "box_crossfit", "estudio_funcional", "ao_ar_livre_urbano", "ao_ar_livre_natureza", "pista_de_corrida", "orla_praia", "academia_praia", "parque_urbano", "calcadao_rio", "academia_ampla"]),
     modalidade: z.enum(["musculacao", "crossfit", "hyrox", "corrida", "funcional", "yoga_pilates"]),
     genero_modelo: z.enum(["mulher", "homem"]),
     faixa_etaria: z.enum(["de_20_a_30", "de_30_a_45", "acima_de_45"]),
@@ -151,6 +152,7 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
         marca: { nome: marca.nome, instagram: marca.instagram, cta: marca.cta_padrao },
         escolhas: {
           cenario: ad.cenario,
+          cenario_descricao: SCENARIO_BRIEFS[ad.cenario],
           modalidade: ad.modalidade,
           genero_modelo: ad.genero_modelo,
           faixa_etaria: ad.faixa_etaria,

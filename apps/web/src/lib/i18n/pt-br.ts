@@ -332,7 +332,7 @@ export const ptBR = {
     ofertaExemplo: "20% OFF esta semana",
   },
   opcoes: {
-    cenarios: { academia: "Academia", box_crossfit: "Box de crossfit", estudio_funcional: "Estúdio funcional", ao_ar_livre_urbano: "Ao ar livre urbano", ao_ar_livre_natureza: "Ao ar livre natureza", pista_de_corrida: "Pista de corrida" },
+    cenarios: { academia: "Academia", box_crossfit: "Box de crossfit", estudio_funcional: "Estúdio funcional", ao_ar_livre_urbano: "Ao ar livre urbano", ao_ar_livre_natureza: "Ao ar livre natureza", pista_de_corrida: "Pista de corrida", orla_praia: "Orla da praia", academia_praia: "Barras na praia", parque_urbano: "Parque urbano", calcadao_rio: "Calçadão à beira-rio", academia_ampla: "Academia ampla e clara" },
     modalidades: { musculacao: "Musculação", crossfit: "Crossfit", hyrox: "Hyrox", corrida: "Corrida", funcional: "Funcional", yoga_pilates: "Yoga/pilates" },
     generosModelo: { mulher: "Mulher", homem: "Homem" },
     faixasEtarias: { de_20_a_30: "20–30", de_30_a_45: "30–45", acima_de_45: "45+" },

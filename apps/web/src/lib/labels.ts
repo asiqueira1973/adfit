@@ -22,6 +22,11 @@ export const CENARIO_LABEL = {
   ao_ar_livre_urbano: "Ao ar livre urbano",
   ao_ar_livre_natureza: "Ao ar livre natureza",
   pista_de_corrida: "Pista de corrida",
+  orla_praia: "Orla da praia",
+  academia_praia: "Barras na praia",
+  parque_urbano: "Parque urbano",
+  calcadao_rio: "Calçadão à beira-rio",
+  academia_ampla: "Academia ampla e clara",
 } as const;
 
 export const MODALIDADE_LABEL = {

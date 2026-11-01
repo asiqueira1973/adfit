@@ -333,7 +333,7 @@ export const en: Dictionary = {
     ofertaExemplo: "20% OFF this week",
   },
   opcoes: {
-    cenarios: { academia: "Gym", box_crossfit: "CrossFit box", estudio_funcional: "Functional studio", ao_ar_livre_urbano: "Outdoors, city", ao_ar_livre_natureza: "Outdoors, nature", pista_de_corrida: "Running track" },
+    cenarios: { academia: "Gym", box_crossfit: "CrossFit box", estudio_funcional: "Functional studio", ao_ar_livre_urbano: "Outdoors, city", ao_ar_livre_natureza: "Outdoors, nature", pista_de_corrida: "Running track", orla_praia: "Beachfront promenade", academia_praia: "Beach workout bars", parque_urbano: "City park", calcadao_rio: "Riverside walk", academia_ampla: "Large bright gym" },
     modalidades: { musculacao: "Weight training", crossfit: "CrossFit", hyrox: "Hyrox", corrida: "Running", funcional: "Functional", yoga_pilates: "Yoga/Pilates" },
     generosModelo: { mulher: "Woman", homem: "Man" },
     faixasEtarias: { de_20_a_30: "20–30", de_30_a_45: "30–45", acima_de_45: "45+" },
