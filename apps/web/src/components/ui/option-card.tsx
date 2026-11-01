@@ -31,7 +31,8 @@ export function OptionCard({
       <input type="radio" name={name} value={value} checked={checked} onChange={() => onChange?.(value)} className="sr-only" />
       {image && (
         <div className="relative aspect-square w-full">
-          <Image src={image} alt="" fill sizes="(max-width: 640px) 50vw, 200px" className="object-cover" />
+          {/* URL assinada do Storage (externa) não passa pelo otimizador do Next; imagens locais passam. */}
+          <Image src={image} alt="" fill unoptimized={image.startsWith("http")} sizes="(max-width: 640px) 50vw, 200px" className="object-cover" />
         </div>
       )}
       <span className="flex min-h-11 items-center justify-between gap-2 px-3 py-2 text-[14px] font-semibold">
