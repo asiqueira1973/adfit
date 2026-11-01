@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { NewAdWizard } from "@/features/ads/new-ad-wizard";
+import { JourneySteps } from "@/features/journey/journey-steps";
 import { brandContext } from "@/server/brand/context";
 import { listActionPrices } from "@/server/brand/credits";
 import { listProducts } from "@/server/products/queries";
@@ -28,11 +29,14 @@ async function Wizard({ searchParams }: { searchParams: PageProps<"/anuncios/nov
     return <EmptyState image="/images/vazio-produtos.jpg" text={t.anuncios.semProdutos} action={<ButtonLink href="/produtos">{t.anuncios.irParaProdutos}</ButtonLink>} />;
   }
   return (
-    <NewAdWizard
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+      <JourneySteps current="escolhas" t={t.jornada} />
+      <NewAdWizard
       products={eligible}
       price={prices.find((p) => p.acao === "gerar_roteiro_quadros")?.creditos ?? 0}
       initialProductId={typeof sp.produto === "string" ? sp.produto : undefined}
       t={{ anuncios: t.anuncios, opcoes: t.opcoes, erros: t.erros }}
-    />
+      />
+    </div>
   );
 }

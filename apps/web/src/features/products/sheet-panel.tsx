@@ -93,9 +93,10 @@ export function SheetPanel({
 
       {error && <Banner tone="danger">{error}</Banner>}
 
+      {!generating && !selected && <p className="text-[15px] text-text-2">{t.produtos.fichaExplica}</p>}
+
       {!versions.length && (
         <>
-          <p className="text-[15px] text-text-2">{t.produtos.fichaExplica}</p>
           <CostButton label={t.produtos.gerarFicha} cost={prices.gerar} balance={0} disabled={!hasPhotos || busy} onClick={() => generate()} />
         </>
       )}

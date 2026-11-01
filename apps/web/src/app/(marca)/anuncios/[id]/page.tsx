@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/feedback";
 import { AdScreen } from "@/features/ads/ad-screen";
+import { JourneySteps } from "@/features/journey/journey-steps";
 import { brandContext } from "@/server/brand/context";
 import { listActionPrices } from "@/server/brand/credits";
 import { getAdView } from "@/server/ads/service";
@@ -33,6 +34,7 @@ async function AdContent({ params }: Pick<PageProps<"/anuncios/[id]">, "params">
   if (!view) notFound();
   return (
     <div className="flex flex-col gap-6">
+      <JourneySteps current={view.status === "pronto" ? "concluido" : view.status === "gerando_clipes" || view.status === "montando" ? "video" : "cenas"} t={t.jornada} />
       <PageHeader title={view.titulo} />
       <AdScreen
         key={`${view.status}:${view.cenas.map((c) => `${c.textoTela ?? ""}|${c.quadros.map((q) => q.status).join("")}`).join(";")}`}

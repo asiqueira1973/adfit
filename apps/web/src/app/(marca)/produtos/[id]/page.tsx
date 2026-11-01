@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/feedback";
 import { ArchiveProductButton } from "@/features/products/archive-button";
 import { PhotoManager } from "@/features/products/photo-manager";
 import { SheetPanel, type SheetVersion } from "@/features/products/sheet-panel";
+import { JourneySteps } from "@/features/journey/journey-steps";
 import { brandContext } from "@/server/brand/context";
 import { listActionPrices } from "@/server/brand/credits";
 import { getProduct } from "@/server/products/queries";
@@ -30,6 +31,7 @@ async function Content({ params }: Pick<PageProps<"/produtos/[id]">, "params">) 
 
   return (
     <div className="flex flex-col gap-6">
+      <JourneySteps current={product.ficha_aprovada_id ? "escolhas" : "ficha"} t={t.jornada} />
       <PageHeader
         title={product.nome}
         subtitle={`${t.categorias[product.categoria]} · ${t.generosAlvo[product.genero_alvo]}`}

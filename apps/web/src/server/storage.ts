@@ -1,5 +1,6 @@
 import "server-only";
 import sharp from "sharp";
+import { toJpeg } from "./images";
 import { createAdminClient } from "./db/supabase";
 import { objectPath } from "@/lib/storage-paths";
 import type { ClaudeImage } from "./claude/types";
@@ -48,8 +49,7 @@ export async function claudeImage(marcaId: string, path: string): Promise<Claude
   const { bucket, object } = brandObject(marcaId, path);
   const { data, error } = await createAdminClient().storage.from(bucket).download(object);
   if (error || !data) throw error ?? new Error("download_falhou");
-  const jpeg = await sharp(Buffer.from(await data.arrayBuffer()))
-    .rotate()
+  const jpeg = await sharp(await toJpeg(new Uint8Array(await data.arrayBuffer())))
     .resize({ width: 1568, height: 1568, fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 85 })
     .toBuffer();
