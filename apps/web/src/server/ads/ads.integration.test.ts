@@ -251,6 +251,19 @@ describe("8.5 — quadros e QC", () => {
     expect((await adRow(anuncioId)).status).toBe("falhou");
     expect(await saldo()).toBe(antes);
   });
+
+  it("função encerrada depois de gravar as cenas e antes da transição → a varredura também falha e estorna", async () => {
+    const produto = await approvedProduct();
+    const antes = await saldo();
+    const anuncioId = crypto.randomUUID();
+    const { data: p } = await db.from("produtos").select("ficha_aprovada_id").eq("id", produto).single();
+    await db.rpc("debitar_creditos", { p_marca_id: marcaId, p_acao: "gerar_roteiro_quadros", p_quantidade_itens: 1, p_referencia_tipo: "anuncio", p_referencia_id: anuncioId, p_criado_por: actor.id });
+    await db.from("anuncios").insert({ id: anuncioId, marca_id: marcaId, produto_id: produto, ficha_id: p!.ficha_aprovada_id!, criado_por: actor.id, titulo: "x", cenario: "academia", modalidade: "musculacao", genero_modelo: "mulher" });
+    await db.from("cenas").insert([1, 2, 3].map((ordem) => ({ anuncio_id: anuncioId, marca_id: marcaId, ordem, descricao: "d", prompt_quadro: "p", prompt_movimento: "m" })));
+    await refreshAd(anuncioId, Date.now() + AD_ORPHAN_AFTER_MS + 60_000);
+    expect((await adRow(anuncioId)).status).toBe("falhou");
+    expect(await saldo()).toBe(antes);
+  });
 });
 
 describe("8.5 — texto da tela editável", () => {
