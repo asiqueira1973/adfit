@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { costSuffix, formatMoney, signedCredits, typicalAds } from "./format";
+import { costSuffix, formatMoney, signedCredits, typicalAdCost, typicalAds } from "./format";
 import { fill, COPY } from "./copy";
 
 describe("format", () => {
@@ -12,9 +12,15 @@ describe("format", () => {
     expect(costSuffix(1)).toBe("1 crédito");
     expect(costSuffix(0)).toBe("grátis");
   });
-  it("anúncios típicos = créditos ÷ 20 para baixo (seção 15)", () => {
-    expect(typicalAds(50)).toBe(2);
-    expect(typicalAds(120)).toBe(6);
+  it("anúncios típicos = créditos ÷ custo do anúncio típico, para baixo (seção 15 + MD-4)", () => {
+    // MD-4: anúncio típico = criar anúncio (2) + gerar vídeo (51) = 53.
+    const prices = { gerar_roteiro_quadros: 2, gerar_video: 51 };
+    expect(typicalAdCost(prices)).toBe(53);
+    expect(typicalAds(60, 53)).toBe(1);
+    expect(typicalAds(150, 53)).toBe(2);
+    // Preços originais do spec (2 + 12 = 14) continuam funcionando.
+    expect(typicalAds(50, typicalAdCost({ gerar_roteiro_quadros: 2, gerar_video: 12 }))).toBe(3);
+    expect(typicalAds(10, 0)).toBe(0);
   });
   it("extrato com sinal", () => {
     expect(signedCredits(100)).toBe("+100");
