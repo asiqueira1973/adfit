@@ -4,8 +4,8 @@ import { createAdminClient } from "../db/supabase";
 import { businessCodeOf } from "../api/http";
 import type { PromptAdjuster } from "../claude/types";
 import { CLAUSULA_IMAGEM } from "../prompts/clauses";
-import { applyResult, getGeneration, setGenerationDepsForTests, type GenerationDeps } from "../higgsfield/process";
-import { reconsultGeneration, TIMEOUT_MS } from "../higgsfield/stale";
+import { applyResult, failGeneration, getGeneration, setGenerationDepsForTests, type GenerationDeps } from "../higgsfield/process";
+import { ORPHAN_AFTER_MS, reconsultGeneration, refreshStaleGenerations, TIMEOUT_MS } from "../higgsfield/stale";
 import { handleHiggsfieldWebhook } from "../higgsfield/webhook";
 import { normalizeResult, type HfResult } from "../higgsfield/types";
 import { approveSheet, requestSheet, sheetStatus, type SheetActor } from "./service";
@@ -216,6 +216,9 @@ describe("8.4 — webhook e resultado", () => {
     await handleHiggsfieldWebhook(token(), new Headers(), payload(webhookNsfw, hf.submitted[1].requestId));
     expect((await ficha(fichaId)).status).toBe("falhou");
     expect((await getGeneration(g2!.id))!.status).toBe("bloqueada_nsfw");
+    // Seção 7.3: custo_usd nulo quando falhou (não cobrado pela Higgsfield).
+    const { data: custos } = await db.from("geracoes").select("custo_usd").in("id", [f1.geracao_id!, (await ficha(fichaId)).geracao_id!]);
+    expect(custos!.every((c) => c.custo_usd === null)).toBe(true);
     expect(await saldo()).toBe(antes);
     // Webhook repetido da tentativa 2 não estorna de novo.
     await handleHiggsfieldWebhook(token(), new Headers(), payload(webhookNsfw, hf.submitted[1].requestId));
@@ -245,6 +248,40 @@ describe("8.4 — webhook e resultado", () => {
     const g = (await ficha(f2)).geracao_id!;
     expect(await reconsultGeneration(g, { force: true, now: Date.now() + TIMEOUT_MS + 60_000 })).toBe("falhou");
     expect((await getGeneration((await ficha(f2)).geracao_id!))!.tentativa).toBe(2);
+  });
+});
+
+describe("8.4 — robustez (achados do verifier)", () => {
+  it("função encerrada depois do débito e antes da submissão: a geração órfã é achada pelo polling, a ficha falha e o crédito volta", async () => {
+    const produto = await newProduct();
+    const antes = await saldo();
+    // Simula a função morrendo durante a chamada ao Claude: o adjuster nunca responde.
+    const hanging: PromptAdjuster = { adjustPrompt: () => new Promise(() => {}) };
+    const { fichaId: v1 } = await requestSheet(actor, produto, undefined);
+    await applyResult((await getGeneration((await ficha(v1)).geracao_id!))!, normalizeResult(JSON.parse(payload(webhookCompleted, hf.submitted[0].requestId)))!, hf);
+    const meio = await saldo();
+    void requestSheet(actor, produto, "cor mais escura", { adjuster: hanging });
+    await new Promise((r) => setTimeout(r, 300));
+    expect(await saldo()).toBe(meio - 1);
+    const status = await sheetStatus(actor, produto);
+    expect(status.geracoesEmAndamento).toHaveLength(1);
+    await refreshStaleGenerations({ geracaoIds: status.geracoesEmAndamento }, Date.now() + ORPHAN_AFTER_MS + 60_000);
+    const v2 = status.versoes.find((v) => v.versao === 2)!;
+    expect((await ficha(v2.id)).status).toBe("falhou");
+    expect(await saldo()).toBe(meio);
+    expect(antes - 2).toBe(meio);
+  });
+
+  it("completed atrasado da tentativa 1 depois da retentativa não quebra o webhook nem toca a ficha", async () => {
+    const produto = await newProduct();
+    const { fichaId } = await requestSheet(actor, produto, undefined);
+    const g1 = (await getGeneration((await ficha(fichaId)).geracao_id!))!;
+    await failGeneration(g1, "falhou", "timeout_15min", hf);
+    const t2 = (await ficha(fichaId)).geracao_id!;
+    expect(t2).not.toBe(g1.id);
+    // Resultado da tentativa 1 processado com a leitura antiga (corrida webhook × timeout).
+    await expect(applyResult(g1, normalizeResult(JSON.parse(payload(webhookCompleted, g1.request_id!)))!, hf)).resolves.toBeUndefined();
+    expect(await ficha(fichaId)).toMatchObject({ status: "gerando", geracao_id: t2, imagem_path: null });
   });
 });
 
