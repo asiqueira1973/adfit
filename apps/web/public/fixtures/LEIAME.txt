@@ -1,0 +1,1 @@
+Imagens fictícias usadas só nas telas de design (fixtures). Não são da plataforma (16.3).

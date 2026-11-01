@@ -6,3 +6,9 @@
 5. Aprovado: salvar capturas em `docs/design/<tela>-<largura>-<tema>.png`, commit, usar na verificação visual de cada épico (22.1).
 
 > Convenções transversais, paradas obrigatórias e verificação: ver `00-plano-geral.md`.
+
+## Execução (aguardando aprovação)
+- 15 imagens da plataforma (16.3) geradas na Higgsfield via MCP (`gpt_image_2_5`), salvas em `apps/web/public/images/` como JPG. Mais 5 imagens **ilustrativas** em `apps/web/public/fixtures/` (foto de produto, ficha, 3 cenas), usadas só nas fixtures.
+- Telas em rotas reais com fixtures (`src/features/fixtures/`); estados por `?estado=`, `?saldo=`, `?pausada=1`, `?formato=horizontal`, `?passo=`, `?aba=`, `?modal=`.
+- Capturas por `scripts/capture-design.mjs` (Playwright): 60 telas/estados, 150 arquivos (390 px todas; 1280 px admin; claro/escuro). Ficam em `docs/design/` e só são commitadas após a aprovação.
+- Divergência: no admin a 390 px as tabelas rolam na horizontal dentro do cartão (admin é desktop-first, seção 16.4).
