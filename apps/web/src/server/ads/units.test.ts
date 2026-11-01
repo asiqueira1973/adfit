@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CLAUSULA_IMAGEM } from "../prompts/clauses";
 import type { AiClient, Script } from "../claude/types";
 import { buildFramePrompt, FRAME_DRESS_LINE, FRAME_REFERENCE_LINE, qcApproved } from "./frames";
+import { defaultModelGender } from "@/features/ads/new-ad-wizard";
 import { buildScriptSystem, fitScreenText, sanitizeScreenTexts } from "./script";
 
 /** Peças puras do 8.5: prompt do quadro (C.2 + roteiro.v2), QC (11.5) e texto da tela (11.7, seção 20). */
@@ -77,8 +78,21 @@ describe("texto da tela", () => {
     expect(r[1]).toBe("Close no agachamento");
     expect(r[2]).toBe("Fica firme em cada série");
   });
+  it("texto substituto só usa a descrição se ela estiver no idioma do vídeo; senão a cena fica sem texto", async () => {
+    const r = await sanitizeScreenTexts(script("Lose weight fast", "Stays in place"), true, "en", reviewer(), "pt_br");
+    expect(r[1]).toBeNull();
+    expect(r[2]).toBe("Stays in place");
+  });
   it("revisão indisponível mantém o texto já checado pela regex", async () => {
     const broken = { reviewTexts: async () => Promise.reject(new Error("x")) } as unknown as AiClient;
     expect(await sanitizeScreenTexts(script("Bora treinar", "Segura no lugar"), true, "pt_br", broken)).toEqual({ 1: "Bora treinar", 2: "Segura no lugar", 3: null });
+  });
+});
+
+describe("padrões do assistente (critério 8.5)", () => {
+  it("modelo derivado do gênero-alvo: feminino→mulher, masculino→homem, unissex→mulher", () => {
+    expect(defaultModelGender("feminino")).toBe("mulher");
+    expect(defaultModelGender("masculino")).toBe("homem");
+    expect(defaultModelGender("unissex")).toBe("mulher");
   });
 });
