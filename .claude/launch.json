@@ -10,7 +10,7 @@
         "-w",
         "apps/web"
       ],
-      "port": 3000,
+      "port": 58743,
       "autoPort": true
     }
   ]

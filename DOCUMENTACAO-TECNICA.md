@@ -1,6 +1,6 @@
 # AdFit — Documentação técnica
 
-Descreve o sistema **como está implementado** (seção 19 do `docs/spec.md`). Atualizada no mesmo commit de toda mudança de schema, função, política, prompt ou lógica de tela. Estado atual: épicos 8.0, design, 8.1 e 8.2.
+Descreve o sistema **como está implementado** (seção 19 do `docs/spec.md`). Atualizada no mesmo commit de toda mudança de schema, função, política, prompt ou lógica de tela. Estado atual: épicos 8.0, design, 8.1, 8.2 e 8.9.
 
 ## 1. Modelo de dados
 
@@ -67,6 +67,10 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | [Admin] Marcas | `marcas`, `anuncios` (contagem do mês) | `POST /api/admin/marcas` |
 | [Admin] Marca | `marcas`, `perfis`, `movimentacoes_creditos`, `pagamentos` (+ `pacotes_creditos.nome`), `anuncios` | `PATCH /api/admin/marcas/:id` (kit, pausar), `POST /api/admin/creditos` (`lancar_creditos`), `POST /api/admin/usuarios`, `PATCH /api/admin/usuarios/:id` |
 | [Admin] Usuários | `perfis` (+ `marcas.nome`), `marcas` | `POST /api/admin/usuarios`, `PATCH /api/admin/usuarios/:id` |
+| [Marca] Créditos | `marcas`, `movimentacoes_creditos`, `precos_acoes`, `pagamentos` (+ `pacotes_creditos.nome`) | — |
+| [Marca] Comprar créditos | `pacotes_creditos` (só ativos, por `ordem`), `marcas.ativa` | `POST /api/creditos/checkout` |
+| [Marca] Compra concluída (`/creditos/obrigado`) | `pagamentos`, `marcas` | `fulfillCheckout` → `creditar_pagamento` (servidor) |
+| [Admin] Configurações | `precos_acoes`, `pacotes_creditos`, `configuracoes` (service_role) | `PUT /api/admin/configuracoes`, `POST /api/admin/pacotes`, `PATCH /api/admin/pacotes/:id` |
 | Demais telas | ainda com dados fictícios do design (`src/features/fixtures`) | ligadas nos épicos seguintes |
 
 ## 5. Lógica por tela (até o 8.1)
@@ -85,7 +89,35 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 - **Idioma (MD-1)**: antes do login, `Accept-Language`; no 1º acesso, gravado em `perfis.idioma`; troca no menu do perfil e no rodapé do admin.
 
 ## 6. Pipelines
-Geração e pagamento: entram nos épicos 8.4–8.9.
+
+### Pipeline de pagamento (seção 4.5, épico 8.9)
+```
+[Comprar créditos] "Pagar" → POST /api/creditos/checkout (usuario_marca ativo, marca ativa, pacote ativo)
+   └─ insere pagamentos (status iniciado; créditos/valor/moeda congelados)
+   └─ Stripe Checkout Session: mode=payment, 1 item (Price do pacote), client_reference_id=marca,
+      metadata={pagamento_id, marca_id, pacote_id}, success_url=/creditos/obrigado?session_id={CHECKOUT_SESSION_ID},
+      cancel_url=/creditos?compra=cancelada
+   └─ grava stripe_checkout_session_id → navegador vai para checkout.stripe.com
+[Stripe] pagamento → dois caminhos chamam a MESMA função, ambos idempotentes:
+   (1) webhook POST /api/webhooks/stripe — corpo bruto + assinatura STRIPE_WEBHOOK_SECRET (inválida → 400, sem efeito)
+   (2) página /creditos/obrigado (atalho para o saldo aparecer mesmo com webhook atrasado; webhook é obrigatório)
+   └─ fulfillCheckout(sessionId): retrieve com line_items; confere metadata.pagamento_id ↔ sessão ↔ Price do pacote;
+      se payment_status='paid' → creditar_pagamento (trava a linha; já pago → devolve a mesma movimentação)
+```
+| Evento | Efeito |
+|---|---|
+| `checkout.session.completed` / `checkout.session.async_payment_succeeded` | `fulfillCheckout` (credita se `paid`) |
+| `checkout.session.async_payment_failed` | `iniciado` → `falhou` (sem crédito) |
+| `checkout.session.expired` | `iniciado` → `expirado` (sem crédito) |
+| `charge.refunded` total | `estornar_pagamento`: `reembolsado` + `ajuste_manual` negativo até o saldo; diferença anotada em `observacao` |
+| `charge.refunded` parcial | só anota em `pagamentos.observacao` (alerta na aba Pagamentos do admin) |
+
+Idempotência: `creditar_pagamento` (trava + status), `pagamentos_stripe_checkout_session_id` único, `movimentacoes.pagamento_id` único; status finais só saem de `iniciado`. Teste automatizado: 3 chamadas a `fulfillCheckout` (1 + 2 em paralelo) = 1 crédito. Teste manual (01/11/2026, sandbox Dab Lab): cartão 4242 → webhook 200 → +50; recarga da página e `stripe events resend` → continua 1 crédito; reembolso → −50.
+
+Admin: pacotes só são criados/alterados se o Price existir na Stripe, ativo, `one_time`, com a mesma moeda e valor (`assertStripePrice`).
+
+### Pipeline de geração
+Entra nos épicos 8.4–8.7.
 
 ## 7. Divergências em relação ao spec
 
@@ -101,5 +133,8 @@ Geração e pagamento: entram nos épicos 8.4–8.9.
 | D-8 | Admin altera `marcas` (kit, pausar) só por rota de servidor (`PATCH /api/admin/marcas/:id`) | O GRANT de coluna vale para todo `authenticated`; a 6.4 permitia ao admin escrever direto. Mais restritivo, mesmo resultado na interface. |
 | D-9 | Pacotes de créditos entram por `scripts/seed-admin.ts`, não por `seed.sql` | Dependem dos Price IDs da Stripe em variáveis de ambiente (seção 7.6). |
 | D-10 | GRANT de coluna esconde `anuncios.roteiro/prompt_versao/erro/montagem_*`, `cenas.prompt_*` e `quadros.qc_detalhe` do cliente | A RLS da 6.4 liberava as linhas inteiras e a API REST devolveria prompts à própria marca, contra a seção 5 e o princípio 5. Admin lê pelo servidor. Teste `04_colunas_ocultas.test.sql`. |
+| D-11 | `cancel_url = /creditos?compra=cancelada` (spec: `/creditos`) | A tela precisa saber que voltou de um cancelamento para mostrar "Compra cancelada. Nada foi cobrado." |
+| D-12 | `estornar_pagamento` acrescenta a nota em `observacao` (migration 20261101000800) | A versão original sobrescrevia a nota de um reembolso parcial anterior (bug achado por teste). |
+| D-13 | Checkout envia `customer_email` e `locale` do usuário | E-mail pré-preenchido e página da Stripe no idioma do usuário (MD-1). |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
 | MD-2 | Crédito "Feito pela Dab Lab" | Emenda do Alexandre. |

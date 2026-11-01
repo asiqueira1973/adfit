@@ -29,4 +29,12 @@ Plataforma de anúncios em vídeo com IA para marcas de roupa fitness. Spec: [`d
 - Web: `vercel deploy --prod` (projeto `adfit`, produção em https://adfit-roan.vercel.app).
 - Migrations: `supabase db push` no projeto remoto; depois rodar os advisors.
 
-_Seções sobre worker, webhook local da Higgsfield (túnel) e `stripe listen` entram nos épicos 8.6 e 8.9._
+## Pagamentos (Stripe, modo de teste)
+1. Chaves de TESTE no `apps/web/.env.local`: `STRIPE_SECRET_KEY=sk_test_…`, `SEED_STRIPE_PRICE_PACOTE_50/120=price_…` (Prices **avulsos/One-off** em USD) e `npm run seed:admin` para criar os pacotes.
+2. `stripe login` (sandbox) e `stripe listen --print-secret` → `STRIPE_WEBHOOK_SECRET=whsec_…` no `.env.local`.
+3. `stripe listen --forward-to localhost:<porta>/api/webhooks/stripe` com o app rodando e `APP_URL` apontando para a mesma porta.
+4. Comprar em Créditos → Comprar créditos com o cartão `4242 4242 4242 4242`, validade futura, qualquer CVC.
+5. Reenvio de evento: `stripe events resend <evt_…>`; reembolso: painel da Stripe ou `POST /v1/refunds`.
+Produção: chaves live e o endpoint `https://<app>/api/webhooks/stripe` (eventos da seção 4.5) só na Vercel, nunca no `.env.local`.
+
+_Seções sobre worker e webhook local da Higgsfield (túnel) entram nos épicos 8.4 e 8.6._

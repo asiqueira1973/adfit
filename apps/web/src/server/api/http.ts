@@ -38,6 +38,8 @@ export function businessError(code: string, t: Dictionary, supportContact = ""):
     marca_inexistente: { mensagem: t.erros.marcaInexistente, status: 404 },
     usuario_inexistente: { mensagem: t.erros.usuarioInexistente, status: 404 },
     email_existente: { mensagem: t.erros.emailExistente, status: 409 },
+    pacote_inexistente: { mensagem: t.erros.pacoteInexistente, status: 404 },
+    price_invalido: { mensagem: t.erros.priceInvalido, status: 422 },
     saldo_insuficiente: { mensagem: t.copy.saldoInsuficiente, status: 402 },
   };
   return map[code] ?? { mensagem: t.erros.generico, status: 500 };

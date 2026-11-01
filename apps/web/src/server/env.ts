@@ -29,6 +29,16 @@ export function publicServerEnv(): z.infer<typeof publicSchema> {
   return parse(publicSchema);
 }
 
+const stripeSchema = z.object({
+  STRIPE_SECRET_KEY: z.string().regex(/^sk_(test|live)_/),
+  STRIPE_WEBHOOK_SECRET: z.string().regex(/^whsec_/).optional(),
+});
+
+/** Chaves da Stripe (seção 4.5). Só servidor; nunca NEXT_PUBLIC_ (seção 20). */
+export function stripeEnv(): z.infer<typeof stripeSchema> {
+  return parse(stripeSchema);
+}
+
 /** Variáveis do servidor incluindo segredos (service_role). Só para o cliente admin. */
 export function serverEnv(): z.infer<typeof secretSchema> {
   return parse(secretSchema);

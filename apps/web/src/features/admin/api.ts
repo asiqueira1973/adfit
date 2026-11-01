@@ -3,7 +3,7 @@
  * Recebe: método, URL e corpo. Devolve: { ok: true, data } ou { ok: false, erro, mensagem }.
  */
 export async function callApi<T = unknown>(
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "PUT",
   url: string,
   body: unknown,
 ): Promise<{ ok: true; data: T } | { ok: false; erro: string; mensagem: string }> {

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import Stripe from "stripe";
 import type { NextRequest } from "next/server";
 import { assertLocalSupabase } from "@/test/local-db";
@@ -47,6 +47,11 @@ beforeAll(async () => {
   const { data: pacote } = await db.from("pacotes_creditos").insert({ nome: `Teste ${sfx}`, creditos: 50, preco_centavos: 3000, moeda: "usd", stripe_price_id: PRICE, ativo: true }).select("id").single();
   pacoteId = pacote!.id;
   profile = { id: u.user!.id, nome: "Compradora", email: `compra_${sfx}@kore.test`, papel: "usuario_marca", marcaId, idioma: "pt_br", ativo: true };
+});
+
+// Não deixa o pacote de teste à venda no banco local depois da execução.
+afterAll(async () => {
+  await db.from("pacotes_creditos").update({ ativo: false }).eq("id", pacoteId);
 });
 
 const saldo = async () => (await db.from("marcas").select("saldo_creditos").eq("id", marcaId).single()).data!.saldo_creditos;
@@ -175,5 +180,22 @@ describe("8.9 — webhook", () => {
     expect(pag!.status).toBe("reembolsado");
     expect(pag!.observacao).toMatch(/Reembolso parcial/);
     expect(pag!.observacao).toMatch(/diferença de 30 créditos/);
+  });
+});
+
+describe("8.9 — pacotes no admin", () => {
+  const priceStripe = (p: Partial<Stripe.Price> | null): StripeApi => ({ prices: { retrieve: async () => { if (!p) throw new Error("No such price"); return p; } } }) as unknown as StripeApi;
+  const base = { nome: `Pacote adm ${sfx}`, creditos: 10, preco_centavos: 1000, moeda: "usd", stripe_price_id: `price_adm_${sfx}`, ativo: true, ordem: 9 };
+
+  it("cria pacote só se o Price existe na Stripe, é avulso, ativo e bate valor e moeda", async () => {
+    const { createPackage, updatePackage } = await import("../admin/settings");
+    const ok = { active: true, type: "one_time", currency: "usd", unit_amount: 1000 } as Partial<Stripe.Price>;
+    for (const bad of [null, { ...ok, type: "recurring" }, { ...ok, currency: "brl" }, { ...ok, unit_amount: 999 }, { ...ok, active: false }] as Array<Partial<Stripe.Price> | null>) {
+      expect(businessCodeOf(await createPackage(base, priceStripe(bad)).catch((e) => e))).toBe("price_invalido");
+    }
+    const id = await createPackage(base, priceStripe(ok));
+    await updatePackage(id, { ativo: false });
+    const { data } = await db.from("pacotes_creditos").select("ativo").eq("id", id).single();
+    expect(data!.ativo).toBe(false);
   });
 });
