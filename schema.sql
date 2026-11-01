@@ -227,6 +227,38 @@ CREATE TYPE "public"."tipo_movimentacao" AS ENUM (
 ALTER TYPE "public"."tipo_movimentacao" OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."aprovar_ficha"("p_ficha_id" "uuid") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_ficha public.fichas_produto%rowtype;
+begin
+  select * into v_ficha from public.fichas_produto where id = p_ficha_id;
+  if not found then
+    raise exception 'ficha_inexistente';
+  end if;
+  -- Trava o produto: serializa aprovações concorrentes de versões diferentes.
+  perform 1 from public.produtos where id = v_ficha.produto_id for update;
+  select * into v_ficha from public.fichas_produto where id = p_ficha_id for update;
+
+  if v_ficha.status not in ('aguardando_aprovacao', 'aprovada', 'descartada') or v_ficha.imagem_path is null then
+    raise exception 'transicao_invalida';
+  end if;
+
+  update public.fichas_produto set status = 'aprovada' where id = p_ficha_id;
+  update public.fichas_produto set status = 'descartada'
+  where produto_id = v_ficha.produto_id and id <> p_ficha_id and status in ('aguardando_aprovacao', 'aprovada');
+  update public.produtos set ficha_aprovada_id = p_ficha_id where id = v_ficha.produto_id;
+
+  return v_ficha.produto_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."aprovar_ficha"("p_ficha_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."bloquear_alteracao_movimentacao"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -1121,6 +1153,10 @@ CREATE INDEX "fichas_produto_marca_id_idx" ON "public"."fichas_produto" USING "b
 
 
 
+CREATE UNIQUE INDEX "fichas_produto_uma_gerando_uidx" ON "public"."fichas_produto" USING "btree" ("produto_id") WHERE ("status" = 'gerando'::"public"."status_ficha");
+
+
+
 CREATE INDEX "fotos_produto_marca_id_idx" ON "public"."fotos_produto" USING "btree" ("marca_id");
 
 
@@ -1519,6 +1555,11 @@ GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."aprovar_ficha"("p_ficha_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."aprovar_ficha"("p_ficha_id" "uuid") TO "service_role";
 
 
 

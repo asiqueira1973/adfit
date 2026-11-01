@@ -23,7 +23,8 @@ insert into precos_acoes (acao, creditos, descricao) values
   ('gerar_roteiro_quadros', 2, 'Criar anúncio'), ('refazer_quadro', 1, 'Refazer imagem da cena'),
   ('gerar_video', 12, 'Gerar vídeo'), ('refazer_clipe', 4, 'Refazer cena em vídeo'),
   ('remontar_texto', 0, 'Atualizar vídeo')
-on conflict (acao) do nothing;
+-- Preços fixos da fixture (independem do seed/MD-4 do banco local; a transação é desfeita no fim).
+on conflict (acao) do update set creditos = excluded.creditos;
 insert into configuracoes (chave, valor, descricao) values ('teste', '1', 'teste') on conflict do nothing;
 insert into pacotes_creditos (id, nome, creditos, preco_centavos, moeda, stripe_price_id, ativo) values
   ('cccccccc-0000-0000-0000-000000000001', 'Pacote 50', 50, 3000, 'usd', 'price_teste_50', true),
