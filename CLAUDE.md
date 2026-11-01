@@ -1,0 +1,34 @@
+# CLAUDE.md — AdFit
+
+Fonte única de verdade: `docs/spec.md` (v0.2). Planos aprovados: `plans/`. Itens da seção 25 → **pare e pergunte**.
+
+## Regra de ouro
+Se um teste falhar, corrija o código, não o teste; nunca pule nem apague teste que falha.
+Bug: teste que reproduz → ver falhar → commit → `touch .claude/fix-mode` → corrigir → `rm .claude/fix-mode`.
+
+## Convenções (seção 18)
+- Banco em **português snake_case** com os nomes exatos da seção 7/6.4; código, variáveis e arquivos em **inglês**. Fronteira em `apps/web/src/server/db/`.
+- Comentário de cabeçalho em português em toda função, rota, hook, trigger e política: o que faz, recebe, devolve e a regra do spec (ex.: `// Implementa a regra 11.2.4`).
+- Prompts em `apps/web/src/server/prompts/*.vN.md`; nunca editar versão existente — criar `vN+1` e atualizar `PROMPT_VERSIONS`.
+- Migrations em `supabase/migrations/`; nunca editar uma já versionada. Após aplicar: `get_advisors` (security + performance) e atualizar `schema.sql`.
+- Segredos só em `apps/web/src/server/` e `apps/worker/`. Nada da seção 28 (fora do escopo).
+- Next.js 16 (App Router, Cache Components, `proxy.ts` no lugar de middleware): ler `node_modules/next/dist/docs/` antes de usar API nova.
+
+## Arquitetura (seção 4.4)
+`/api/anuncios` debita → Claude (roteiro) → Higgsfield (3 quadros) → webhook → Storage → Claude QC → usuário aprova → `/gerar-video` debita → Higgsfield (3 clipes) → webhook → `montando` → worker ffmpeg → `pronto`.
+Compra: `/api/creditos/checkout` → Stripe Checkout → webhook `/api/webhooks/stripe` **e** `/creditos/obrigado` → `fulfillCheckout` → `creditar_pagamento` (idempotente por Checkout Session).
+
+## Comandos (22.1, na raiz)
+`npm run typecheck` · `npm run lint` · `npm test` (pgTAP no Supabase local + Vitest) · `npm run build` · `npm run verify` (os quatro).
+Saída saudável do verify: termina com a tabela de rotas do `next build` e `worker@… build` sem erro, código 0.
+
+## Pegadinhas
+- Nunca exibir prompt, nome de modelo ou custo USD para `usuario_marca`.
+- Webhook da Higgsfield chega repetido: tudo idempotente por `request_id`.
+- Copiar o resultado da Higgsfield para o Storage antes de marcar `pronto`.
+- Débito de crédito sempre antes de submeter; estorno só via `estornar_creditos`.
+- Crédito de compra só via `creditar_pagamento`, a partir de `fulfillCheckout`; nunca a partir do redirect sozinho nem de dado vindo do navegador.
+- Webhook da Stripe precisa do corpo bruto (sem parse de JSON antes de verificar a assinatura).
+- Supabase remoto é o projeto compartilhado "BANCO DE TESTE" (`jeesdmfcrmhyufwzwzwt`): há tabelas de outros apps (`livros_*`, `oc_*`) — não tocar; filtrar advisors para objetos do AdFit.
+- `typecheck` do web roda `next typegen` antes do `tsc` (tipos `LayoutProps`/`PageProps` são gerados).
+- Quando o agente errar a mesma coisa duas vezes, a correção entra aqui.
