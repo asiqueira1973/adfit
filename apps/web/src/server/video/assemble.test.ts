@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -22,7 +22,8 @@ function clip(name: string, size: string, color: string): string {
 function frameMean(video: string, at: number): number {
   const png = join(dir, `f-${at}-${Math.random().toString(36).slice(2)}.png`);
   execFileSync(ffmpegPath(), ["-y", "-ss", String(at), "-i", video, "-frames:v", "1", png], { stdio: "ignore" });
-  return Number(execFileSync(ffmpegPath(), ["-i", png, "-vf", "signalstats,metadata=print:key=lavfi.signalstats.YAVG", "-f", "null", "-"], { stdio: ["ignore", "ignore", "pipe"] }).toString().match(/YAVG=([\d.]+)/)?.[1] ?? "0");
+  const r = spawnSync(ffmpegPath(), ["-i", png, "-vf", "signalstats,metadata=print:key=lavfi.signalstats.YAVG", "-f", "null", "-"], { encoding: "utf8" });
+  return Number(`${r.stdout}${r.stderr}`.match(/YAVG=([\d.]+)/)?.[1] ?? "0");
 }
 
 describe("montagem do vídeo (11.8)", () => {
