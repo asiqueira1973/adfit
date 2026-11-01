@@ -84,3 +84,10 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 
 ## I-1 — Plano de mídia a partir de uma pasta (backlog, ver `docs/ideias.md`)
 - Reforço do Alexandre: sugerir o plano **não consome crédito**; só o que for gerado de fato é cobrado.
+
+## Marca de teste separada da Kore Active (01/11/2026, Alexandre)
+- A Kore Active existe de verdade: é a marca do irmão do Alexandre e será criada do zero quando ele começar a usar o app.
+- Tudo o que foi feito nos testes fica na **Marca Teste Dab Lab** (`@dablab_teste`). Em produção, a antiga "Kore Active" do seed foi renomeada para ela. O seed local cria a marca de teste.
+- Acessos de teste em produção, ambos sem senha e com login pelo Google (MD-5):
+  - `alexandre@dablab.com.br`: admin.
+  - `alexandre.silva.siqueira@gmail.com`: lojista da Marca Teste, com 120 créditos de bônus de teste interno.

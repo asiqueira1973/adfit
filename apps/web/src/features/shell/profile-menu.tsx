@@ -1,4 +1,4 @@
-import { LogOut, MessageSquare, Store } from "lucide-react";
+import { CircleHelp, LogOut, MessageSquare, Store } from "lucide-react";
 import { MADE_BY } from "@/lib/constants";
 import { fill } from "@/lib/copy";
 import type { Dictionary, Locale } from "@/lib/i18n";
@@ -6,7 +6,7 @@ import { LanguageSwitch } from "./language-switch";
 import { MenuLink } from "./menu-link";
 
 /**
- * Menu do perfil (seção 10): avatar com iniciais que abre "Marca", "Enviar feedback" (MD-6), idioma (MD-1), "Sair" e o
+ * Menu do perfil (seção 10): avatar com iniciais que abre "Marca", "Como funciona", "Enviar feedback" (MD-6), idioma (MD-1), "Sair" e o
  * crédito da Dab Lab (MD-2). Usa <details> nativo; "Sair" é um formulário POST.
  * Recebe: nome do usuário e da marca, idioma e dicionário. Devolve: o menu.
  */
@@ -24,6 +24,9 @@ export function ProfileMenu({ userName, brandName, locale, t }: { userName: stri
         </div>
         <MenuLink href="/marca" className="flex min-h-11 items-center gap-3 px-4 text-[15px] hover:bg-surface">
           <Store className="size-4.5 text-text-2" /> {t.nav.marca}
+        </MenuLink>
+        <MenuLink href="/como-funciona" className="flex min-h-11 items-center gap-3 px-4 text-[15px] hover:bg-surface">
+          <CircleHelp className="size-4.5 text-text-2" /> {t.comoFunciona.menu}
         </MenuLink>
         <MenuLink href="/feedback" withOrigin className="flex min-h-11 items-center gap-3 px-4 text-[15px] hover:bg-surface">
           <MessageSquare className="size-4.5 text-text-2" /> {t.feedback.menu}

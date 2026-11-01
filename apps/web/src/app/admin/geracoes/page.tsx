@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { SampleDataNotice } from "@/components/sample-data-notice";
 import { ExternalLink, RefreshCw, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ export default function AdminGenerationsPage({ searchParams }: PageProps<"/admin
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Gerações" />
+      <SampleDataNotice />
       <form className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <SelectField label="Tipo" name="tipo" options={[{ value: "", label: "Todos" }, ...Object.entries(GEN_TYPE_LABEL).map(([value, label]) => ({ value, label }))]} />
         <SelectField label="Status" name="status" options={[{ value: "", label: "Todos" }, ...Object.entries(GEN_BADGE).map(([value, b]) => ({ value, label: b.label }))]} />

@@ -32,5 +32,5 @@ on conflict (chave) do nothing;
 
 -- Marca piloto (seção 7.6), sem saldo.
 insert into public.marcas (nome, instagram)
-select 'Kore Active', 'kore_active'
-where not exists (select 1 from public.marcas where instagram = 'kore_active');
+select 'Marca Teste Dab Lab', 'dablab_teste'
+where not exists (select 1 from public.marcas where instagram = 'dablab_teste');

@@ -1,3 +1,4 @@
+import { SampleDataNotice } from "@/components/sample-data-notice";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +33,7 @@ export default function AdminCostsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Custos" action={<Button variant="secondary"><Download className="size-4.5" /> Exportar CSV</Button>} />
+      <SampleDataNotice />
       <form className="grid grid-cols-2 gap-3 md:max-w-md">
         <SelectField label="Marca" name="marca" options={[{ value: "", label: "Todas" }, ...fxAdminBrands.map((b) => ({ value: b.id, label: b.nome }))]} />
         <TextField label="Mês" name="mes" type="month" defaultValue="2026-10" />
