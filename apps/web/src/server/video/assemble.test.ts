@@ -69,6 +69,24 @@ describe("montagem do vídeo (11.8)", () => {
     expect(info.duration).toBeGreaterThan(14.8);
   }, 120_000);
 
+  it("não usa drawtext (o ffmpeg Linux da Vercel não tem esse filtro — bug B-8)", async () => {
+    let graph = "";
+    await assembleVideo({
+      clips: [clip("d1.mp4", "720x1280", "red"), clip("d2.mp4", "720x1280", "green"), clip("d3.mp4", "720x1280", "blue")],
+      out: join(dir, "d.mp4"),
+      formato: "vertical_9_16",
+      textos: ["Texto 1", "Texto 2", null],
+      logoPng: null,
+      marca: "Marca",
+      cta: "Compre",
+      cor: "#C6F432",
+      oferta: "10% OFF",
+      onCommand: (args) => (graph = args[args.indexOf("-filter_complex") + 1]),
+    });
+    expect(graph).not.toContain("drawtext");
+    expect(graph).toContain("overlay");
+  }, 120_000);
+
   it("texto com caracteres especiais não quebra o filtro", async () => {
     const out = join(dir, "esc.mp4");
     writeFileSync(join(dir, "x.txt"), "");
