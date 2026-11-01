@@ -241,7 +241,7 @@ Imagens das cenas no modelo `modelo_quadro` (Marketing Studio Flare, MD-12); a f
 | MD-2 | Crédito "Feito pela Dab Lab" (link para dablab.com.br) | Emenda do Alexandre. |
 | MD-10 | 2 planos de 2,5 s por cena (zoom no 2º); `roteiro.v4` com duas ações por cena | Ritmo de Reels sem custo extra. |
 | MD-11 | Som ambiente do Seedance (sem música/fala) no lugar da faixa muda | Pedido do Alexandre; mesmo preço. |
-| MD-12 | Imagens das cenas no Marketing Studio 2.5 Flare (`modelo_quadro`, `preco_usd_por_quadro`) | O Grok barrava como nsfw toda cena de corrida com top. |
+| MD-12 | Imagens das cenas no Marketing Studio 2.5 Flare (`modelo_quadro`, `preco_usd_por_quadro` = US$ 0,07 pelo extrato) | O Grok barrava como nsfw toda cena de corrida com top. |
 | MD-13 | CTA da marca opcional | Pedido do Alexandre. |
 | MD-14 | Fecho como cartela desfocada e escurecida (o logo nunca cobre a peça) | O logo cobria a modelo no 16:9. |
 | MD-15 | Fecho opcional por anúncio (`anuncios.com_fecho`) | O lojista pode querer só as cenas. |
