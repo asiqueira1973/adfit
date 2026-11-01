@@ -18,6 +18,7 @@ import { hasForbiddenTerm } from "@/lib/forbidden-terms";
 import { validateScreenText } from "@/lib/text-rules";
 import { emailOf, track } from "../analytics/track";
 import { getDictionary, type Locale } from "@/lib/i18n";
+import { assertProviderAvailable } from "../higgsfield/provider-health";
 
 /** Quem pede: usuário da marca (só a própria) ou admin (seção 13: rotas "marca/admin"). */
 export type AdActor = { id: string; papel: "admin_plataforma" | "usuario_marca"; marcaId: string | null; idioma: Locale; email?: string };
@@ -67,6 +68,8 @@ export async function createAd(actor: AdActor, input: CreateAdInput, deps: { ai?
   const anuncioId = randomUUID();
   const titulo = `${produto.nome} · ${t.opcoes.cenarios[input.cenario]} · ${input.formato === "vertical_9_16" ? "9:16" : "16:9"}`;
 
+  // Saldo da Higgsfield esgotado: barra antes de cobrar (pedido do Alexandre, 01/11/2026).
+  await assertProviderAvailable();
   const { data: cobrancaId, error: debitErr } = await db.rpc("debitar_creditos", {
     p_marca_id: produto.marca_id,
     p_acao: "gerar_roteiro_quadros",

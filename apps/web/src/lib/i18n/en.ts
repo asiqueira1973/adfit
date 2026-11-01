@@ -105,6 +105,7 @@ export const en: Dictionary = {
   // [Admin] Costs and Generations (epic 8.8).
   relatorios: {
     custosTitulo: "Costs",
+    saldoHiggsfieldEsgotado: "Higgsfield balance is empty: new images and videos are blocked for brands (nothing is charged). Top up at console.higgsfield.ai; this notice clears on the next successful generation.",
     exportarCsv: "Export CSV",
     marca: "Brand",
     todas: "All",
@@ -273,6 +274,7 @@ export const en: Dictionary = {
     transicaoInvalida: "This action isn't available right now.",
     geracaoInexistente: "Generation not found.",
     cenasIncompletas: "Pick a ready image for each of the 3 scenes before generating the video.",
+    servicoIndisponivel: "We are having a technical issue creating images and videos. You were not charged. Please try again shortly.",
     anuncioInexistente: "Ad not found.",
     produtoSemFicha: "Approve the reference image before creating the ad.",
   },
@@ -475,6 +477,8 @@ export const en: Dictionary = {
     emBreve: "Available in the next step.",
     maisAcoes: "More actions",
     arquivar: "Archive ad",
+    falhouCenaVideo: "This one did not work. Its credits are already back; you can try again when the others finish.",
+    falhouCenaImagem: "This one did not work. Trying again is free.",
     filtroProduto: "Product",
     filtroStatus: "Status",
     filtroTodos: "All",

@@ -122,7 +122,7 @@ export function AdScreen({
             { label: a.roteiro, state: ad.status === "gerando_roteiro" ? "andamento" : "feito" },
             ...([1, 2, 3] as const).map((n) => {
               const cena = ad.cenas.find((c) => c.ordem === n);
-              return { label: `${fill(a.cena, { n })} · ${t.opcoes.papelCena[n]}`, state: cena ? sceneState(cena) : ("espera" as StepState) };
+              return { label: `${fill(a.cena, { n })} · ${t.opcoes.papelCena[n]}`, state: cena ? sceneState(cena) : ("espera" as StepState), hint: a.falhouCenaImagem };
             }),
           ]}
         />
@@ -133,7 +133,7 @@ export function AdScreen({
         <AdProgress
           title={ad.status === "montando" ? a.montandoVideo : t.copy.gerandoVideo}
           steps={[
-            ...ad.cenas.map((c) => ({ label: `${fill(a.cena, { n: c.ordem })} · ${t.opcoes.papelCena[c.ordem]}`, state: sceneState(c) })),
+            ...ad.cenas.map((c) => ({ label: `${fill(a.cena, { n: c.ordem })} · ${t.opcoes.papelCena[c.ordem]}`, state: sceneState(c), hint: a.falhouCenaVideo })),
             { label: a.etapaMontagem, state: (ad.status === "montando" ? "andamento" : "espera") as StepState },
           ]}
         />

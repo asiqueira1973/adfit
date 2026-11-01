@@ -104,6 +104,7 @@ export const ptBR = {
   // [Admin] Custos e Gerações (épico 8.8).
   relatorios: {
     custosTitulo: "Custos",
+    saldoHiggsfieldEsgotado: "Saldo da Higgsfield esgotado: novas imagens e vídeos estão bloqueados para os lojistas (nada é cobrado). Recarregue em console.higgsfield.ai; o aviso some na próxima geração que der certo.",
     exportarCsv: "Exportar CSV",
     marca: "Marca",
     todas: "Todas",
@@ -272,6 +273,7 @@ export const ptBR = {
     transicaoInvalida: "Essa ação não está disponível agora.",
     geracaoInexistente: "Geração não encontrada.",
     cenasIncompletas: "Escolha uma imagem pronta para cada uma das 3 cenas antes de gerar o vídeo.",
+    servicoIndisponivel: "Estamos com uma instabilidade técnica para criar imagens e vídeos. Nada foi cobrado. Tente de novo daqui a pouco.",
     anuncioInexistente: "Anúncio não encontrado.",
     produtoSemFicha: "Aprove a ficha do produto antes de criar o anúncio.",
   },
@@ -474,6 +476,8 @@ export const ptBR = {
     emBreve: "Disponível na próxima etapa.",
     maisAcoes: "Mais ações",
     arquivar: "Arquivar anúncio",
+    falhouCenaVideo: "Não deu certo. Os créditos desta cena já voltaram; você pode tentar de novo quando as outras terminarem.",
+    falhouCenaImagem: "Não deu certo. Tentar de novo não custa nada.",
     filtroProduto: "Produto",
     filtroStatus: "Status",
     filtroTodos: "Todos",

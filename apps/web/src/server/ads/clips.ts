@@ -18,6 +18,7 @@ import { aiClient, runLater } from "./runtime";
 import { stripBodyTerms } from "./frames";
 import { transition, type AdStatus } from "./stateMachine";
 import { emailOf, track } from "../analytics/track";
+import { assertProviderAvailable } from "../higgsfield/provider-health";
 
 /** Prompt do clipe pelo CÓDIGO (Anexo C.2): `prompt_movimento` + `CLAUSULA_AUDIO` (MD-11) + `CLAUSULA_VIDEO` sempre no fim, sem termos de corpo. */
 export function buildClipPrompt(promptMovimento: string): string {
@@ -124,6 +125,8 @@ export async function startVideo(actor: Actor, anuncioId: string, deps: { genera
     });
   if (!ok) throw new BusinessError("cenas_incompletas");
 
+  // Saldo da Higgsfield esgotado: barra antes de cobrar (pedido do Alexandre, 01/11/2026).
+  await assertProviderAvailable();
   const { data: cobrancaId, error: debitErr } = await db.rpc("debitar_creditos", {
     p_marca_id: ad.marca_id,
     p_acao: "gerar_video",
@@ -158,6 +161,8 @@ export async function redoClip(actor: Actor, cenaId: string, instrucao: RedoInpu
   if (!(from === "pronto" || (from === "aguardando_aprovacao" && clips.length > 0)) || !cena.quadro_atual_id) throw new BusinessError("transicao_invalida");
 
   const clipeId = randomUUID();
+  // Saldo da Higgsfield esgotado: barra antes de cobrar (pedido do Alexandre, 01/11/2026).
+  await assertProviderAvailable();
   const { data: cobrancaId, error: debitErr } = await db.rpc("debitar_creditos", {
     p_marca_id: cena.marca_id,
     p_acao: "refazer_clipe",

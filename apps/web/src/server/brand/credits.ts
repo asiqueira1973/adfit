@@ -48,13 +48,18 @@ export async function listActionPrices() {
   return (data ?? []).sort((a, b) => order.indexOf(a.acao) - order.indexOf(b.acao));
 }
 
-/** Histórico de pagamentos da própria marca (tela Créditos). */
+/**
+ * Histórico de pagamentos da própria marca (tela Créditos). Só os que importam para o lojista: pagos,
+ * reembolsados e recusados. Tentativas abertas e não pagas (`iniciado`, `expirado`) ficam só no admin
+ * (pedido do Alexandre, 01/11/2026). Recebe: marca. Devolve: pagamentos (mais recentes primeiro).
+ */
 export async function listBrandPayments(marcaId: string) {
   const supabase = await createUserClient();
   const { data, error } = await supabase
     .from("pagamentos")
     .select("id, criado_em, creditos, valor_centavos, moeda, status, pacotes_creditos(nome)")
     .eq("marca_id", marcaId)
+    .in("status", ["pago", "reembolsado", "falhou"])
     .order("criado_em", { ascending: false });
   if (error) throw error;
   return (data ?? []).map((p) => ({ ...p, pacote: (p.pacotes_creditos as { nome: string } | null)?.nome ?? "" }));

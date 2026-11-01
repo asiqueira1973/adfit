@@ -13,6 +13,7 @@ import { BusinessError } from "../api/http";
 import { readConfig } from "../config";
 import { transition } from "./stateMachine";
 import { emailOf, track } from "../analytics/track";
+import { assertProviderAvailable } from "../higgsfield/provider-health";
 
 /** Frases fixas da montagem do quadro (Anexo C.2 + roteiro.v2 aprovado em 01/11/2026). */
 export const FRAME_REFERENCE_LINE = "Reference image 1 is the garment reference sheet.";
@@ -254,6 +255,8 @@ export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: Re
   if (quadros.some((q) => q.status === "gerando")) throw new BusinessError("transicao_invalida");
   const free = quadros.length > 0 && !quadros.some((q) => q.status === "pronto");
 
+  // Saldo da Higgsfield esgotado: barra antes de cobrar (pedido do Alexandre, 01/11/2026).
+  await assertProviderAvailable();
   const quadroId = randomUUIDv4();
   let cobrancaId: string | null = null;
   if (!free) {

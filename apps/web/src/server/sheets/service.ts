@@ -9,6 +9,7 @@ import { failGeneration, generationDeps, getGeneration, submitGeneration, type G
 import { buildFirstSheetPrompt, buildRedoSheetPrompt, redoBasePrompt, type SheetPrompt } from "./prompt";
 import { appendShortcutLines, redoRequest, type RedoInput } from "../prompts/redo-shortcuts";
 import { track } from "../analytics/track";
+import { assertProviderAvailable } from "../higgsfield/provider-health";
 
 /** Quem pede a ação: usuário da marca (só a própria marca) ou admin (qualquer marca) — seção 13. */
 export type SheetActor = { id: string; papel: "admin_plataforma" | "usuario_marca"; marcaId: string | null; email?: string };
@@ -75,6 +76,8 @@ export async function requestSheet(
 
   // 1. Débito antes de tudo (11.2.1), já referenciando a versão que vai nascer. Sem saldo ou
   //    com a marca pausada, nada é criado (fichas_produto nunca é excluída — seção 7.4).
+  // Saldo da Higgsfield esgotado: barra antes de cobrar (pedido do Alexandre, 01/11/2026).
+  await assertProviderAvailable();
   const { data: cobrancaId, error: debitErr } = await db.rpc("debitar_creditos", {
     p_marca_id: produto.marca_id,
     p_acao: isRedo ? "refazer_ficha" : "gerar_ficha",
