@@ -21,7 +21,7 @@ select is((select count(*) from geracoes), 0::bigint, 'geracoes: usuário da mar
 select is((select count(*) from movimentacoes_creditos where marca_id = 'bbbbbbbb-0000-0000-0000-000000000000'), 0::bigint, 'movimentacoes_creditos: A não lê B');
 select is((select count(*) from pagamentos where marca_id = 'bbbbbbbb-0000-0000-0000-000000000000'), 0::bigint, 'pagamentos: A não lê B');
 select is((select count(*) from configuracoes), 0::bigint, 'configuracoes: usuário da marca não lê');
-select is((select count(*) from pacotes_creditos), 1::bigint, 'pacotes_creditos: usuário da marca só vê pacote ativo');
+select is((select count(*) from pacotes_creditos where id in ('cccccccc-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000002')), 1::bigint, 'pacotes_creditos: usuário da marca só vê o pacote ativo (não vê o inativo)');
 select is((select count(*) from precos_acoes), 7::bigint, 'precos_acoes: todo autenticado lê');
 
 -- E a própria marca continua visível.
