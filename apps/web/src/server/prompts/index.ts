@@ -9,12 +9,14 @@ import { join } from "node:path";
 export const PROMPT_VERSIONS = {
   // v2 (01/11/2026, aprovado pelo Alexandre): fotos como fonte da verdade, logo copiado das fotos
   // ou painel 3 com o tecido quando não há logo, rugas sem perder textura. v1 fica guardado.
-  ficha: "ficha.v2",
+  // v3 (01/11/2026): só a marca visível por fora; etiqueta interna/tamanho nunca vira logo (top "oxer P").
+  ficha: "ficha.v3",
   refacao: "refacao.v1",
   // v2 (aprovado em 01/11/2026): mesma modelo nas 3 cenas (campo `modelo`) e texto no idioma da marca (MD-1).
   // v3 (aprovado em 01/11/2026, depois do 1º teste real): modelo descrita por ação/postura/roupa, nunca por
   // partes do corpo — "chest slightly lifted" fez a Higgsfield barrar a cena 3 como nsfw duas vezes.
-  roteiro: "roteiro.v3",
+  // v4 (MD-10, 01/11/2026): duas ações por cena e câmera em movimento; a montagem corta cada cena em 2 planos.
+  roteiro: "roteiro.v4",
   qcQuadro: "qc-quadro.v1",
   // v2: revisão no idioma do texto (MD-1) e formato de saída explícito.
   qcTexto: "qc-texto.v2",

@@ -104,4 +104,24 @@ describe("montagem do vídeo (11.8)", () => {
       }),
     ).resolves.toBeUndefined();
   }, 120_000);
+
+  it("MD-10: cada cena vira 2 planos de 2,5 s, o 2º com zoom leve (6 planos), e o vídeo segue com 15 s", async () => {
+    let graph = "";
+    const out = join(dir, "ritmo.mp4");
+    await assembleVideo({
+      clips: [clip("r1.mp4", "720x1280", "red"), clip("r2.mp4", "720x1280", "green"), clip("r3.mp4", "720x1280", "blue")],
+      out,
+      formato: "vertical_9_16",
+      textos: [null, null, null],
+      logoPng: null,
+      marca: "Marca",
+      cta: "Compre",
+      cor: null,
+      oferta: null,
+      onCommand: (args) => (graph = args[args.indexOf("-filter_complex") + 1]),
+    });
+    expect(graph).toContain("concat=n=6");
+    expect(graph.match(/scale=trunc\(iw\*1\.12/g)?.length).toBe(3);
+    expect(Math.abs(ffprobeInfo(out).duration - 15)).toBeLessThanOrEqual(0.2);
+  }, 120_000);
 });

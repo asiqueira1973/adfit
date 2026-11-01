@@ -59,12 +59,17 @@ export type AssembleInput = {
 };
 
 const SCENE = 5;
+/** Metade da cena: ponto do corte interno (MD-10). */
+const HALF = 2.5;
+/** Zoom do 2º plano de cada cena (MD-10). */
+const PUNCH_IN = 1.12;
 const TOTAL = 15;
 const CLOSING_START = 12.5;
 
 /**
  * Monta o anúncio final com ffmpeg seguindo a regra 11.8 à risca:
- * - cenas 1, 2, 3 de 5 s cada, corte seco; clipe em outra proporção é recortado ao centro;
+ * - cenas 1, 2, 3 de 5 s cada, corte seco; clipe em outra proporção é recortado ao centro; cada cena
+ *   é cortada em 2 planos de 2,5 s, o 2º com zoom de 12% (emenda MD-10: 6 planos, ritmo de Reels);
  * - 1080×1920 (vertical) ou 1920×1080 (horizontal), 30 fps;
  * - texto da cena em Inter Bold branco com sombra de 2 px a 50%, de 0,3 s a 4,7 s, fade de 0,2 s
  *   (desenhado em PNG por `renderTextImage` e sobreposto — o ffmpeg da Vercel não tem drawtext, B-8);
@@ -91,11 +96,14 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       return { index: 4 + images.length, ...img };
     };
 
-    // 1. Normaliza e junta os clipes (recorte ao centro, 5 s exatos, 30 fps).
+    // 1. Normaliza os clipes (recorte ao centro, 5 s exatos, 30 fps) e corta cada cena em 2 planos de
+    //    2,5 s; o 2º plano tem zoom leve de 12% ao centro (emenda MD-10: ritmo de Reels, 6 planos em 15 s).
     for (let i = 0; i < 3; i++) {
-      filters.push(`[${i}:v]trim=0:${SCENE},setpts=PTS-STARTPTS,fps=30,scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,format=yuv420p[v${i}]`);
+      filters.push(`[${i}:v]trim=0:${SCENE},setpts=PTS-STARTPTS,fps=30,scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,format=yuv420p,split[a${i}][b${i}]`);
+      filters.push(`[a${i}]trim=0:${HALF},setpts=PTS-STARTPTS[p${i}a]`);
+      filters.push(`[b${i}]trim=${HALF}:${SCENE},setpts=PTS-STARTPTS,scale=trunc(iw*${PUNCH_IN}/2)*2:trunc(ih*${PUNCH_IN}/2)*2,crop=${W}:${H},setsar=1[p${i}b]`);
     }
-    filters.push(`[v0][v1][v2]concat=n=3:v=1:a=0[base]`);
+    filters.push(`[p0a][p0b][p1a][p1b][p2a][p2b]concat=n=6:v=1:a=0[base]`);
     let last = "base";
     const chain = (f: string) => {
       const next = `s${filters.length}`;

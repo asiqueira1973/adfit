@@ -150,3 +150,9 @@ Registro de decisões do responsável de produto tomadas durante a implementaç�
 - **Margem no pior caso** (US$ 0,54/crédito): 1 − 14,49/24,30 = **40% bruta**, cerca de 33% depois da Stripe.
 - **Anúncio típico:** 2 + 45 = **47 créditos**. Pacote 60 rende 1 anúncio e Pacote 150 rende 3.
 - **Argumento de venda** (pedido do Alexandre): o vídeo inclui roteiro, 3 cenas com modelo e locação, animação de cada cena e a montagem final com texto, logo e CTA. Não é só um clipe.
+
+## MD-10 — Ritmo de Reels: 2 planos por cena (01/11/2026, aprovado pelo Alexandre)
+Diverge da regra 11.8 ("3 cenas de 5 s, corte seco"). Motivo: 3 planos de 5 s deixam o anúncio lento para Reels.
+- Montagem: cada clipe de 5 s vira 2 planos de 2,5 s; o 2º com zoom de 12% ao centro → 6 planos em 15 s. Texto da cena e fecho mantêm os tempos da 11.8. Sem custo extra (gerar 6 clipes dobraria o custo: o Seedance cobra no mínimo 5 s).
+- Roteiro `roteiro.v4`: duas ações encadeadas por cena e câmera em movimento.
+- Junto (mesma data): `ficha.v3` copia só a marca visível por fora; etiqueta interna, tamanho e tag nunca viram logo (caso do top com "oxer P" impresso dentro da gola).
