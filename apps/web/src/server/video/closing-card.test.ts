@@ -30,4 +30,13 @@ describe("fecho como cartela (MD-14)", () => {
     const blurred = edges(out, 14.2);
     expect(blurred).toBeLessThan(sharp * 0.5);
   }, 120_000);
+
+  it("sem fecho (opção do anúncio): nenhuma cartela, logo, CTA ou oferta; vídeo segue com 15 s", async () => {
+    let graph = "";
+    const out = join(dir, "sem-fecho.mp4");
+    await assembleVideo({ clips: [clip("d.mp4"), clip("e.mp4"), clip("f.mp4")], out, formato: "horizontal_16_9", textos: [null, null, null], logoPng: null, marca: "Marca", cta: "Compre", cor: null, oferta: "10% OFF", fecho: false, onCommand: (a) => (graph = a.join(" ")) });
+    expect(graph).not.toContain("boxblur");
+    expect(graph).not.toMatch(/txt\d+\.png/);
+    expect(edges(out, 14.2)).toBeGreaterThan(edges(out, 11) * 0.7);
+  }, 120_000);
 });

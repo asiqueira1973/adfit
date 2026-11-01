@@ -168,3 +168,6 @@ O Grok Imagine 2.0 barrou como nsfw toda variação de "mulher correndo de top" 
 
 ## MD-14 — Fecho como cartela: o logo nunca cobre a peça (01/11/2026, regra pedida pelo Alexandre)
 Diverge da 11.8 ("escurecimento de 40%" com logo por cima da cena). No vídeo da orla (16:9), o logo e o nome caíram sobre o rosto e o top da modelo. Regra: de 12,5 s a 15 s a cena 3 fica **desfocada** (boxblur, entrada de 0,4 s) e **escurecida em 50%**; logo (ou nome), CTA e oferta entram por cima, centralizados. Vale para os dois formatos. Teste: `server/video/closing-card.test.ts`.
+
+## MD-15 — Fecho opcional por anúncio (01/11/2026, pedido do Alexandre)
+Coluna `anuncios.com_fecho` (padrão `true`). No assistente, "Logo e chamada no final: Sim/Não". Sem fecho, o vídeo tem só as 3 cenas (6 planos, som ambiente) — sem cartela, logo, CTA ou oferta; o lojista põe os próprios textos no Reels. Teste: `server/video/closing-card.test.ts` e `server/ads/ads.integration.test.ts`.

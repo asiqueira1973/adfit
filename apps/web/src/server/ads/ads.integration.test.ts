@@ -309,3 +309,13 @@ describe("arquivar anúncio (seção 6 \"Arquivar anúncio\"; pedido do Alexandr
     expect(businessCodeOf(await archiveAd(actor, gerando).catch((e) => e))).toBe("transicao_invalida");
   });
 });
+
+describe("fecho opcional (MD-15)", () => {
+  it("grava com_fecho; sem informar, o anúncio sai com fecho", async () => {
+    const produto = await approvedProduct();
+    const { anuncioId: sem } = await createAd(actor, input(produto, { com_fecho: false }));
+    const { anuncioId: padrao } = await createAd(actor, input(produto));
+    const { data } = await db.from("anuncios").select("id, com_fecho").in("id", [sem, padrao]);
+    expect(Object.fromEntries((data ?? []).map((r) => [r.id, r.com_fecho]))).toEqual({ [sem]: false, [padrao]: true });
+  });
+});

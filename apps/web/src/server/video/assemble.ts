@@ -55,6 +55,8 @@ export type AssembleInput = {
   /** `cor_destaque` (#RRGGBB) do CTA; null = branco (11.8). */
   cor: string | null;
   oferta: string | null;
+  /** Fecho com cartela, logo, CTA e oferta (MD-15); false = só as cenas. Padrão: true. */
+  fecho?: boolean;
   /** Só para testes: recebe os argumentos do ffmpeg antes de rodar. */
   onCommand?: (args: string[]) => void;
 };
@@ -141,44 +143,47 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
       overlayImage(img.index, textCenterY - img.height / 2, i * SCENE + 0.3, i * SCENE + 4.7, true);
     }
 
-    // 3. Fecho como cartela (MD-14: o logo nunca cobre a peça): a cena desfoca e escurece a partir de
-    //    12,5 s (entrada de 0,4 s) e o logo (ou nome), o CTA e a oferta entram por cima.
-    const closing = `enable='gte(t,${CLOSING_START})'`;
-    {
-      const keep = `k${filters.length}`;
-      const soft = `b${filters.length}`;
-      filters.push(`[${last}]split[${keep}][${soft}0]`);
-      filters.push(`[${soft}0]boxblur=luma_radius=28:luma_power=2:chroma_radius=14:chroma_power=2,format=yuva420p,fade=t=in:st=${CLOSING_START}:d=0.4:alpha=1[${soft}]`);
-      const next = `s${filters.length}`;
-      filters.push(`[${keep}][${soft}]overlay=0:0:format=auto,format=yuv420p[${next}]`);
-      last = next;
-    }
-    chain(`drawbox=x=0:y=0:w=iw:h=ih:color=black@0.5:t=fill:${closing}`);
-    const logoW = Math.round(W * (vertical ? 0.4 : 0.2));
-    const centerY = Math.round(H * 0.45);
-    let below: number;
-    if (input.logoPng) {
-      filters.push(`[3:v]scale=${logoW}:-1[logo]`);
-      const next = `s${filters.length}`;
-      filters.push(`[${last}][logo]overlay=x=(W-w)/2:y=${centerY}-h/2:${closing}[${next}]`);
-      last = next;
-      below = centerY + Math.round(logoW / 2.5);
-    } else {
-      const name = await addImage([input.marca], vertical ? 76 : 72, "#FFFFFF");
-      overlayImage(name.index, centerY - name.height / 2, CLOSING_START, TOTAL, false);
-      below = centerY + name.height / 2;
-    }
-    const ctaSize = vertical ? 54 : 48;
-    // CTA opcional (MD-13): sem ele, a oferta sobe para logo abaixo do logo/nome.
-    let next = below + 40;
-    if (input.cta?.trim()) {
-      const cta = await addImage([input.cta], ctaSize, /^#[0-9a-f]{6}$/i.test(input.cor ?? "") ? input.cor! : "#FFFFFF");
-      overlayImage(cta.index, next, CLOSING_START, TOTAL, false);
-      next += cta.height + 12;
-    }
-    if (input.oferta) {
-      const oferta = await addImage([input.oferta], Math.round(ctaSize * 0.75), "#FFFFFF");
-      overlayImage(oferta.index, next, CLOSING_START, TOTAL, false);
+    // 3. Fecho (opcional por anúncio, MD-15).
+    if (input.fecho !== false) {
+      // 3. Fecho como cartela (MD-14: o logo nunca cobre a peça): a cena desfoca e escurece a partir de
+      //    12,5 s (entrada de 0,4 s) e o logo (ou nome), o CTA e a oferta entram por cima.
+      const closing = `enable='gte(t,${CLOSING_START})'`;
+      {
+        const keep = `k${filters.length}`;
+        const soft = `b${filters.length}`;
+        filters.push(`[${last}]split[${keep}][${soft}0]`);
+        filters.push(`[${soft}0]boxblur=luma_radius=28:luma_power=2:chroma_radius=14:chroma_power=2,format=yuva420p,fade=t=in:st=${CLOSING_START}:d=0.4:alpha=1[${soft}]`);
+        const next = `s${filters.length}`;
+        filters.push(`[${keep}][${soft}]overlay=0:0:format=auto,format=yuv420p[${next}]`);
+        last = next;
+      }
+      chain(`drawbox=x=0:y=0:w=iw:h=ih:color=black@0.5:t=fill:${closing}`);
+      const logoW = Math.round(W * (vertical ? 0.4 : 0.2));
+      const centerY = Math.round(H * 0.45);
+      let below: number;
+      if (input.logoPng) {
+        filters.push(`[3:v]scale=${logoW}:-1[logo]`);
+        const next = `s${filters.length}`;
+        filters.push(`[${last}][logo]overlay=x=(W-w)/2:y=${centerY}-h/2:${closing}[${next}]`);
+        last = next;
+        below = centerY + Math.round(logoW / 2.5);
+      } else {
+        const name = await addImage([input.marca], vertical ? 76 : 72, "#FFFFFF");
+        overlayImage(name.index, centerY - name.height / 2, CLOSING_START, TOTAL, false);
+        below = centerY + name.height / 2;
+      }
+      const ctaSize = vertical ? 54 : 48;
+      // CTA opcional (MD-13): sem ele, a oferta sobe para logo abaixo do logo/nome.
+      let next = below + 40;
+      if (input.cta?.trim()) {
+        const cta = await addImage([input.cta], ctaSize, /^#[0-9a-f]{6}$/i.test(input.cor ?? "") ? input.cor! : "#FFFFFF");
+        overlayImage(cta.index, next, CLOSING_START, TOTAL, false);
+        next += cta.height + 12;
+      }
+      if (input.oferta) {
+        const oferta = await addImage([input.oferta], Math.round(ctaSize * 0.75), "#FFFFFF");
+        overlayImage(oferta.index, next, CLOSING_START, TOTAL, false);
+      }
     }
 
     const args = [

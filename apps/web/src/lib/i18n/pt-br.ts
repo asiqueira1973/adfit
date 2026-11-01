@@ -370,6 +370,8 @@ export const ptBR = {
     estilo: "Estilo",
     formato: "Formato",
     textoNaTela: "Texto na tela",
+    fecho: "Logo e chamada no final",
+    fechoDica: "Sem isso, o vídeo termina só com as cenas: você põe seus textos direto no Instagram.",
     sim: "Sim",
     nao: "Não",
     oferta: "Oferta (opcional)",

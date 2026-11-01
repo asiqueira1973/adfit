@@ -32,6 +32,7 @@ type Choices = {
   estilo: string;
   formato: string;
   com_texto: string;
+  com_fecho: string;
   texto_oferta: string;
 };
 
@@ -74,6 +75,7 @@ export function NewAdWizard({
     estilo: "energetico",
     formato: "vertical_9_16",
     com_texto: "sim",
+    com_fecho: "sim",
     texto_oferta: "",
   });
   const set = (k: keyof Choices) => (v: string) => setC((prev) => ({ ...prev, [k]: v }));
@@ -91,6 +93,7 @@ export function NewAdWizard({
       estilo: c.estilo,
       formato: c.formato,
       com_texto: c.com_texto === "sim",
+      com_fecho: c.com_fecho === "sim",
       texto_oferta: c.texto_oferta.trim() || undefined,
       observacoes: c.observacoes.trim() || undefined,
     });
@@ -172,6 +175,8 @@ export function NewAdWizard({
             options={Object.entries(o.formatos).map(([value, label]) => ({ value, label, hint: o.formatosDica[value as keyof typeof o.formatosDica] }))}
           />
           <Segmented name="com_texto" label={a.textoNaTela} value={c.com_texto} onChange={set("com_texto")} options={[{ value: "sim", label: a.sim }, { value: "nao", label: a.nao }]} />
+          <Segmented name="com_fecho" label={a.fecho} value={c.com_fecho} onChange={set("com_fecho")} options={[{ value: "sim", label: a.sim }, { value: "nao", label: a.nao }]} />
+          <p className="-mt-3 text-[13px] text-text-2">{a.fechoDica}</p>
           <TextField label={a.oferta} name="texto_oferta" maxChars={40} placeholder={a.ofertaPlaceholder} value={c.texto_oferta} onChange={(e) => set("texto_oferta")(e.target.value)} hint={a.ofertaDica} />
         </div>
       )}
@@ -194,6 +199,7 @@ export function NewAdWizard({
                 [a.estilo, o.estilos[c.estilo as keyof typeof o.estilos], 4],
                 [a.formato, o.formatos[c.formato as keyof typeof o.formatos], 4],
                 [a.textoNaTela, c.com_texto === "sim" ? a.sim : a.nao, 4],
+                [a.fecho, c.com_fecho === "sim" ? a.sim : a.nao, 4],
                 [a.oferta, c.texto_oferta || a.semOferta, 4],
               ] as Array<[string, string, number]>
             ).map(([label, value, target]) => (

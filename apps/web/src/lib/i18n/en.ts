@@ -371,6 +371,8 @@ export const en: Dictionary = {
     estilo: "Style",
     formato: "Format",
     textoNaTela: "On-screen text",
+    fecho: "Logo and call to action at the end",
+    fechoDica: "Without it, the video ends with the scenes only: you add your own text on Instagram.",
     sim: "Yes",
     nao: "No",
     oferta: "Offer (optional)",

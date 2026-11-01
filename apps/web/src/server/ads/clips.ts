@@ -257,7 +257,7 @@ export async function runMontage(anuncioId: string): Promise<void> {
   const db = createAdminClient();
   const { data: ad } = await db
     .from("anuncios")
-    .select("id, marca_id, status, formato, com_texto, texto_oferta, versao_montagem, tentativas_montagem, montagem_iniciada_em, criado_por, produtos(nome), marcas(nome, instagram, logo_path, cta_padrao, cor_destaque)")
+    .select("id, marca_id, status, formato, com_texto, com_fecho, texto_oferta, versao_montagem, tentativas_montagem, montagem_iniciada_em, criado_por, produtos(nome), marcas(nome, instagram, logo_path, cta_padrao, cor_destaque)")
     .eq("id", anuncioId)
     .maybeSingle();
   if (!ad || ad.status !== "montando" || ad.tentativas_montagem >= 3) return;
@@ -303,6 +303,7 @@ export async function runMontage(anuncioId: string): Promise<void> {
       out,
       formato: ad.formato,
       textos: ad.com_texto ? [cenas[0].texto_tela, cenas[1].texto_tela, null] : [null, null, null],
+      fecho: ad.com_fecho !== false,
       logoPng,
       marca: marca.nome,
       cta: marca.cta_padrao,

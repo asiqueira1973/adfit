@@ -33,11 +33,14 @@ export const createAdSchema = z
     estilo: z.enum(["energetico", "cinematografico", "lifestyle"]),
     formato: z.enum(["vertical_9_16", "horizontal_16_9"]),
     com_texto: z.boolean(),
+    // MD-15: fecho opcional (padrão: com fecho).
+    com_fecho: z.boolean().default(true),
     texto_oferta: z.string().trim().max(40).optional(),
     observacoes: z.string().trim().max(200).optional(),
   })
   .strict();
-export type CreateAdInput = z.infer<typeof createAdSchema>;
+// Entrada (z.input): `com_fecho` é opcional para quem chama; o padrão é com fecho (MD-15).
+export type CreateAdInput = z.input<typeof createAdSchema>;
 
 /** Varredura de órfãos: etapa parada há mais que isso (acima da duração máxima de uma função). */
 export const AD_ORPHAN_AFTER_MS = 6 * 60_000;
@@ -88,6 +91,7 @@ export async function createAd(actor: AdActor, input: CreateAdInput, deps: { ai?
     estilo: input.estilo,
     formato: input.formato,
     com_texto: input.com_texto,
+    com_fecho: input.com_fecho ?? true,
     texto_oferta: input.texto_oferta || null,
     observacoes: input.observacoes || null,
     status: "gerando_roteiro",
