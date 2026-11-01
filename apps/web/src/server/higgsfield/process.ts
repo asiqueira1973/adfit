@@ -120,8 +120,18 @@ export async function applyResult(g: GenerationRow, result: HfResult, deps = gen
   if (!url) return failGeneration(g, "falhou", "resultado_sem_arquivo", deps);
 
   if (g.tipo !== "ficha_produto") throw new Error(`tipo_nao_suportado:${g.tipo}`);
+  const { preco_usd_por_imagem } = await readConfig(["preco_usd_por_imagem"]);
   const { data: ficha } = await db.from("fichas_produto").select("id, produto_id, versao").eq("geracao_id", g.id).maybeSingle();
-  if (!ficha) throw new Error("ficha_da_geracao_inexistente");
+  if (!ficha) {
+    // Resultado atrasado de uma tentativa já substituída (corrida webhook × timeout): a Higgsfield
+    // cobrou, então registra o custo, mas não toca a ficha (ela segue a tentativa atual).
+    await db
+      .from("geracoes")
+      .update({ status: "concluida", custo_usd: Number(preco_usd_por_imagem), concluido_em: new Date().toISOString(), erro: "resultado_de_tentativa_substituida" })
+      .eq("id", g.id)
+      .in("status", ["na_fila", "processando"]);
+    return;
+  }
 
   // 1. Copia para o Storage (nunca guardamos só a URL externa — seção 4.3).
   const file = await deps.download(url);
@@ -132,8 +142,7 @@ export async function applyResult(g: GenerationRow, result: HfResult, deps = gen
   const path = `${PHOTO_BUCKET}/${object}`;
 
   // 2. Libera a ficha para aprovação (12.1) e 3. conclui a geração com o custo real (seção 7.3).
-  await db.from("fichas_produto").update({ imagem_path: path, status: "aguardando_aprovacao" }).eq("id", ficha.id).eq("status", "gerando");
-  const { preco_usd_por_imagem } = await readConfig(["preco_usd_por_imagem"]);
+  await db.from("fichas_produto").update({ imagem_path: path, status: "aguardando_aprovacao" }).eq("id", ficha.id).eq("geracao_id", g.id).eq("status", "gerando");
   await db
     .from("geracoes")
     .update({ status: "concluida", resultado_url: path, custo_usd: Number(preco_usd_por_imagem), concluido_em: new Date().toISOString() })
@@ -157,7 +166,7 @@ export async function failGeneration(
   const db = createAdminClient();
   const { data: claimed } = await db
     .from("geracoes")
-    .update({ status, erro: erro.slice(0, 500), concluido_em: new Date().toISOString(), custo_usd: 0 })
+    .update({ status, erro: erro.slice(0, 500), concluido_em: new Date().toISOString() })
     .eq("id", g.id)
     .in("status", ["na_fila", "processando"])
     .select("id");
@@ -167,19 +176,38 @@ export async function failGeneration(
   const { data: ficha } = await db.from("fichas_produto").select("id, versao").eq("geracao_id", g.id).maybeSingle();
   if (!ficha) return;
 
-  if (g.tentativa < MAX_ATTEMPTS) {
+  // Sem prompt (falhou no preparo, ex.: Claude) não há o que retentar.
+  const hasPrompt = !!(g.entrada as GenerationInput | null)?.prompt;
+  if (g.tentativa < MAX_ATTEMPTS && hasPrompt) {
     const { data: retry, error } = await db
       .from("geracoes")
       .insert({ marca_id: g.marca_id, tipo: g.tipo, modelo: g.modelo, entrada: g.entrada as never, tentativa: g.tentativa + 1, cobranca_id: g.cobranca_id })
       .select("id")
       .single();
     if (error) throw error;
-    await db.from("fichas_produto").update({ geracao_id: retry.id }).eq("id", ficha.id).eq("status", "gerando");
+    // Só troca se a ficha ainda segue ESTA tentativa (um resultado atrasado pode tê-la resolvido).
+    const { data: linked } = await db
+      .from("fichas_produto")
+      .update({ geracao_id: retry.id })
+      .eq("id", ficha.id)
+      .eq("geracao_id", g.id)
+      .eq("status", "gerando")
+      .select("id");
+    if (!linked?.length) {
+      await db.from("geracoes").update({ status: "falhou", erro: "ficha_ja_resolvida", concluido_em: new Date().toISOString() }).eq("id", retry.id);
+      return;
+    }
     await submitGeneration(retry.id, deps);
     return;
   }
 
-  const { data: failed } = await db.from("fichas_produto").update({ status: "falhou" }).eq("id", ficha.id).eq("status", "gerando").select("id");
+  const { data: failed } = await db
+    .from("fichas_produto")
+    .update({ status: "falhou" })
+    .eq("id", ficha.id)
+    .eq("geracao_id", g.id)
+    .eq("status", "gerando")
+    .select("id");
   if (failed?.length && g.cobranca_id) {
     const { error } = await db.rpc("estornar_creditos", {
       p_movimentacao_id: g.cobranca_id,

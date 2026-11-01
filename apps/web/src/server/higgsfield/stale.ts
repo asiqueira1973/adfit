@@ -5,6 +5,9 @@ import { applyResult, failGeneration, generationDeps, getGeneration } from "./pr
 /** Polling de reserva (seção 4.3): só para gerações paradas há mais de 3 min, no máximo a cada 30 s. */
 export const STALE_AFTER_MS = 3 * 60_000;
 export const POLL_EVERY_MS = 30_000;
+/** Geração `na_fila` sem `request_id` há mais de 6 min: a função que a criou foi encerrada antes
+ *  de submeter (acima da duração máxima de uma função na Vercel) → política de falha/estorno. */
+export const ORPHAN_AFTER_MS = 6 * 60_000;
 /** Sem webhook nem resposta no polling há mais de 15 min → `falhou` por timeout (12.3). */
 export const TIMEOUT_MS = 15 * 60_000;
 
@@ -34,6 +37,10 @@ export async function reconsultGeneration(geracaoId: string, { force = false, no
     } catch (e) {
       console.error("Polling da Higgsfield falhou:", e instanceof Error ? e.message : e);
     }
+  }
+  if (!g.request_id && g.status === "na_fila" && age > ORPHAN_AFTER_MS) {
+    await failGeneration(g, "falhou", "orfa_sem_submissao", deps);
+    return (await getGeneration(g.id))?.status ?? "falhou";
   }
   if (age > TIMEOUT_MS) {
     await failGeneration(g, "falhou", "timeout_15min", deps);

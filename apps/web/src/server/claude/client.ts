@@ -37,7 +37,7 @@ function userMessage(input: AdjustInput): string {
  * Modelo de `configuracoes.modelo_claude_roteiro` (MD-3). Recebe: nada. Devolve: PromptAdjuster.
  */
 export function createClaudeAdjuster(): PromptAdjuster {
-  const client = new Anthropic({ apiKey: anthropicEnv().ANTHROPIC_API_KEY, maxRetries: 1 });
+  const client = new Anthropic({ apiKey: anthropicEnv().ANTHROPIC_API_KEY, maxRetries: 1, timeout: 60_000 });
   return {
     async adjustPrompt(input) {
       const { modelo_claude_roteiro } = await readConfig(["modelo_claude_roteiro"]);

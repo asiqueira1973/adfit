@@ -129,8 +129,10 @@ Idempotência: `creditar_pagamento` (trava + status), `pagamentos_stripe_checkou
 Admin: pacotes só são criados/alterados se o Price existir na Stripe, ativo, `one_time`, com a mesma moeda e valor (`assertStripePrice`).
 
 ### Pipeline de geração — ficha de produto (épico 8.4)
-1. `POST /api/produtos/:id/ficha` confere o produto: da marca, não arquivado, com ≥1 foto e sem ficha `gerando`. Cria a versão `gerando`; o índice único barra o 2º clique.
-2. `debitar_creditos`: `gerar_ficha` (2) se nenhuma versão tem imagem, senão `refazer_ficha` (1). Sem saldo ou com a marca pausada, a versão é apagada e nada é cobrado.
+1. `POST /api/produtos/:id/ficha` confere o produto: da marca, não arquivado, com ≥1 foto e sem ficha `gerando`.
+2. `debitar_creditos` primeiro: `gerar_ficha` (2) se nenhuma versão tem imagem, senão `refazer_ficha` (1). A referência é o id da nova versão. Sem saldo ou com a marca pausada, nada é criado.
+   - A versão é criada `gerando`; se o índice único recusar o 2º clique, há estorno e resposta 409.
+   - A geração nasce `na_fila` antes do Claude. Se a função for encerrada no meio, a varredura de órfãs (`na_fila` sem `request_id` há mais de 6 min) faz falha e estorno.
 3. Refação: o Claude (Anexo C.3, `salvar_prompt`, 2 tentativas, modelo `modelo_claude_roteiro`) traduz o pedido. O prompt é o C.1 (v1) ou o texto do Claude, mais `CLAUSULA_IMAGEM` concatenada pelo código.
 4. `geracoes` recebe `modelo` = `configuracoes.modelo_imagem` (MD-4: Grok Imagine 2.0) e `entrada` = prompt, versão do prompt e **caminhos** das fotos (sem URL assinada).
 5. Submissão (`src/server/higgsfield/`):
@@ -143,7 +145,9 @@ Admin: pacotes só são criados/alterados se o Price existir na Stripe, ativo, `
    - "Reconsultar" do admin.
 7. `completed`: baixa, grava em `produtos/<marca>/<produto>/fichas/v<n>-<geracao>.<ext>` e só então a ficha vira `aguardando_aprovacao`. Depois a geração vira `concluida` com `custo_usd` = `preco_usd_por_imagem`. Idempotente por `request_id`: estado final não muda; upload com caminho determinístico.
 8. `failed`, `nsfw`, erro de submissão ou timeout de 15 min:
-   - tentativa 1 → nova geração (tentativa 2, mesma cobrança, sem débito);
+   - tentativa 1 com prompt → nova geração (tentativa 2, mesma cobrança, sem débito), trocada na ficha só se ela ainda segue a tentativa 1;
+   - falha no preparo (sem prompt, ex.: o Claude falhou) → falha definitiva direto;
+   - `custo_usd` fica nulo nas falhas (7.3); um `completed` atrasado de tentativa substituída registra o custo sem tocar a ficha;
    - tentativa 2 → ficha `falhou` + `estornar_creditos` integral (idempotente);
    - a tela mostra "Algo deu errado do nosso lado…".
 9. `POST /api/fichas/:id/aprovar` → `aprovar_ficha`. As fotos originais congelam (`pode_gravar_original`). Voltar para uma versão anterior é aprovar uma `descartada`, sem custo.

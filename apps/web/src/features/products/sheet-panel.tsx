@@ -42,8 +42,11 @@ export function SheetPanel({
   const withImage = versions.filter((v) => v.url);
   const generating = versions.some((v) => v.status === "gerando");
   const latest = versions.at(-1);
+  const approved = withImage.find((v) => v.status === "aprovada");
+  // Versão nova para conferir vem primeiro (fluxo 8.4: "ficha aparece → Aprovar ou Refazer").
+  const toReview = withImage.filter((v) => v.status === "aguardando_aprovacao").at(-1);
   const lastFailed = !generating && latest?.status === "falhou";
-  const defaultSelected = (withImage.find((v) => v.status === "aprovada") ?? withImage.at(-1))?.id ?? null;
+  const defaultSelected = (toReview ?? approved ?? withImage.at(-1))?.id ?? null;
 
   const [selectedId, setSelectedId] = useState<string | null>(defaultSelected);
   const [redo, setRedo] = useState(false);
@@ -104,7 +107,7 @@ export function SheetPanel({
         </div>
       )}
 
-      {lastFailed && (
+      {lastFailed && !approved && (
         <>
           <Banner tone="danger">{t.copy.falhaGeral}</Banner>
           {!withImage.length && (
