@@ -3,7 +3,8 @@ import { z } from "zod";
 /** Saída da ferramenta `salvar_prompt` do Anexo C.3 (refação). */
 export const adjustedPromptSchema = z.object({
   prompt: z.string().min(1).max(4000),
-  resumo_pt: z.string().min(1).max(80),
+  // Bug B-11: resumo acima de 80 caracteres derrubava a refação inteira; agora é encurtado.
+  resumo_pt: z.string().min(1).transform((s) => (s.length > 80 ? `${s.slice(0, 79).trimEnd()}…` : s)),
 });
 export type AdjustedPrompt = z.infer<typeof adjustedPromptSchema>;
 

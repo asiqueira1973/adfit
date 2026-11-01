@@ -6,7 +6,7 @@ import { readConfig } from "../config";
 import { createClaudeAdjuster } from "../claude/client";
 import type { PromptAdjuster } from "../claude/types";
 import { failGeneration, generationDeps, getGeneration, submitGeneration, type GenerationDeps, type GenerationInput } from "../higgsfield/process";
-import { buildFirstSheetPrompt, buildRedoSheetPrompt, type SheetPrompt } from "./prompt";
+import { buildFirstSheetPrompt, buildRedoSheetPrompt, redoBasePrompt, type SheetPrompt } from "./prompt";
 import { track } from "../analytics/track";
 
 /** Quem pede a ação: usuário da marca (só a própria marca) ou admin (qualquer marca) — seção 13. */
@@ -31,10 +31,9 @@ async function currentBasePrompt(fichas: SheetRow[], categoria: string): Promise
   const last = [...fichas].filter((f) => f.imagem_path && f.geracao_id).sort((a, b) => b.versao - a.versao)[0];
   if (last?.geracao_id) {
     const { data } = await createAdminClient().from("geracoes").select("entrada").eq("id", last.geracao_id).maybeSingle();
-    const base = (data?.entrada as GenerationInput | undefined)?.prompt_base;
-    if (base) return base;
+    return redoBasePrompt((data?.entrada as GenerationInput | undefined) ?? null, categoria);
   }
-  return buildFirstSheetPrompt(categoria).base;
+  return redoBasePrompt(null, categoria);
 }
 
 /**

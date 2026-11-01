@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, CostButton } from "@/components/ui/button";
@@ -57,6 +57,15 @@ export function SheetPanel({
   // A versão escolhida some quando a lista muda (nova versão pronta): volta ao padrão.
   const selected = withImage.find((v) => v.id === selectedId) ?? withImage.find((v) => v.id === defaultSelected) ?? null;
 
+  // Ao começar ou terminar uma ficha, leva o painel para a tela: o aviso "Preparando…" e o resultado
+  // aparecem no topo do painel, longe do botão "Refazer" (relato do Alexandre, 01/11/2026).
+  const cardRef = useRef<HTMLDivElement>(null);
+  const wasGenerating = useRef(generating);
+  useEffect(() => {
+    if (wasGenerating.current !== generating) cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    wasGenerating.current = generating;
+  }, [generating]);
+
   useEffect(() => {
     if (!generating) return;
     const timer = setInterval(async () => {
@@ -83,7 +92,7 @@ export function SheetPanel({
   const approve = (id: string) => run(() => callApi("POST", `/api/fichas/${id}/aprovar`, {}));
 
   return (
-    <Card className="flex flex-col gap-4 p-4">
+    <Card ref={cardRef} className="flex scroll-mt-20 flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-[17px] font-semibold">{t.produtos.fichaTitulo}</h2>
         {generating && <Badge tone="processing">{t.produtos.fichaPreparando}</Badge>}

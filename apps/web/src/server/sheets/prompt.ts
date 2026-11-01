@@ -41,3 +41,14 @@ export function buildRedoSheetPrompt(adjusted: string): SheetPrompt {
   const base = adjusted.replace(CLAUSULA_IMAGEM, "").trim();
   return { base, final: withImageClause(base), versao: `${versao}+refacao.v1` };
 }
+
+/**
+ * Prompt base de uma refação (Anexo C.3: o "prompt atual"). Bug B-10: base gravada com uma versão
+ * antiga do template da ficha não carrega as regras novas; nesse caso recomeça do template atual.
+ * Recebe: entrada da última geração com imagem (ou null) e categoria. Devolve: o prompt base.
+ */
+export function redoBasePrompt(last: { prompt_base?: string; prompt_versao?: string } | null, categoria: string): string {
+  const current = loadPrompt("ficha").versao;
+  const sameTemplate = last?.prompt_versao === current || last?.prompt_versao?.startsWith(`${current}+`);
+  return last?.prompt_base && sameTemplate ? last.prompt_base : buildFirstSheetPrompt(categoria).base;
+}

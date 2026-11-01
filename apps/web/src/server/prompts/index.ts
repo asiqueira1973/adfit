@@ -10,7 +10,8 @@ export const PROMPT_VERSIONS = {
   // v2 (01/11/2026, aprovado pelo Alexandre): fotos como fonte da verdade, logo copiado das fotos
   // ou painel 3 com o tecido quando não há logo, rugas sem perder textura. v1 fica guardado.
   // v3 (01/11/2026): só a marca visível por fora; etiqueta interna/tamanho nunca vira logo (top "oxer P").
-  ficha: "ficha.v3",
+  // v4 (01/11/2026): painéis sem rótulos de texto (o Grok escreveu FRONT/BACK/CLOSE-UP na imagem).
+  ficha: "ficha.v4",
   refacao: "refacao.v1",
   // v2 (aprovado em 01/11/2026): mesma modelo nas 3 cenas (campo `modelo`) e texto no idioma da marca (MD-1).
   // v3 (aprovado em 01/11/2026, depois do 1º teste real): modelo descrita por ação/postura/roupa, nunca por

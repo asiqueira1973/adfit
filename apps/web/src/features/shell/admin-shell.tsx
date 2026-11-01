@@ -1,8 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 import { MadeBy } from "@/components/made-by";
 import { LogOut, Menu } from "lucide-react";
-import { APP_NAME, MADE_BY } from "@/lib/constants";
-import { fill } from "@/lib/copy";
+import { APP_NAME } from "@/lib/constants";
 import type { Dictionary, Locale } from "@/lib/i18n";
 import { AdminNavGroups, AdminNavGroupsView } from "./admin-nav";
 import { LanguageSwitch } from "./language-switch";

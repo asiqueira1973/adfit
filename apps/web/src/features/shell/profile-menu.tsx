@@ -1,7 +1,5 @@
 import { CircleHelp, LogOut, MessageSquare, Store } from "lucide-react";
 import { MadeBy } from "@/components/made-by";
-import { MADE_BY } from "@/lib/constants";
-import { fill } from "@/lib/copy";
 import type { Dictionary, Locale } from "@/lib/i18n";
 import { LanguageSwitch } from "./language-switch";
 import { MenuLink } from "./menu-link";

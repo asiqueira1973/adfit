@@ -16,3 +16,12 @@ reproduz fica no código sempre que dá para automatizar.
 
 ## B-9 — Cenas barradas por conteúdo com top (01/11/2026)
 Anúncio do top azul-marinho: o Grok barrou as 3 cenas e as 3 novas tentativas (`bloqueada_nsfw`), créditos estornados. Reproduzido direto na Higgsfield: prompts limpos e variações (modelo mais jovem, academia, sem cláusula) seguiram barrados; a mesma cena com a ficha **sem o 3º painel** (close da gola por dentro) passou. Qwen como alternativa passou mas copiou o layout da ficha (descartado). Correção: a nova tentativa pós-nsfw de quadro manda a ficha recortada (frente e costas; `dropCloseUpPanel`, flag `sem_close` na entrada). Teste: `server/higgsfield/nsfw-retry.test.ts`.
+
+## B-10 — Refação da ficha usava o template antigo (01/11/2026)
+A refação parte do prompt base da última versão; a v1 do top tinha sido gerada com `ficha.v2`, então a regra nova (só marca visível por fora) não entrou, e o pedido "não usar logo dentro, somente fora" virou "leve o logo para fora": o "oxer P" da etiqueta interna foi para a frente. Correção: `redoBasePrompt` recomeça do template atual quando a base é de outra versão. Junto, `ficha.v4`: painéis sem rótulos de texto (apareceu FRONT/BACK/CLOSE-UP). Teste: `server/sheets/redo.test.ts`.
+
+## B-11 — Resumo da refação longo derrubava a refação (01/11/2026)
+`resumo_pt` acima de 80 caracteres → `claude_fora_do_schema`, ficha `falhou` (crédito estornado). Agora é encurtado. Teste: `server/sheets/redo.test.ts`.
+
+## B-12 — Aviso "Preparando a ficha" fora da tela (01/11/2026)
+Ao tocar em Refazer (embaixo), o aviso aparecia no topo do painel, fora da tela. Agora o painel rola para a tela ao começar e ao terminar.
