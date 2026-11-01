@@ -39,7 +39,8 @@ export const frameQcSchema = z.object({
   anatomia: z.number().min(0).max(10),
   texto_espurio: z.boolean(),
   conteudo_improprio: z.boolean(),
-  motivo: z.string().max(400),
+  // C.4 pede ≤ 200 caracteres; o excedente é cortado (texto técnico interno, nunca exibido).
+  motivo: z.string().transform((m) => m.slice(0, 200)),
 });
 export type FrameQc = z.infer<typeof frameQcSchema>;
 

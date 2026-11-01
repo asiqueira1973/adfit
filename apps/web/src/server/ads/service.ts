@@ -162,7 +162,7 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
   }
 
   // 2. Texto da tela saneado (seção 20; 11.7; C.6).
-  const textos = await sanitizeScreenTexts(script, ad.com_texto, marca.idioma_anuncios, ai);
+  const textos = await sanitizeScreenTexts(script, ad.com_texto, marca.idioma_anuncios, ai, idiomaCriador);
   const cenasRoteiro = [...script.cenas].sort((a, b) => a.ordem - b.ordem).map((c) => ({ ...c, texto_tela: textos[c.ordem] }));
 
   // 3. Cenas (unique por anúncio+ordem impede duplicar se o pipeline rodar duas vezes).
@@ -199,7 +199,12 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
         .select("id")
         .single();
       if (gErr) throw gErr;
-      await db.from("quadros").insert({ id: quadroId, cena_id: cena.id, marca_id: ad.marca_id, versao: 1, status: "gerando", geracao_id: g.id });
+      const { error: qErr } = await db.from("quadros").insert({ id: quadroId, cena_id: cena.id, marca_id: ad.marca_id, versao: 1, status: "gerando", geracao_id: g.id });
+      if (qErr) {
+        // A varredura de órfãos já criou a v1 desta cena: não submete geração sem alvo (custo à toa).
+        await db.from("geracoes").update({ status: "falhou", erro: "alvo_ja_resolvido", concluido_em: new Date().toISOString() }).eq("id", g.id);
+        return;
+      }
       await submitGeneration(g.id, generation);
     }),
   );
@@ -265,6 +270,8 @@ export async function refreshAd(anuncioId: string, now = Date.now()): Promise<vo
   const age = now - new Date(ad.atualizado_em).getTime();
 
   if (ad.status === "gerando_roteiro" && age > AD_ORPHAN_AFTER_MS) {
+    const { count } = await db.from("cenas").select("id", { count: "exact", head: true }).eq("anuncio_id", anuncioId);
+    if (count) return;
     if (await transition(anuncioId, "gerando_roteiro", "falhou", { erro: "roteiro_orfao" })) await refundAd(anuncioId, "Falha técnica ao criar o roteiro");
     return;
   }

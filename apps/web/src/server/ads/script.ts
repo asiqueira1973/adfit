@@ -63,13 +63,21 @@ export function fitScreenText(text: string): string | null {
  * 3. revisão `qc-texto` (Claude): problema com sugestão válida → usa a sugestão; sem sugestão
  *    válida → `descricao`; revisão indisponível → mantém o texto já checado pela regex;
  * 4. no fim, tudo cabe em 2×32 e não casa a regex; senão a cena fica sem texto.
- * Recebe: roteiro, se tem texto, idioma e cliente. Devolve: textos por ordem (1..3).
+ * Recebe: roteiro, se tem texto, idioma do vídeo, cliente e idioma da `descricao`. Devolve: textos (1..3).
  */
-export async function sanitizeScreenTexts(script: Script, comTexto: boolean, idioma: ScriptOptions["idioma_texto"], ai: AiClient): Promise<Record<1 | 2 | 3, string | null>> {
+export async function sanitizeScreenTexts(
+  script: Script,
+  comTexto: boolean,
+  idioma: ScriptOptions["idioma_texto"],
+  ai: AiClient,
+  idiomaDescricao: ScriptOptions["idioma_descricao"] = idioma,
+): Promise<Record<1 | 2 | 3, string | null>> {
   const out: Record<1 | 2 | 3, string | null> = { 1: null, 2: null, 3: null };
   if (!comTexto) return out;
   const cenas = script.cenas.filter((c) => c.ordem !== 3);
-  const fallback = (c: (typeof cenas)[number]) => (hasForbiddenTerm(c.descricao) ? null : fitScreenText(c.descricao));
+  // A `descricao` sai no idioma de quem criou (roteiro.v2, D-21): só serve de texto substituto se
+  // for o mesmo idioma do vídeo; senão a cena fica sem texto (nunca português num vídeo em inglês).
+  const fallback = (c: (typeof cenas)[number]) => (idiomaDescricao !== idioma || hasForbiddenTerm(c.descricao) ? null : fitScreenText(c.descricao));
   const first = cenas.map((c) => (c.texto_tela && !hasForbiddenTerm(c.texto_tela) ? (fitScreenText(c.texto_tela) ?? fallback(c)) : fallback(c)));
 
   let reviewed = first;

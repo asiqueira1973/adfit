@@ -76,6 +76,9 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | [Marca] Créditos | `marcas`, `movimentacoes_creditos`, `precos_acoes`, `pagamentos` (+ `pacotes_creditos.nome`) | — |
 | [Marca] Comprar créditos | `pacotes_creditos` (só ativos, por `ordem`), `marcas.ativa` | `POST /api/creditos/checkout` |
 | [Marca] Compra concluída (`/creditos/obrigado`) | `pagamentos`, `marcas` | `fulfillCheckout` → `creditar_pagamento` (servidor) |
+| [Marca] Novo anúncio | `produtos` com ficha aprovada (URL assinada da ficha), `precos_acoes` | `POST /api/anuncios` |
+| [Marca] Anúncio | `anuncios`, `cenas`, `quadros` (sem colunas técnicas; service_role com posse conferida) | `GET /api/anuncios/:id` (polling), `PATCH /api/anuncios/:id/textos` |
+| [Marca] Anúncios | `anuncios` + quadro atual da cena 1 | — |
 | [Admin] Configurações | `precos_acoes`, `pacotes_creditos`, `configuracoes` (service_role) | `PUT /api/admin/configuracoes`, `POST /api/admin/pacotes`, `PATCH /api/admin/pacotes/:id` |
 | [Marca] Marca | `marcas` (kit), URL assinada do logo | `marcas` direto pela RLS `marcas_update_kit`; Storage `marcas/<marca>/logo/*` |
 | [Marca] Produtos | `produtos` (não arquivados) + `fotos_produto` + `fichas_produto` (selo), URLs assinadas | — |
@@ -154,6 +157,33 @@ Admin: pacotes só são criados/alterados se o Price existir na Stripe, ativo, `
 
 Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGeneration`.
 
+### Pipeline de geração — anúncio: roteiro e quadros (épico 8.5)
+1. `POST /api/anuncios` confere o produto (da marca, não arquivado, com ficha aprovada).
+   - Debita `gerar_roteiro_quadros` (2) com o id do novo anúncio.
+   - Cria o anúncio `gerando_roteiro` com a ficha congelada e responde 202. O resto roda em `after()` (`runLater`).
+2. **Roteiro:** o Claude (`modelo_claude_roteiro`, `roteiro.v2` + tabelas C.5) recebe a ficha como imagem JPEG reduzida (sharp, lado ≤ 1568 px). A ferramenta `salvar_roteiro` é validada com Zod (C.2 + `modelo`), com 2 tentativas. Falha → `falhou` + estorno integral.
+3. **Texto da tela:**
+   - regex dos termos proibidos (pt/en) → `descricao` neutra (D-21);
+   - revisão `qc-texto.v2` (`modelo_claude_qc_texto`, Haiku);
+   - 2×32 (11.7); `com_texto = false` e a cena 3 ficam sem texto.
+4. **Gravação:** 3 `cenas` (unique por ordem impede duplicar) → `gerando_quadros` (roteiro e `prompt_versao = roteiro.v2+quadro.v2`) → 3 `quadros` v1, cada um com uma `geracoes` `quadro_chave`, submetidos em paralelo.
+   - O prompt de cada quadro é montado pelo código: cena + modelo única + referência à ficha + "Dress the model…" + `CLAUSULA_IMAGEM`.
+5. **Resultado** (webhook, polling ou admin): copia para `anuncios/<marca>/<anuncio>/quadros/…` e grava `imagem_path`; o QC roda em `after()`.
+6. **QC** (`qc-quadro.v1`, ficha + quadro), com aprovação calculada no código (11.5):
+   - 1ª reprovação → nova geração do mesmo quadro, sem cobrança e com o motivo no prompt;
+   - 2ª reprovação → `pronto` com aviso;
+   - impróprio → `falhou`, nunca exibido (D-18);
+   - Claude indisponível → `pronto` sem aviso (D-19).
+7. **Fechamento** (`checkAdProgress`), quando a versão mais recente de cada cena está final:
+   - `cenas.quadro_atual_id` aponta para o quadro pronto;
+   - ≥ 1 pronto → `aguardando_aprovacao`; 3 falharam → `falhou` + estorno integral.
+8. **Órfãos** (`refreshAd`, chamado pelo polling da tela):
+   - roteiro parado há mais de 6 min sem cenas → `falhou` + estorno;
+   - cena sem quadro → quadro `falhou`;
+   - gerações paradas → reconsulta e timeout;
+   - QC que não rodou há mais de 3 min → roda.
+9. Estados do anúncio só mudam por `transition()` (`ads/stateMachine.ts`, 12.2), com update condicional por status.
+
 ## 7. Divergências em relação ao spec
 
 | # | Divergência | Por quê |
@@ -175,6 +205,11 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
 | D-15 | `GET /api/produtos/:id/ficha` (estado das versões para o polling de 5 s) também dispara o polling de reserva das gerações paradas há mais de 3 min | Rota fora da seção 13. Até o worker do 8.6 existir não há processo periódico (a Vercel Hobby só tem cron diário); a tela aberta faz a reconsulta. |
 | D-16 | Webhook da Higgsfield confere também a assinatura Standard Webhooks (`webhook-signature`, segredo `whsec_` em `HF_WEBHOOK_SECRET`), além do token da query | A documentação atual da Higgsfield assina as entregas (MD-4); o token continua obrigatório. |
 | D-17 | No ambiente local, as fotos de entrada sobem pela API de upload da Higgsfield em vez de URL assinada | O Storage local (http://127.0.0.1) não é alcançável pela Higgsfield; em produção vale a URL assinada da seção 4.3. |
+| D-18 | Cena com quadro `falhou` (falha técnica ou conteúdo impróprio) e as outras prontas: o anúncio vai a `aguardando_aprovacao`, a cena mostra a falha e a nova tentativa dela será **grátis** (rota de refazer do 8.6). Sem estorno por cena | A 12.2 só prevê "3 prontos" ou "3 falharam". O preço é 2 créditos para roteiro + 3 quadros, e `floor(2/3) = 0` por cena. A 11.5 pede estorno para conteúdo impróprio; a tentativa grátis cumpre a intenção "não cobrar por falha nossa" (a decidir com o Alexandre antes do 8.6). |
+| D-19 | QC indisponível (o Claude falhou 2×): o quadro fica `pronto` com `qc_aprovado` nulo, sem aviso | O spec não diz o que fazer quando o QC não roda; sem QC não há como reprovar. |
+| D-20 | `GET /api/anuncios/:id`: estado para o polling de 5 s; também roda a varredura de órfãos do anúncio | Rota fora da seção 13, como a D-15. |
+| D-21 | `roteiro.v2` pede a `descricao` no idioma de quem cria (`{idioma_descricao}`) e o texto da tela no idioma da marca. Texto barrado pela regex só é trocado pela `descricao` se os idiomas forem iguais; senão, a cena fica sem texto | A `descricao` é para o lojista (seção 15); o texto do vídeo segue a marca (MD-1). |
+| D-22 | `PATCH /api/anuncios/:id/textos` não aceita `cta` | `anuncios` não tem coluna de CTA (seção 7.3); o CTA do fecho vem de `marcas.cta_padrao`, editado na tela Marca. |
 | MD-3 | Modelos Claude: `claude-sonnet-5` (roteiro, refação, QC de imagem) e `claude-haiku-4-5` (QC de texto, nova chave `modelo_claude_qc_texto`) | O spec citava `claude-sonnet-5-5`/`claude-haiku-5-5`, que não existem; decisão do Alexandre. |
 | MD-4 | Imagem: Grok Imagine 2.0 (`xai/grok-imagine-image-2.0`); vídeo: Seedance 2.5 1080p (`bytedance/seedance-2.5/image-to-video`); `gerar_video` = 51, `refazer_clipe` = 17; pacotes de 60 por US$ 36 e de 150 por US$ 81 | Nano Banana não existe na Higgsfield API; o Seedance foi escolhido pela qualidade e custa ~US$ 17 por vídeo, então os preços foram revistos para margem ≥ 30% (decisão do Alexandre, 25.5 e 25.1). |
 | MD-1 | App em pt-BR e inglês | Emenda do Alexandre (`docs/mudancas-de-escopo.md`); diverge da seção 17. |
