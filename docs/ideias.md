@@ -18,7 +18,7 @@ item de spec só depois de revisadas (seção 28 continua valendo).
   planejamento** — um serviço contínuo (o que postar, quando e com qual peça), não só a geração
   de um vídeo avulso. A I-1 é o primeiro passo nessa direção.
 
-## I-2 — Catálogo de personagens da marca (01/11/2026, Alexandre)
+## I-2 — Catálogo de personagens da marca (01/11/2026, Alexandre) — vira a próxima release: `plans/I-2-personagens.md` (MD-17)
 - **Ideia:** a marca guarda personagens (modelos) com uma **ficha de personagem** — imagem de referência com rosto, corpo e penteado em ângulos fixos, como a ficha da peça. No Novo anúncio, escolhe "usar um personagem do catálogo" ou "deixar o AdFit criar um novo"; o novo pode ser salvo no catálogo depois.
 - **Por quê:** a mesma "embaixadora" em vários anúncios cria identidade de marca e série de conteúdo; resolve de vez a consistência da modelo (O-1), porque a imagem de referência vale mais que a descrição em texto.
 - **Como encaixa no que existe:** a ficha de personagem seria uma 2ª imagem de referência nas cenas (o Flare aceita até 16), ao lado da ficha da peça; o roteiro deixa de inventar a `modelo` e usa a do catálogo.
