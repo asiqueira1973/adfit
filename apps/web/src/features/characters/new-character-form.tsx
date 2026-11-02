@@ -91,7 +91,7 @@ export function NewCharacterForm({ marcaId, preco, t }: { marcaId: string; preco
             <div key={it.key} className="relative size-24 overflow-hidden rounded-[10px] bg-surface">
               {/* eslint-disable-next-line @next/next/no-img-element -- prévia local */}
               <img src={it.preview} alt="" className="size-full object-cover" />
-              <button type="button" aria-label="Remover" onClick={() => setPicked((l) => l.filter((x) => x.key !== it.key))} className="absolute right-1 top-1 flex size-7 items-center justify-center rounded-full bg-black/60 text-white">
+              <button type="button" aria-label={p.removerFoto} onClick={() => setPicked((l) => l.filter((x) => x.key !== it.key))} className="absolute right-1 top-1 flex size-7 items-center justify-center rounded-full bg-black/60 text-white">
                 <X className="size-4" />
               </button>
             </div>

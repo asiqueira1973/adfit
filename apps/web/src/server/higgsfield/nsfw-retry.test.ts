@@ -36,4 +36,11 @@ describe("nova tentativa de quadro barrado por conteúdo", () => {
     expect(meta.height).toBe(675);
     expect(meta.format).toBe("jpeg");
   });
+
+  it("MD-17: com personagem, a nova tentativa mantém a linha da personagem (2ª referência)", () => {
+    const comPersonagem = { ...row("quadro_chave"), entrada: { ...entrada, personagem: true } } as unknown as GenerationRow;
+    const r = retryInput(comPersonagem, "bloqueada_nsfw");
+    expect(r.prompt).toContain("Reference image 2 is the character sheet");
+    expect(r.personagem).toBe(true);
+  });
 });

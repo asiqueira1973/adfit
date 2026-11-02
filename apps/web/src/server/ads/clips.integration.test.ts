@@ -322,3 +322,16 @@ describe("salvar a modelo do anúncio como personagem (MD-17)", () => {
     expect(businessCodeOf(await saveAdModelAsCharacter(actor, ad.id, "De novo").catch((e) => e))).toBe("transicao_invalida");
   });
 });
+
+describe("salvar personagem sem saldo (verificador MD-17)", () => {
+  it("sem saldo para a ficha: recusa antes de criar a personagem (sem registro órfão)", async () => {
+    const { saveAdModelAsCharacter } = await import("../characters/service");
+    const ad = await readyAd();
+    const { data: m } = await db.from("marcas").select("saldo_creditos").eq("id", marcaId).single();
+    await db.rpc("lancar_creditos", { p_marca_id: marcaId, p_tipo: "ajuste_manual", p_quantidade: -m!.saldo_creditos, p_valor_pago_centavos: null as never, p_observacao: "zera para o teste", p_criado_por: null as never });
+    expect(businessCodeOf(await saveAdModelAsCharacter(actor, ad.id, "Sem saldo").catch((e) => e))).toBe("saldo_insuficiente");
+    const { count } = await db.from("personagens").select("id", { count: "exact", head: true }).eq("anuncio_origem_id", ad.id);
+    expect(count).toBe(0);
+    await db.rpc("lancar_creditos", { p_marca_id: marcaId, p_tipo: "bonus", p_quantidade: 400, p_valor_pago_centavos: null as never, p_observacao: "repõe", p_criado_por: null as never });
+  });
+});

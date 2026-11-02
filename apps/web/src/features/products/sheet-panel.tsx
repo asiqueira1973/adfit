@@ -92,7 +92,7 @@ export function SheetPanel({
       if (json && !json.versoes.some((v) => v.status === "gerando")) router.refresh();
     }, POLL_MS);
     return () => clearInterval(timer);
-  }, [generating, produtoId, router]);
+  }, [generating, sheetUrl, router]);
 
   async function run(fn: () => ReturnType<typeof callApi>) {
     setBusy(true);

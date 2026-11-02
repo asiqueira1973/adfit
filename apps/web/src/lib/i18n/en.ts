@@ -356,6 +356,7 @@ export const en: Dictionary = {
     idade: "Age",
     fotos: "Reference photos (optional, up to 4)",
     fotosDica: "Face and body clearly visible, good light. A real person or an inspiration.",
+    removerFoto: "Remove photo",
     criar: "Create character",
     criando: "Creating…",
     pronta: "Ready",

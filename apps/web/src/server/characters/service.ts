@@ -350,6 +350,15 @@ export async function saveAdModelAsCharacter(
   const { data: cenas } = await db.from("cenas").select("quadros!cenas_quadro_atual_id_fkey(status, imagem_path)").eq("anuncio_id", anuncioId);
   const prontas = (cenas ?? []).filter((c) => (c.quadros as unknown as { status: string; imagem_path: string | null } | null)?.status === "pronto");
   if (!prontas.length) throw new BusinessError("cenas_incompletas");
+  // Confere serviço, marca e saldo ANTES de criar a personagem: sem isso sobraria personagem sem
+  // ficha quando a cobrança fosse recusada (verificador, 01/11/2026).
+  await assertProviderAvailable();
+  const [{ data: marca }, { data: preco }] = await Promise.all([
+    db.from("marcas").select("ativa, saldo_creditos").eq("id", ad.marca_id).single(),
+    db.from("precos_acoes").select("creditos").eq("acao", "gerar_ficha_personagem").single(),
+  ]);
+  if (!marca?.ativa) throw new BusinessError("marca_inativa");
+  if ((marca.saldo_creditos ?? 0) < (preco?.creditos ?? 0)) throw new BusinessError("saldo_insuficiente");
   const { data: p, error } = await db
     .from("personagens")
     .insert({ marca_id: ad.marca_id, nome: nome.trim().slice(0, 60) || "Personagem", genero_modelo: ad.genero_modelo, faixa_etaria: ad.faixa_etaria, modelo_en: modelo.slice(0, 600), origem: "anuncio", anuncio_origem_id: ad.id, criado_por: actor.id })

@@ -2409,7 +2409,58 @@ GRANT SELECT ON TABLE "public"."perfis" TO "authenticated";
 
 
 GRANT ALL ON TABLE "public"."personagens" TO "service_role";
-GRANT SELECT ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("marca_id") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("nome") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("descricao") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("genero_modelo") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("faixa_etaria") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("origem") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("anuncio_origem_id") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("ficha_aprovada_id") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("arquivado") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("criado_por") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("criado_em") ON TABLE "public"."personagens" TO "authenticated";
+
+
+
+GRANT SELECT("atualizado_em") ON TABLE "public"."personagens" TO "authenticated";
 
 
 

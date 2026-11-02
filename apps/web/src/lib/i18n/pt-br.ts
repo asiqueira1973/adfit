@@ -355,6 +355,7 @@ export const ptBR = {
     idade: "Idade",
     fotos: "Fotos de referência (opcional, até 4)",
     fotosDica: "Rosto e corpo bem visíveis, boa luz. Pode ser uma pessoa real ou uma inspiração.",
+    removerFoto: "Remover foto",
     criar: "Criar personagem",
     criando: "Criando…",
     pronta: "Pronta",
