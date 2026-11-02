@@ -31,3 +31,6 @@ Vídeo da orla: pico de −4 dB aos 0,3 s da cena 1 (resto do ambiente ~−40 dB
 
 ## B-14 — Débito sem estorno quando a função cai antes de criar os clipes (01/11/2026, verificador)
 `startVideo`/`redoClip` debitam antes de criar os clipes; se a função caísse no meio, o anúncio ficava em `gerando_clipes` com o crédito debitado. Correção: `sweepOrphanClips` (chamado por `refreshAd` com `gerando_clipes` parado há mais de 6 min e nenhum clipe gerando) cria o clipe `falhou` da cena e estorna a parte dela (gerar vídeo) ou estorna o refazer sem clipe. Teste: `clips.integration.test.ts` ("clipes órfãos").
+
+## B-15 — Registro do clipe sempre com aspect_ratio 9:16 (01/11/2026)
+A entrada gravada em `geracoes` para os clipes trazia `aspect_ratio: "9:16"` fixo, mesmo em anúncio 16:9. Só o registro estava errado (o Seedance segue a proporção da imagem de entrada; o vídeo saía certo). Correção: `createClip` lê o formato do anúncio. Registros antigos de anúncios 16:9 corrigidos no banco. Teste: `clips.integration.test.ts` ("registro do clipe").

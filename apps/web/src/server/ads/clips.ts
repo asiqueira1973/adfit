@@ -86,12 +86,15 @@ async function createClip(cena: { id: string; marca_id: string; quadro_atual_id:
   const { data: quadro } = await db.from("quadros").select("imagem_path").eq("id", cena.quadro_atual_id).single();
   const { data: prev } = await db.from("clipes").select("versao").eq("cena_id", cena.id).order("versao", { ascending: false }).limit(1).maybeSingle();
   const { modelo_video } = await readConfig(["modelo_video"]);
+  // Proporção do anúncio no registro da geração (B-15: ficava sempre 9:16; o Seedance segue a imagem).
+  const { data: dono } = await db.from("cenas").select("anuncios(formato)").eq("id", cena.id).single();
+  const formato = (dono?.anuncios as unknown as { formato: string } | null)?.formato;
   const entrada: GenerationInput & { prompt_movimento: string } = {
     prompt: buildClipPrompt(promptMovimento),
     prompt_base: promptMovimento,
     prompt_versao: "clipe.v1",
     referencias: [quadro!.imagem_path!],
-    aspect_ratio: "9:16",
+    aspect_ratio: formato === "horizontal_16_9" ? "16:9" : "9:16",
     prompt_movimento: promptMovimento,
   };
   const { data: g, error } = await db.from("geracoes").insert({ marca_id: cena.marca_id, tipo: "clipe_video", modelo: String(modelo_video), entrada: entrada as never, cobranca_id: cobrancaId }).select("id").single();
