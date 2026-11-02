@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -34,7 +35,12 @@ type Choices = {
   com_texto: string;
   com_fecho: string;
   texto_oferta: string;
+  /** MD-17: "catalogo" usa `personagem_id`; "nova" usa gênero, idade e observação. */
+  quem: "catalogo" | "nova";
+  personagem_id: string;
 };
+
+export type WizardCharacter = { id: string; nome: string; detalhe: string; imagem: string | null };
 
 export type WizardProduct = { id: string; nome: string; genero_alvo: string; imagem: string | null };
 
@@ -51,12 +57,15 @@ export function NewAdWizard({
   products,
   price,
   initialProductId,
+  characters = [],
   t,
 }: {
   products: WizardProduct[];
   price: number;
   initialProductId?: string;
-  t: Pick<Dictionary, "anuncios" | "opcoes" | "erros">;
+  /** Personagens prontas do catálogo (MD-17). */
+  characters?: WizardCharacter[];
+  t: Pick<Dictionary, "anuncios" | "opcoes" | "erros" | "personagens">;
 }) {
   const router = useRouter();
   const o = t.opcoes;
@@ -77,7 +86,11 @@ export function NewAdWizard({
     com_texto: "sim",
     com_fecho: "sim",
     texto_oferta: "",
+    quem: "nova",
+    personagem_id: characters[0]?.id ?? "",
   });
+  const usaCatalogo = c.quem === "catalogo" && !!c.personagem_id;
+  const personagem = characters.find((x) => x.id === c.personagem_id);
   const set = (k: keyof Choices) => (v: string) => setC((prev) => ({ ...prev, [k]: v }));
   const product = products.find((p) => p.id === c.produto_id) ?? first;
 
@@ -96,6 +109,7 @@ export function NewAdWizard({
       com_fecho: c.com_fecho === "sim",
       texto_oferta: c.texto_oferta.trim() || undefined,
       observacoes: c.observacoes.trim() || undefined,
+      ...(usaCatalogo ? { personagem_id: c.personagem_id } : {}),
     });
     if (!result.ok) {
       setBusy(false);
@@ -158,9 +172,47 @@ export function NewAdWizard({
 
       {step === 3 && (
         <div className="flex flex-col gap-5">
+          {/* MD-17: personagem do catálogo ou criar uma nova para este anúncio. */}
+          <Segmented
+            name="quem"
+            label={t.personagens.quemVaiVestir}
+            value={c.quem}
+            onChange={(v) => set("quem")(v)}
+            options={[{ value: "nova", label: t.personagens.criarNova }, { value: "catalogo", label: t.personagens.usarCatalogo }]}
+          />
+          {c.quem === "catalogo" ? (
+            characters.length ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {characters.map((ch) => (
+                  <button
+                    key={ch.id}
+                    type="button"
+                    aria-pressed={c.personagem_id === ch.id}
+                    onClick={() => set("personagem_id")(ch.id)}
+                    className={`flex flex-col gap-2 rounded-[14px] p-2 text-left ${c.personagem_id === ch.id ? "bg-text/5 ring-2 ring-text" : "bg-surface"}`}
+                  >
+                    <div className="relative aspect-video overflow-hidden rounded-[10px] bg-[#EDEDED]">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada temporária */}
+                      {ch.imagem && <img src={ch.imagem} alt="" className="size-full object-cover" />}
+                    </div>
+                    <div className="px-1 text-[15px] font-semibold">{ch.nome}</div>
+                    <div className="px-1 pb-1 text-[12px] text-text-2">{ch.detalhe}</div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[14px] text-text-2">
+                {t.personagens.semProntas}{" "}
+                <Link href="/personagens/nova" className="font-semibold text-brand-text">{t.personagens.irPersonagens}</Link>
+              </p>
+            )
+          ) : (
+            <>
           <Segmented name="genero_modelo" label={a.modelo} value={c.genero_modelo} onChange={set("genero_modelo")} options={Object.entries(o.generosModelo).map(([value, label]) => ({ value, label }))} />
           <Segmented name="faixa_etaria" label={a.faixaEtaria} value={c.faixa_etaria} onChange={set("faixa_etaria")} options={Object.entries(o.faixasEtarias).map(([value, label]) => ({ value, label }))} />
           <TextArea label={a.observacao} name="observacoes" rows={3} maxChars={200} placeholder={a.observacaoPlaceholder} value={c.observacoes} onChange={(e) => set("observacoes")(e.target.value)} />
+            </>
+          )}
         </div>
       )}
 
@@ -195,7 +247,7 @@ export function NewAdWizard({
               [
                 [a.onde, o.cenarios[c.cenario as keyof typeof o.cenarios], 2],
                 [a.esporte, o.modalidades[c.modalidade as keyof typeof o.modalidades], 2],
-                [a.modelo, `${o.generosModelo[c.genero_modelo as keyof typeof o.generosModelo]} · ${o.faixasEtarias[c.faixa_etaria as keyof typeof o.faixasEtarias]}`, 3],
+                [a.modelo, usaCatalogo && personagem ? personagem.nome : `${o.generosModelo[c.genero_modelo as keyof typeof o.generosModelo]} · ${o.faixasEtarias[c.faixa_etaria as keyof typeof o.faixasEtarias]}`, 3],
                 [a.estilo, o.estilos[c.estilo as keyof typeof o.estilos], 4],
                 [a.formato, o.formatos[c.formato as keyof typeof o.formatos], 4],
                 [a.textoNaTela, c.com_texto === "sim" ? a.sim : a.nao, 4],

@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Clapperboard, Coins, House, Shirt } from "lucide-react";
+import { Clapperboard, Coins, House, Shirt, UserRound } from "lucide-react";
 import { cn } from "@/components/ui/cn";
 
-/** Abas da marca (seção 10): Início, Produtos, Anúncios, Créditos. Rótulos vêm do dicionário (MD-1). */
-export type BrandTabLabels = { inicio: string; produtos: string; anuncios: string; creditos: string };
+/** Abas da marca (seção 10 + MD-17): Início, Produtos, Personagens, Anúncios, Créditos. Rótulos vêm do dicionário (MD-1). */
+export type BrandTabLabels = { inicio: string; produtos: string; personagens: string; anuncios: string; creditos: string };
 
 function tabs(l: BrandTabLabels) {
   return [
     { href: "/inicio", label: l.inicio, icon: House },
     { href: "/produtos", label: l.produtos, icon: Shirt },
+    // MD-17: catálogo de personagens.
+    { href: "/personagens", label: l.personagens, icon: UserRound },
     { href: "/anuncios", label: l.anuncios, icon: Clapperboard },
     { href: "/creditos", label: l.creditos, icon: Coins },
   ];

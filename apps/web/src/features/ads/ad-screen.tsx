@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Archive, Download } from "lucide-react";
+import { Archive, Download, UserRoundPlus } from "lucide-react";
 import { Button, CostButton } from "@/components/ui/button";
 import { Banner } from "@/components/ui/feedback";
 import { fill } from "@/lib/copy";
@@ -29,9 +29,9 @@ export function AdScreen({
   prices,
   t,
 }: {
-  ad: { id: string; status: Status; formato: string; comTexto: boolean; videoUrl: string | null; cenas: SceneView[] };
-  prices: { gerarVideo: number; refazerQuadro: number; refazerClipe: number };
-  t: Pick<Dictionary, "anuncios" | "opcoes" | "copy" | "erros" | "refazer">;
+  ad: { id: string; status: Status; formato: string; comTexto: boolean; videoUrl: string | null; cenas: SceneView[]; personagemId?: string | null };
+  prices: { gerarVideo: number; refazerQuadro: number; refazerClipe: number; salvarPersonagem?: number };
+  t: Pick<Dictionary, "anuncios" | "opcoes" | "copy" | "erros" | "refazer" | "personagens">;
 }) {
   const router = useRouter();
   const a = t.anuncios;
@@ -91,6 +91,18 @@ export function AdScreen({
     setSaving(false);
     setMessage(r.ok ? (ok ? { tone: "success", text: ok } : null) : { tone: "danger", text: r.mensagem || t.erros.generico });
     if (r.ok) router.refresh();
+  }
+
+  // MD-17: salvar a modelo deste anúncio como personagem do catálogo (gera a ficha, cobra).
+  const canSaveCharacter = !ad.personagemId && ["aguardando_aprovacao", "pronto"].includes(ad.status) && ad.cenas.some((c) => c.quadros.some((q) => q.id === c.quadroAtualId && q.status === "pronto")) && !busy;
+  async function saveCharacter() {
+    const nome = window.prompt(t.personagens.salvarDoAnuncioPergunta, t.personagens.salvarDoAnuncioPadrao);
+    if (!nome?.trim()) return;
+    setSaving(true);
+    const r = await callApi<{ personagem_id: string }>("POST", `/api/anuncios/${ad.id}/salvar-personagem`, { nome: nome.trim().slice(0, 60) });
+    setSaving(false);
+    if (!r.ok) return setMessage({ tone: "danger", text: r.mensagem || t.erros.generico });
+    router.push(`/personagens/${r.data.personagem_id}`);
   }
 
   // Arquivar (seção 6): some da lista; recusado enquanto algo gera.
@@ -204,6 +216,20 @@ export function AdScreen({
               )
             )}
           </div>
+        </div>
+      )}
+
+      {canSaveCharacter && (
+        <div className="flex justify-center">
+          <CostButton
+            label={t.personagens.salvarDoAnuncio}
+            cost={prices.salvarPersonagem ?? 0}
+            balance={0}
+            variant="secondary"
+            icon={<UserRoundPlus className="size-4" />}
+            disabled={saving}
+            onClick={saveCharacter}
+          />
         </div>
       )}
 

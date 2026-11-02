@@ -252,7 +252,7 @@ export async function getAdView(actor: AdActor, anuncioId: string) {
   const db = createAdminClient();
   const { data: ad } = await db
     .from("anuncios")
-    .select("id, marca_id, produto_id, titulo, status, formato, com_texto, texto_oferta, arquivado, criado_em, atualizado_em, video_final_path, versao_montagem")
+    .select("id, marca_id, produto_id, titulo, status, formato, com_texto, texto_oferta, arquivado, criado_em, atualizado_em, video_final_path, versao_montagem, personagem_id")
     .eq("id", anuncioId)
     .maybeSingle();
   if (!ad || ad.arquivado) throw new BusinessError("anuncio_inexistente");
@@ -275,6 +275,7 @@ export async function getAdView(actor: AdActor, anuncioId: string) {
     status: ad.status as AdStatus,
     formato: ad.formato,
     comTexto: ad.com_texto,
+    personagemId: ad.personagem_id as string | null,
     textoOferta: ad.texto_oferta,
     videoUrl: ad.video_final_path ? (urls[ad.video_final_path] ?? null) : null,
     versaoMontagem: ad.versao_montagem,

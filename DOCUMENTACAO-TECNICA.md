@@ -23,6 +23,7 @@ Banco Postgres (Supabase), schema `public`, nomes em português `snake_case` exa
 | `precos_acoes` | Preço em créditos de cada ação (regra 11.1). |
 | `feedbacks` | Problemas e sugestões enviados pelos usuários (MD-6); cada um lê os próprios, o admin lê todos e muda o status. |
 | `pedidos_convite` | Pedidos de acesso da tela pública (MD-9); só o admin lê e muda o status. |
+| `personagens`, `fotos_personagem`, `fichas_personagem` | Catálogo de personagens (MD-17): modelo reaproveitável da marca com descrição em inglês (`modelo_en`), fotos de referência e versões da ficha (frente, 3/4, rosto, costas). Leitura da própria marca; escrita só pelo servidor. `anuncios.personagem_id` liga o anúncio à personagem. |
 | `downloads_anuncio` | Um registro por download do vídeo final (métrica da seção 21); gravado pelo servidor, lido só pelo admin. FK composta (anúncio, marca). |
 | `configuracoes` | Chave-valor da regra 11.6 (modelos, preços USD, cotações, contato de suporte). |
 
@@ -83,6 +84,7 @@ pagamentos N─1 pacotes_creditos;  pagamentos 1─0..1 movimentacoes_creditos (
 | [Marca] Anúncio | `anuncios`, `cenas`, `quadros`, `clipes` (sem colunas técnicas; service_role com posse conferida) | `GET /api/anuncios/:id` (polling + varredura), `PATCH /api/anuncios/:id` (arquivar), `PATCH .../textos`, `POST .../gerar-video`, `GET .../download` (+ `downloads_anuncio`), `POST /api/cenas/:id/{refazer-quadro,usar-quadro,refazer-clipe,usar-clipe}` (com atalhos de refação) |
 | [Marca] Anúncios | `anuncios` (não arquivados; filtro por produto e status) + quadro atual da cena 1, `produtos` | — |
 | [Marca] Créditos | `movimentacoes_creditos` com o item de cada linha (ficha → produto; quadro/clipe/anúncio → anúncio), `precos_acoes`, `pacotes_creditos` na moeda do idioma (MD-16), `pagamentos` | — |
+| [Marca] Personagens / Nova / Personagem | `personagens`, `fotos_personagem`, `fichas_personagem` (URLs assinadas), `anuncios` (com a personagem) | `POST /api/personagens`, Storage `produtos/<marca>/personagens/<id>/originais/*`, `POST …/fotos`, `POST|GET …/ficha`, `POST /api/fichas-personagem/:id/aprovar`, `PATCH /api/personagens/:id` (arquivar) |
 | [Admin] Custos | `marcas`, `anuncios`, `movimentacoes_creditos`, `geracoes`, `pagamentos` (pagos), `downloads_anuncio`, `configuracoes` (cotações) | `GET /api/admin/custos/csv` (seção 14) |
 | [Admin] Gerações | `geracoes` (+ `marcas.nome`), URL assinada do resultado | `POST /api/admin/geracoes/:id/reconsultar` |
 | [Admin] Pedidos de acesso | `pedidos_convite` | `PATCH /api/admin/pedidos/:id`, convite |
@@ -197,6 +199,12 @@ Quadros e clipes (8.5–8.7) reutilizam `submitGeneration`/`applyResult`/`failGe
 
 Imagens das cenas no modelo `modelo_quadro` (Marketing Studio Flare, MD-12); a ficha segue em `modelo_imagem` (Grok). Nova tentativa pós-nsfw manda a ficha sem o painel do close (B-9).
 
+### Pipeline da personagem (MD-17)
+1. `POST /api/personagens` cria a personagem; fotos opcionais vão direto ao Storage e são registradas por `POST …/fotos` (até 4, caminho amarrado por CHECK).
+2. `POST /api/personagens/:id/ficha`: saldo da Higgsfield conferido, débito (2 ou 1), versão `gerando`, geração `ficha_personagem` `na_fila`; o Claude escreve `modelo_en` (texto + fotos) na 1ª vez; prompt `personagem.v1`; Flare com as fotos como referência ou só texto. Resultado em `produtos/<marca>/personagens/<id>/fichas/`; falha definitiva → estorno.
+3. Anúncio com `personagem_id`: `roteiro.v5` recebe `modelo_fixo`, o código fixa `script.modelo = modelo_en`, e cada quadro manda [ficha da peça, ficha da personagem] com `FRAME_CHARACTER_LINE` (também na refação, na regeneração do QC e na nova tentativa pós-nsfw; o recorte pós-nsfw só vale para a ficha da peça).
+4. `POST /api/anuncios/:id/salvar-personagem`: personagem `origem = anuncio` com o `modelo` do roteiro e as imagens atuais das cenas como referência → ficha (2 créditos).
+
 ### Pipeline do vídeo — clipes e montagem (épicos 8.6/8.7; D-23)
 1. `POST /api/anuncios/:id/gerar-video`: 3 quadros atuais `pronto` e nenhum gerando → debita `gerar_video` (45, MD-4a) **uma vez** com referência ao anúncio → `gerando_clipes` → 3 `clipes` + `geracoes` `clipe_video` (Seedance 2.5, 5 s, 1080p, `generate_audio: true` — MD-11). Prompt: `prompt_movimento` (roteiro.v4: duas ações por cena — MD-10) + `CLAUSULA_AUDIO` + `CLAUSULA_VIDEO` no fim.
 2. Resultado copiado para `anuncios/<marca>/<anuncio>/clipes/…`. Falha definitiva da cena → clipe `falhou` + estorno de `floor(45/3) = 15` (referência ao clipe); a cena mostra "Refazer cena".
@@ -248,6 +256,7 @@ Imagens das cenas no modelo `modelo_quadro` (Marketing Studio Flare, MD-12); a f
 | MD-13 | CTA da marca opcional | Pedido do Alexandre. |
 | MD-14 | Fecho como cartela desfocada e escurecida (o logo nunca cobre a peça) | O logo cobria a modelo no 16:9. |
 | MD-15 | Fecho opcional por anúncio (`anuncios.com_fecho`) | O lojista pode querer só as cenas. |
+| MD-17 | Catálogo de personagens (aba Personagens; escolha no Novo anúncio; salvar a modelo do anúncio) | Pedido do Alexandre; `plans/I-2-personagens.md`. |
 | MD-16 | Pacotes por moeda; a tela mostra os da moeda do idioma (pt-BR → BRL) | A conta Stripe brasileira só cobra cartão brasileiro em BRL. |
 | D-25 | Tabela `downloads_anuncio` | A métrica "anúncios baixados por semana" (seção 21) precisa do registro; o spec não tinha onde guardar. |
 | D-27 | Tabelas e funções do AdFit **sem prefixo de sistema** no banco compartilhado (os outros apps usam `oc_`, `livros_`) | O spec exigia os nomes exatos da seção 7; o banco compartilhado foi decidido depois e só se conferiu colisão. Apontado pelo Alexandre em 01/11/2026 — mantido como está. Saída recomendada: projeto Supabase próprio do AdFit ao sair do piloto. Todo app novo no banco precisa conferir colisão com `marcas`, `perfis`, `produtos`, `anuncios`, `configuracoes`… |

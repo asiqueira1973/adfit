@@ -6,6 +6,7 @@ import { JourneySteps } from "@/features/journey/journey-steps";
 import { brandContext } from "@/server/brand/context";
 import { listActionPrices } from "@/server/brand/credits";
 import { listProducts } from "@/server/products/queries";
+import { listCharacters } from "@/server/characters/service";
 
 /**
  * Tela [Marca] Novo anúncio (seção 10; critério 8.5): só produtos com ficha aprovada (a imagem é a
@@ -23,7 +24,9 @@ export default function NewAdPage({ searchParams }: PageProps<"/anuncios/novo">)
 async function Wizard({ searchParams }: { searchParams: PageProps<"/anuncios/novo">["searchParams"] }) {
   const sp = await searchParams;
   const { profile, t } = await brandContext();
-  const [products, prices] = await Promise.all([listProducts(profile.marcaId), listActionPrices()]);
+  const [products, prices, chars] = await Promise.all([listProducts(profile.marcaId), listActionPrices(), listCharacters(profile.marcaId, { soProntas: true })]);
+  // Personagens prontas do catálogo (MD-17).
+  const characters = chars.map((ch) => ({ id: ch.id, nome: ch.nome, detalhe: `${t.opcoes.generosModelo[ch.genero]} · ${t.opcoes.faixasEtarias[ch.faixa]}`, imagem: ch.imagem }));
   const eligible = products.filter((p) => p.status === "pronto").map((p) => ({ id: p.id, nome: p.nome, genero_alvo: p.genero_alvo, imagem: p.imagem }));
   if (!eligible.length) {
     return <EmptyState image="/images/vazio-produtos.jpg" text={t.anuncios.semProdutos} action={<ButtonLink href="/produtos">{t.anuncios.irParaProdutos}</ButtonLink>} />;
@@ -35,7 +38,8 @@ async function Wizard({ searchParams }: { searchParams: PageProps<"/anuncios/nov
       products={eligible}
       price={prices.find((p) => p.acao === "gerar_roteiro_quadros")?.creditos ?? 0}
       initialProductId={typeof sp.produto === "string" ? sp.produto : undefined}
-      t={{ anuncios: t.anuncios, opcoes: t.opcoes, erros: t.erros }}
+      characters={characters}
+      t={{ anuncios: t.anuncios, opcoes: t.opcoes, erros: t.erros, personagens: t.personagens }}
       />
     </div>
   );
