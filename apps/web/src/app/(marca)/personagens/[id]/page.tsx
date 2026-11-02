@@ -56,7 +56,7 @@ async function Content({ params }: Pick<PageProps<"/personagens/[id]">, "params"
         prices={{ gerar: price("gerar_ficha_personagem"), refazer: price("refazer_ficha_personagem") }}
         hasPhotos
         t={{ produtos: t.produtos, copy: t.copy, erros: t.erros, refazer: t.refazer }}
-        api={{ sheet: `/api/personagens/${view.id}/ficha`, approve: (fid) => `/api/fichas-personagem/${fid}/aprovar` }}
+        api={{ sheet: `/api/personagens/${view.id}/ficha`, approveBase: "/api/fichas-personagem/" }}
         texts={{
           fichaTitulo: p.fichaTitulo,
           fichaExplica: p.fichaExplica,

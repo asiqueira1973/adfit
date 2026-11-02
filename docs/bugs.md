@@ -34,3 +34,6 @@ Vídeo da orla: pico de −4 dB aos 0,3 s da cena 1 (resto do ambiente ~−40 dB
 
 ## B-15 — Registro do clipe sempre com aspect_ratio 9:16 (01/11/2026)
 A entrada gravada em `geracoes` para os clipes trazia `aspect_ratio: "9:16"` fixo, mesmo em anúncio 16:9. Só o registro estava errado (o Seedance segue a proporção da imagem de entrada; o vídeo saía certo). Correção: `createClip` lê o formato do anúncio. Registros antigos de anúncios 16:9 corrigidos no banco. Teste: `clips.integration.test.ts` ("registro do clipe").
+
+## B-16 — Tela da personagem quebrava em produção (01/11/2026)
+A página (componente do servidor) passava uma função (`approve`) para o painel da ficha (componente do navegador); o Next.js não serializa funções e a página dava "This page couldn't load". Os testes do servidor não renderizam a página. Correção: o painel recebe `approveBase` (texto). Junto: o cartão da personagem mostrava "Sem ficha" com a ficha aguardando aprovação; agora mostra "Confira". Teste novo de `getCharacterView`.

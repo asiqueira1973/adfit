@@ -362,6 +362,7 @@ export const en: Dictionary = {
     pronta: "Ready",
     semFicha: "No sheet",
     preparando: "Preparing",
+    confira: "Review",
     fichaTitulo: "Character sheet",
     fichaExplica: "The sheet shows the person from the front, the side, the face and the back. It keeps the same model in every ad. You check it and approve.",
     gerarFicha: "Prepare the sheet",

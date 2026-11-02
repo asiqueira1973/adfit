@@ -279,7 +279,9 @@ export async function listCharacters(marcaId: string, opts: { soProntas?: boolea
     const aprovada = fichas.find((f) => f.id === c.ficha_aprovada_id);
     const ultima = [...fichas].filter((f) => f.imagem_path).sort((a, b) => b.versao - a.versao)[0];
     const gerando = fichas.some((f) => f.status === "gerando");
-    return { id: c.id, nome: c.nome, descricao: c.descricao, genero: c.genero_modelo, faixa: c.faixa_etaria, pronta: !!c.ficha_aprovada_id, gerando, imagemPath: (aprovada ?? ultima)?.imagem_path ?? null };
+    // Ficha pronta esperando aprovação ("Confira"), não "Sem ficha" (relato de 01/11/2026).
+    const aguardando = fichas.some((f) => f.status === "aguardando_aprovacao");
+    return { id: c.id, nome: c.nome, descricao: c.descricao, genero: c.genero_modelo, faixa: c.faixa_etaria, pronta: !!c.ficha_aprovada_id, gerando, aguardando, imagemPath: (aprovada ?? ultima)?.imagem_path ?? null };
   });
   const urls = await signBrandPaths(marcaId, rows.flatMap((r) => (r.imagemPath ? [r.imagemPath] : [])));
   return rows.map((r) => ({ ...r, imagem: r.imagemPath ? (urls[r.imagemPath] ?? null) : null }));

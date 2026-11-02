@@ -42,8 +42,12 @@ export function SheetPanel({
   prices: { gerar: number; refazer: number };
   hasPhotos: boolean;
   t: Pick<Dictionary, "produtos" | "copy" | "erros" | "refazer">;
-  /** Endereços (padrão: ficha do produto). A ficha de personagem (MD-17) usa os seus. */
-  api?: { sheet: string; approve: (fichaId: string) => string };
+  /**
+   * Endereços (padrão: ficha do produto). A ficha de personagem (MD-17) usa os seus. Só textos:
+   * a página é do servidor e não pode passar função para este componente do navegador (bug B-16).
+   * `approveBase` + `<id>/aprovar` = rota de aprovação.
+   */
+  api?: { sheet: string; approveBase: string };
   /** Textos que mudam entre ficha da peça e ficha de personagem (MD-17). */
   texts?: Partial<SheetTexts>;
 }) {
@@ -55,7 +59,7 @@ export function SheetPanel({
     ...texts,
   };
   const sheetUrl = api?.sheet ?? `/api/produtos/${produtoId}/ficha`;
-  const approveUrl = api?.approve ?? ((id: string) => `/api/fichas/${id}/aprovar`);
+  const approveUrl = (id: string) => `${api?.approveBase ?? "/api/fichas/"}${id}/aprovar`;
   const withImage = versions.filter((v) => v.url);
   const generating = versions.some((v) => v.status === "gerando");
   const latest = versions.at(-1);

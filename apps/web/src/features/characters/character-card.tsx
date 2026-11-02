@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
  * Cartão de personagem (MD-17): ficha (aprovada ou a última), nome, gênero/idade e selo.
  * Recebe: dados e rótulos traduzidos. Devolve: o link para a tela da personagem.
  */
-export function CharacterCard({ id, nome, detalhe, imagem, status, statusLabel }: { id: string; nome: string; detalhe: string; imagem: string | null; status: "pronta" | "gerando" | "sem_ficha"; statusLabel: string }) {
+export function CharacterCard({ id, nome, detalhe, imagem, status, statusLabel }: { id: string; nome: string; detalhe: string; imagem: string | null; status: "pronta" | "gerando" | "confira" | "sem_ficha"; statusLabel: string }) {
   return (
     <Link href={`/personagens/${id}`} className="group flex flex-col gap-2">
       <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-[14px] bg-[#EDEDED]">
@@ -21,7 +21,7 @@ export function CharacterCard({ id, nome, detalhe, imagem, status, statusLabel }
         <div className="line-clamp-1 text-[15px] font-semibold">{nome}</div>
         <div className="flex items-center gap-2 text-[12px] text-text-2">
           {detalhe}
-          <Badge tone={status === "pronta" ? "success" : status === "gerando" ? "processing" : "neutral"}>{statusLabel}</Badge>
+          <Badge tone={status === "pronta" ? "success" : status === "gerando" ? "processing" : status === "confira" ? "warning" : "neutral"}>{statusLabel}</Badge>
         </div>
       </div>
     </Link>

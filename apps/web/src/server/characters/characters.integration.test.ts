@@ -8,7 +8,7 @@ import { setGenerationDepsForTests, type GenerationDeps } from "../higgsfield/pr
 import { handleHiggsfieldWebhook } from "../higgsfield/webhook";
 import webhookCompleted from "../higgsfield/__fixtures__/webhook-completed.json";
 import webhookFailed from "../higgsfield/__fixtures__/webhook-failed.json";
-import { addCharacterPhotos, approveCharacterSheet, createCharacter, listCharacters, requestCharacterSheet, setCharacterAiForTests, type CharacterActor } from "./service";
+import { addCharacterPhotos, approveCharacterSheet, createCharacter, getCharacterView, listCharacters, requestCharacterSheet, setCharacterAiForTests, type CharacterActor } from "./service";
 
 /** Catálogo de personagens (MD-17, plans/I-2-personagens.md) contra o Supabase local, com dublês. */
 assertLocalSupabase();
@@ -123,5 +123,16 @@ describe("personagens (MD-17)", () => {
     const outro: CharacterActor = { ...actor, marcaId: outraMarcaId };
     expect(businessCodeOf(await requestCharacterSheet(outro, personagemId, undefined).catch((e) => e))).toBe("personagem_inexistente");
     expect(businessCodeOf(await addCharacterPhotos(actor, personagemId, [`produtos/${outraMarcaId}/personagens/${personagemId}/originais/x.png`]).catch((e) => e))).toBe("validacao");
+  });
+
+  it("tela da personagem: monta a visão com a ficha pronta (bug de 01/11/2026: a página quebrava)", async () => {
+    const { personagemId } = await createCharacter(actor, { nome: "Tela", genero_modelo: "mulher", faixa_etaria: "de_20_a_30" });
+    await requestCharacterSheet(actor, personagemId, undefined);
+    await deliver(webhookCompleted, hf.submitted.at(-1)!.requestId);
+    const view = await getCharacterView(actor, personagemId);
+    expect(view.nome).toBe("Tela");
+    expect(view.versoes).toHaveLength(1);
+    expect(view.versoes[0].status).toBe("aguardando_aprovacao");
+    expect(view.versoes[0].url).toMatch(/^http/);
   });
 });

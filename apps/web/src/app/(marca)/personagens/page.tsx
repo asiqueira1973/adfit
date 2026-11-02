@@ -30,7 +30,7 @@ async function Content() {
       ) : (
         <div className="grid grid-cols-1 gap-x-3 gap-y-5 sm:grid-cols-2 md:grid-cols-3">
           {chars.map((c) => {
-            const status = c.pronta ? "pronta" : c.gerando ? "gerando" : "sem_ficha";
+            const status = c.pronta ? "pronta" : c.gerando ? "gerando" : c.aguardando ? "confira" : "sem_ficha";
             return (
               <CharacterCard
                 key={c.id}
@@ -39,7 +39,7 @@ async function Content() {
                 detalhe={`${t.opcoes.generosModelo[c.genero]} · ${t.opcoes.faixasEtarias[c.faixa]}`}
                 imagem={c.imagem}
                 status={status}
-                statusLabel={status === "pronta" ? p.pronta : status === "gerando" ? p.preparando : p.semFicha}
+                statusLabel={status === "pronta" ? p.pronta : status === "gerando" ? p.preparando : status === "confira" ? p.confira : p.semFicha}
               />
             );
           })}

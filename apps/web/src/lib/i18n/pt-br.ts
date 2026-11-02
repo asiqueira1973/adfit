@@ -361,6 +361,7 @@ export const ptBR = {
     pronta: "Pronta",
     semFicha: "Sem ficha",
     preparando: "Preparando",
+    confira: "Confira",
     fichaTitulo: "Ficha da personagem",
     fichaExplica: "A ficha mostra a pessoa de frente, de lado, o rosto e as costas. É ela que mantém a mesma modelo em todos os anúncios. Você confere e aprova.",
     gerarFicha: "Preparar a ficha",
