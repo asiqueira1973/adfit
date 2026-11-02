@@ -80,7 +80,7 @@ const CLOSING_START = 12.5;
  *   área segura vertical entre 15% e 70% da altura; horizontal com margem de 6%;
  * - fecho de 12,5 s a 15 s como cartela (MD-14): cena desfocada e escurecida em 50%, logo centralizado (40% da largura no vertical,
  *   20% no horizontal), CTA abaixo na cor de destaque (branco se nula; opcional, MD-13) e oferta abaixo;
- * - som ambiente dos clipes (MD-11; clipe sem áudio entra mudo), entrada suave de 0,6 s por cena e
+ * - som ambiente dos clipes (MD-11; clipe sem áudio entra mudo), entrada suave de 0,8 s por cena e
  *   compressor contra estalos do áudio gerado, fade de 0,5 s no fim; AAC 128k;
  *   H.264 High, CRF 20, preset veryfast, +faststart.
  * Recebe: AssembleInput. Devolve: nada (grava `out`). Lança se o ffmpeg falhar.
@@ -114,8 +114,8 @@ export async function assembleVideo(input: AssembleInput): Promise<void> {
     // Som ambiente dos clipes (emenda MD-11): 5 s de cada, na ordem; clipe sem áudio entra mudo.
     // Fade de 0,5 s no fim. Sem música, voz ou narração (o prompt do clipe proíbe).
     for (let i = 0; i < 3; i++) {
-      // Entrada suave de 0,6 s: o Seedance às vezes gera um estalo no começo do clipe (relato de 01/11/2026).
-      const source = ffprobeInfo(input.clips[i]).audio ? `[${i}:a]atrim=0:${SCENE},asetpts=PTS-STARTPTS,aresample=48000,apad=whole_dur=${SCENE},afade=t=in:d=0.6:curve=cub` : `aevalsrc=0|0:d=${SCENE}:s=48000`;
+      // Entrada suave de 0,8 s: o Seedance às vezes gera um estalo no começo do clipe (relato de 01/11/2026).
+      const source = ffprobeInfo(input.clips[i]).audio ? `[${i}:a]atrim=0:${SCENE},asetpts=PTS-STARTPTS,aresample=48000,apad=whole_dur=${SCENE},afade=t=in:d=0.8:curve=cub` : `aevalsrc=0|0:d=${SCENE}:s=48000`;
       filters.push(`${source},aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[ca${i}]`);
     }
     // Compressor segura picos repentinos no resto do clipe sem apagar o ambiente.
