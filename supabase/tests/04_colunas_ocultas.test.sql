@@ -3,7 +3,7 @@
 -- coluna escondem os campos técnicos. O admin lê esses campos pelo servidor (service_role).
 begin;
 \ir 00_fixture.sql.inc
-select plan(7);
+select plan(9);
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
@@ -13,9 +13,12 @@ select throws_ok($$ select prompt_movimento from cenas $$, '42501', null, 'cenas
 select throws_ok($$ select roteiro from anuncios $$, '42501', null, 'anuncios.roteiro oculto');
 select throws_ok($$ select prompt_versao from anuncios $$, '42501', null, 'anuncios.prompt_versao oculto');
 select throws_ok($$ select qc_detalhe from quadros $$, '42501', null, 'quadros.qc_detalhe oculto');
+-- MD-17 (verificador): a descrição em inglês da personagem entra nos prompts.
+select throws_ok($$ select modelo_en from personagens $$, '42501', null, 'personagens.modelo_en oculto');
 -- O que a interface precisa continua legível.
 select lives_ok($$ select id, descricao, texto_tela, quadro_atual_id from cenas $$, 'cenas: campos de interface legíveis');
 select lives_ok($$ select id, titulo, status, video_final_path, versao_montagem from anuncios $$, 'anuncios: campos de interface legíveis');
+select lives_ok($$ select id, nome, descricao, genero_modelo, faixa_etaria, ficha_aprovada_id, arquivado from personagens $$, 'personagens: campos de interface legíveis');
 
 select * from finish();
 rollback;
