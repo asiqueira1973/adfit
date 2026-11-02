@@ -19,6 +19,7 @@ import { validateScreenText } from "@/lib/text-rules";
 import { emailOf, track } from "../analytics/track";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { assertProviderAvailable } from "../higgsfield/provider-health";
+import { characterForAd } from "../characters/service";
 
 /** Quem pede: usuário da marca (só a própria) ou admin (seção 13: rotas "marca/admin"). */
 export type AdActor = { id: string; papel: "admin_plataforma" | "usuario_marca"; marcaId: string | null; idioma: Locale; email?: string };
@@ -38,6 +39,8 @@ export const createAdSchema = z
     com_fecho: z.boolean().default(true),
     texto_oferta: z.string().trim().max(40).optional(),
     observacoes: z.string().trim().max(200).optional(),
+    // MD-17: personagem do catálogo (gênero e idade passam a vir dela).
+    personagem_id: z.string().uuid().optional(),
   })
   .strict();
 // Entrada (z.input): `com_fecho` é opcional para quem chama; o padrão é com fecho (MD-15).
@@ -63,6 +66,14 @@ export async function createAd(actor: AdActor, input: CreateAdInput, deps: { ai?
   if (!produto || (actor.papel !== "admin_plataforma" && actor.marcaId !== produto.marca_id)) throw new BusinessError("produto_inexistente");
   if (produto.arquivado) throw new BusinessError("produto_arquivado");
   if (!produto.ficha_aprovada_id) throw new BusinessError("produto_sem_ficha");
+  // Personagem do catálogo (MD-17): da mesma marca, não arquivada e com ficha aprovada.
+  let personagem: { id: string; genero_modelo: "mulher" | "homem"; faixa_etaria: "de_20_a_30" | "de_30_a_45" | "acima_de_45" } | null = null;
+  if (input.personagem_id) {
+    const { data: p } = await db.from("personagens").select("id, marca_id, arquivado, ficha_aprovada_id, genero_modelo, faixa_etaria").eq("id", input.personagem_id).maybeSingle();
+    if (!p || p.arquivado || p.marca_id !== produto.marca_id) throw new BusinessError("personagem_inexistente");
+    if (!p.ficha_aprovada_id) throw new BusinessError("personagem_sem_ficha");
+    personagem = p;
+  }
 
   const t = getDictionary(actor.idioma);
   const anuncioId = randomUUID();
@@ -89,8 +100,9 @@ export async function createAd(actor: AdActor, input: CreateAdInput, deps: { ai?
     titulo,
     cenario: input.cenario,
     modalidade: input.modalidade,
-    genero_modelo: input.genero_modelo,
-    faixa_etaria: input.faixa_etaria,
+    genero_modelo: personagem?.genero_modelo ?? input.genero_modelo,
+    faixa_etaria: personagem?.faixa_etaria ?? input.faixa_etaria,
+    personagem_id: personagem?.id ?? null,
     estilo: input.estilo,
     formato: input.formato,
     com_texto: input.com_texto,
@@ -129,6 +141,8 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
   const fichaPath = (ad.fichas_produto as { imagem_path: string | null }).imagem_path;
   const idiomaCriador = ((ad.perfis as { idioma: "pt_br" | "en" } | null)?.idioma ?? "pt_br") as "pt_br" | "en";
   const ai = deps.ai ?? aiClient();
+  // Personagem do catálogo (MD-17): descrição fixa e ficha da pessoa como 2ª referência.
+  const personagem = await characterForAd(ad.personagem_id as string | null, ad.marca_id);
 
   const fail = async (erro: string) => {
     if (await transition(anuncioId, "gerando_roteiro", "falhou", { erro: erro.slice(0, 500) })) {
@@ -169,8 +183,11 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
           texto_oferta: ad.texto_oferta,
         },
         observacoes_do_lojista: ad.observacoes,
+        ...(personagem ? { modelo_fixo: personagem.modeloEn } : {}),
       },
     });
+    // A modelo do catálogo vale mesmo se o Claude escrever outra (roteiro.v5 pede para copiar).
+    if (personagem) script = { ...script, modelo: personagem.modeloEn };
   } catch (e) {
     console.error(`Roteiro do anúncio ${anuncioId} falhou:`, e instanceof Error ? e.message : e);
     return fail(`roteiro: ${e instanceof Error ? e.message : String(e)}`);
@@ -201,13 +218,14 @@ export async function runAdPipeline(anuncioId: string, deps: { ai?: AiClient; ge
     cenas.map(async (cena) => {
       const quadroId = randomUUID();
       const entrada: GenerationInput & { prompt_cena: string; modelo: string } = {
-        prompt: buildFramePrompt(cena.prompt_quadro, script.modelo),
+        prompt: buildFramePrompt(cena.prompt_quadro, script.modelo, null, false, !!personagem),
         prompt_base: cena.prompt_quadro,
         prompt_versao: promptVersao,
-        referencias: [fichaPath!],
+        referencias: personagem ? [fichaPath!, personagem.fichaPath] : [fichaPath!],
         aspect_ratio: ad.formato === "vertical_9_16" ? "9:16" : "16:9",
         prompt_cena: cena.prompt_quadro,
         modelo: script.modelo,
+        personagem: !!personagem,
       };
       const { data: g, error: gErr } = await db
         .from("geracoes")

@@ -35,6 +35,8 @@ export type GenerationInput = {
   resumo_refacao?: string | null;
   /** Nova tentativa pós-nsfw de quadro: ficha sem o painel do close (bug B-9). */
   sem_close?: boolean;
+  /** Quadro com personagem do catálogo: a 2ª referência é a ficha da pessoa (MD-17). */
+  personagem?: boolean;
 };
 
 export type GenerationRow = {
@@ -294,7 +296,7 @@ export async function failGeneration(
 export function retryInput(g: GenerationRow, status: "falhou" | "bloqueada_nsfw"): GenerationInput {
   const entrada = g.entrada as GenerationInput & { prompt_cena?: string; modelo?: string; motivo_qc?: string | null };
   if (status !== "bloqueada_nsfw" || g.tipo !== "quadro_chave" || !entrada.prompt_cena || !entrada.modelo) return entrada;
-  return { ...entrada, prompt: buildFramePrompt(entrada.prompt_cena, entrada.modelo, entrada.motivo_qc, true), sem_close: true };
+  return { ...entrada, prompt: buildFramePrompt(entrada.prompt_cena, entrada.modelo, entrada.motivo_qc, true, !!entrada.personagem), sem_close: true };
 }
 
 /**

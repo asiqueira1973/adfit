@@ -14,9 +14,12 @@ import { readConfig } from "../config";
 import { transition } from "./stateMachine";
 import { emailOf, track } from "../analytics/track";
 import { assertProviderAvailable } from "../higgsfield/provider-health";
+import { characterForAd } from "../characters/service";
 
 /** Frases fixas da montagem do quadro (Anexo C.2 + roteiro.v2 aprovado em 01/11/2026). */
 export const FRAME_REFERENCE_LINE = "Reference image 1 is the garment reference sheet.";
+/** Personagem do catálogo (MD-17): a 2ª referência é a ficha da pessoa. */
+export const FRAME_CHARACTER_LINE = "Reference image 2 is the character sheet: the model is exactly this person — same face, hair, skin tone and body; ignore the sheet's plain outfit, panels and grey background.";
 export const FRAME_DRESS_LINE = "Dress the model in the garment shown in the sheet; do not reproduce the sheet layout, panels or grey background.";
 
 /** Linha da nova tentativa depois de bloqueio por conteúdo (nsfw): enquadramento aberto e discreto. */
@@ -54,15 +57,17 @@ export function stripBodyTerms(text: string): string {
  * `prompt_quadro` + a modelo única do anúncio + referência à ficha + "vista a peça" + motivo do QC
  * (só na regeneração automática, regra 11.5) + enquadramento discreto (só na nova tentativa depois
  * de nsfw) + `CLAUSULA_IMAGEM` sempre no fim. Partes do corpo saem do texto (stripBodyTerms).
- * Recebe: prompt da cena, descrição da modelo, motivo opcional e se é nova tentativa pós-nsfw.
+ * Recebe: prompt da cena, descrição da modelo, motivo opcional, se é nova tentativa pós-nsfw e se
+ * há personagem do catálogo (2ª referência, MD-17).
  * Devolve: o prompt final.
  */
-export function buildFramePrompt(promptQuadro: string, modelo: string, motivoQc?: string | null, safeRetry = false): string {
+export function buildFramePrompt(promptQuadro: string, modelo: string, motivoQc?: string | null, safeRetry = false, comPersonagem = false): string {
   const motivo = motivoQc ? stripBodyTerms(motivoQc.trim()) : "";
   return [
     stripBodyTerms(promptQuadro.replace(CLAUSULA_IMAGEM, "").trim()),
     `The model (same person in every scene): ${stripBodyTerms(modelo.trim())}`,
     FRAME_REFERENCE_LINE,
+    comPersonagem ? FRAME_CHARACTER_LINE : null,
     FRAME_DRESS_LINE,
     motivo ? `Fix from the previous attempt: ${motivo}` : null,
     safeRetry ? FRAME_SAFE_RETRY_LINE : null,
@@ -148,7 +153,7 @@ export async function runFrameQc(quadroId: string, deps: { ai?: AiClient; genera
     const g = await getGeneration(q.geracao_id);
     if (!g) return;
     const entrada = g.entrada as GenerationInput & { prompt_cena: string; modelo: string };
-    const prompt = buildFramePrompt(entrada.prompt_cena, entrada.modelo, qc.motivo);
+    const prompt = buildFramePrompt(entrada.prompt_cena, entrada.modelo, qc.motivo, false, !!entrada.personagem);
     const { data: saved } = await db.from("quadros").update({ qc_detalhe: detalhe as never, imagem_path: null }).eq("id", q.id).eq("geracao_id", g.id).eq("status", "gerando").select("id");
     if (!saved?.length) return;
     const nextId = await chainGeneration(g, { table: "quadros", id: q.id }, { tentativa: 1, entrada: { ...entrada, prompt, motivo_qc: qc.motivo } as GenerationInput });
@@ -249,7 +254,7 @@ export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: Re
     .maybeSingle();
   if (!cena) throw new BusinessError("anuncio_inexistente");
   if (actor.papel !== "admin_plataforma" && actor.marcaId !== cena.marca_id) throw new BusinessError("anuncio_inexistente");
-  const { data: ad } = await db.from("anuncios").select("status, roteiro, prompt_versao, ficha_id, fichas_produto!anuncios_ficha_id_fkey(imagem_path), formato").eq("id", cena.anuncio_id).single();
+  const { data: ad } = await db.from("anuncios").select("status, roteiro, prompt_versao, ficha_id, personagem_id, fichas_produto!anuncios_ficha_id_fkey(imagem_path), formato").eq("id", cena.anuncio_id).single();
   if (ad?.status !== "aguardando_aprovacao") throw new BusinessError("transicao_invalida");
   const quadros = [...((cena.quadros ?? []) as Array<{ id: string; versao: number; status: string; geracao_id: string | null }>)].sort((a, b) => b.versao - a.versao);
   if (quadros.some((q) => q.status === "gerando")) throw new BusinessError("transicao_invalida");
@@ -287,11 +292,14 @@ export async function redoFrame(actor: FrameActor, cenaId: string, instrucao: Re
   // Imagens das cenas no modelo próprio (MD-12: Marketing Studio Flare).
   const { modelo_quadro } = await readConfig(["modelo_quadro"]);
   const fichaPath = (ad.fichas_produto as unknown as { imagem_path: string }).imagem_path;
+  // Personagem do catálogo (MD-17): mantém a 2ª referência na refação.
+  const personagem = await characterForAd(ad.personagem_id as string | null, cena.marca_id);
   const entrada = {
-    prompt: buildFramePrompt(promptCena, modelo),
+    prompt: buildFramePrompt(promptCena, modelo, null, false, !!personagem),
     prompt_base: promptCena,
     prompt_versao: ad.prompt_versao ?? "",
-    referencias: [fichaPath],
+    referencias: personagem ? [fichaPath, personagem.fichaPath] : [fichaPath],
+    personagem: !!personagem,
     aspect_ratio: ad.formato === "vertical_9_16" ? "9:16" : "16:9",
     prompt_cena: promptCena,
     modelo,

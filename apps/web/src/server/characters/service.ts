@@ -312,3 +312,51 @@ export async function getCharacterView(actor: CharacterActor, personagemId: stri
     anuncios: ads ?? [],
   };
 }
+
+/**
+ * Personagem do catálogo de um anúncio (MD-17): descrição em inglês e caminho da ficha aprovada
+ * (na pasta da marca). Recebe: personagem (ou null) e marca. Devolve: dados ou null.
+ */
+export async function characterForAd(personagemId: string | null, marcaId: string): Promise<{ modeloEn: string; fichaPath: string } | null> {
+  if (!personagemId) return null;
+  const { data } = await createAdminClient()
+    .from("personagens")
+    .select("marca_id, modelo_en, fichas_personagem!personagens_ficha_aprovada_fk(imagem_path)")
+    .eq("id", personagemId)
+    .maybeSingle();
+  const fichaPath = (data?.fichas_personagem as unknown as { imagem_path: string | null } | null)?.imagem_path;
+  if (!data || data.marca_id !== marcaId || !data.modelo_en || !fichaPath || !fichaPath.startsWith(`produtos/${marcaId}/`)) return null;
+  return { modeloEn: data.modelo_en, fichaPath };
+}
+
+/**
+ * POST /api/anuncios/:id/salvar-personagem (MD-17): a modelo que ficou boa num anúncio vira
+ * personagem do catálogo — descrição = `modelo` do roteiro; referências = imagens atuais das 3
+ * cenas; gera a ficha (2 créditos). Só anúncio sem personagem do catálogo, com as imagens prontas.
+ * Recebe: ator, anúncio e nome. Devolve: { personagemId, fichaId }.
+ */
+export async function saveAdModelAsCharacter(
+  actor: CharacterActor,
+  anuncioId: string,
+  nome: string,
+  deps: { generation?: GenerationDeps; describer?: CharacterDescriber } = {},
+): Promise<{ personagemId: string; fichaId: string }> {
+  const db = createAdminClient();
+  const { data: ad } = await db.from("anuncios").select("id, marca_id, status, roteiro, genero_modelo, faixa_etaria, personagem_id, arquivado").eq("id", anuncioId).maybeSingle();
+  if (!ad || ad.arquivado) throw new BusinessError("anuncio_inexistente");
+  if (actor.papel !== "admin_plataforma" && actor.marcaId !== ad.marca_id) throw new BusinessError("anuncio_inexistente");
+  const modelo = (ad.roteiro as { modelo?: string } | null)?.modelo;
+  if (ad.personagem_id || !modelo || !["aguardando_aprovacao", "gerando_clipes", "montando", "pronto"].includes(ad.status)) throw new BusinessError("transicao_invalida");
+  const { data: cenas } = await db.from("cenas").select("quadros!cenas_quadro_atual_id_fkey(status, imagem_path)").eq("anuncio_id", anuncioId);
+  const prontas = (cenas ?? []).filter((c) => (c.quadros as unknown as { status: string; imagem_path: string | null } | null)?.status === "pronto");
+  if (!prontas.length) throw new BusinessError("cenas_incompletas");
+  const { data: p, error } = await db
+    .from("personagens")
+    .insert({ marca_id: ad.marca_id, nome: nome.trim().slice(0, 60) || "Personagem", genero_modelo: ad.genero_modelo, faixa_etaria: ad.faixa_etaria, modelo_en: modelo.slice(0, 600), origem: "anuncio", anuncio_origem_id: ad.id, criado_por: actor.id })
+    .select("id")
+    .single();
+  if (error) throw error;
+  await track({ nome: "adfit_personagem_do_anuncio", distinctId: actor.email ?? "", tela: "Anúncio", descricao: "salvou a modelo do anúncio como personagem", propriedades: { anuncio_id: ad.id, personagem_id: p.id } });
+  const { fichaId } = await requestCharacterSheet(actor, p.id, undefined, deps);
+  return { personagemId: p.id, fichaId };
+}

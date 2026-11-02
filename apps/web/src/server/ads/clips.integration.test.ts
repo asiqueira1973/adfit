@@ -304,3 +304,21 @@ describe("registro do clipe (B-15)", () => {
     expect(ratios).toEqual(["16:9", "16:9", "16:9"]);
   });
 });
+
+describe("salvar a modelo do anúncio como personagem (MD-17)", () => {
+  it("cria a personagem com o modelo do roteiro, as 3 imagens como referência e cobra a ficha (2)", async () => {
+    const { saveAdModelAsCharacter } = await import("../characters/service");
+    const ad = await readyAd();
+    const antes = await saldo();
+    const from = hf.submitted.length;
+    const { personagemId } = await saveAdModelAsCharacter(actor, ad.id, "Embaixadora");
+    expect(await saldo()).toBe(antes - 2);
+    const { data: p } = await db.from("personagens").select("nome, origem, modelo_en, anuncio_origem_id").eq("id", personagemId).single();
+    expect(p).toMatchObject({ nome: "Embaixadora", origem: "anuncio", modelo_en: SCRIPT.modelo, anuncio_origem_id: ad.id });
+    const sub = hf.submitted.slice(from).at(-1)!;
+    expect(sub.body.image_urls).toHaveLength(3);
+    // Não salva duas vezes a partir de um anúncio que já usa personagem.
+    await db.from("anuncios").update({ personagem_id: personagemId }).eq("id", ad.id);
+    expect(businessCodeOf(await saveAdModelAsCharacter(actor, ad.id, "De novo").catch((e) => e))).toBe("transicao_invalida");
+  });
+});

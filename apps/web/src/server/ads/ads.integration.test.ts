@@ -337,3 +337,44 @@ describe("biblioteca: filtros por produto e status (critério 8.8)", () => {
     expect(await ids({ produtoId: p2, status: "pronto" })).toEqual([]);
   });
 });
+
+describe("anúncio com personagem do catálogo (MD-17)", () => {
+  /** Personagem com ficha aprovada (imagem real no Storage local). */
+  async function approvedCharacter(marca = marcaId, aprovar = true): Promise<string> {
+    const { data: p } = await db.from("personagens").insert({ marca_id: marca, nome: `Ana ${sfx}`, genero_modelo: "mulher", faixa_etaria: "de_30_a_45", criado_por: actor.id, modelo_en: "Woman in her 30s, short platinum hair, freckles, athletic build." }).select("id").single();
+    const object = `${marca}/personagens/${p!.id}/fichas/v1-teste.png`;
+    await db.storage.from("produtos").upload(object, PNG, { contentType: "image/png", upsert: true });
+    const { data: f } = await db.from("fichas_personagem").insert({ personagem_id: p!.id, marca_id: marca, versao: 1, status: "aguardando_aprovacao", imagem_path: `produtos/${object}` }).select("id").single();
+    if (aprovar) await db.rpc("aprovar_ficha_personagem", { p_ficha_id: f!.id });
+    return p!.id;
+  }
+
+  it("usa a modelo do catálogo e manda 2 referências (peça + personagem) em cada cena", async () => {
+    const produto = await approvedProduct();
+    const personagem = await approvedCharacter();
+    const from = hf.submitted.length;
+    const { anuncioId } = await createAd(actor, input(produto, { personagem_id: personagem, genero_modelo: "homem", faixa_etaria: "de_20_a_30" }));
+    const { data: ad } = await db.from("anuncios").select("personagem_id, genero_modelo, faixa_etaria, roteiro").eq("id", anuncioId).single();
+    expect(ad!.personagem_id).toBe(personagem);
+    // Gênero e idade vêm da personagem, não do formulário.
+    expect([ad!.genero_modelo, ad!.faixa_etaria]).toEqual(["mulher", "de_30_a_45"]);
+    expect((ad!.roteiro as Script).modelo).toBe("Woman in her 30s, short platinum hair, freckles, athletic build.");
+    const frames = hf.submitted.slice(from);
+    expect(frames).toHaveLength(3);
+    for (const s of frames) {
+      expect(s.body.image_urls).toHaveLength(2);
+      expect(String(s.body.prompt)).toContain("Reference image 2 is the character sheet");
+      expect(String(s.body.prompt)).toContain("short platinum hair");
+    }
+  });
+
+  it("personagem sem ficha aprovada ou de outra marca é recusada sem débito", async () => {
+    const produto = await approvedProduct();
+    const semFicha = await approvedCharacter(marcaId, false);
+    const daOutra = await approvedCharacter(outraMarcaId);
+    const antes = await saldo();
+    expect(businessCodeOf(await createAd(actor, input(produto, { personagem_id: semFicha })).catch((e) => e))).toBe("personagem_sem_ficha");
+    expect(businessCodeOf(await createAd(actor, input(produto, { personagem_id: daOutra })).catch((e) => e))).toBe("personagem_inexistente");
+    expect(await saldo()).toBe(antes);
+  });
+});

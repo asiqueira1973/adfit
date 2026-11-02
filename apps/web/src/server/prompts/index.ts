@@ -18,7 +18,8 @@ export const PROMPT_VERSIONS = {
   // v3 (aprovado em 01/11/2026, depois do 1º teste real): modelo descrita por ação/postura/roupa, nunca por
   // partes do corpo — "chest slightly lifted" fez a Higgsfield barrar a cena 3 como nsfw duas vezes.
   // v4 (MD-10, 01/11/2026): duas ações por cena e câmera em movimento; a montagem corta cada cena em 2 planos.
-  roteiro: "roteiro.v4",
+  // v5 (MD-17, 01/11/2026): com personagem do catálogo, copia `modelo_fixo` no campo `modelo`.
+  roteiro: "roteiro.v5",
   qcQuadro: "qc-quadro.v1",
   // v2: revisão no idioma do texto (MD-1) e formato de saída explícito.
   qcTexto: "qc-texto.v2",
