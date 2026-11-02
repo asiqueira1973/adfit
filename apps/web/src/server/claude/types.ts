@@ -58,6 +58,12 @@ export const textReviewSchema = z.object({
 });
 export type TextReview = z.infer<typeof textReviewSchema>;
 
+/** Saída da ferramenta `salvar_personagem` (MD-17): descrição em inglês da aparência fixa. */
+export const characterSchema = z.object({
+  modelo_en: z.string().min(20).transform((s) => s.trim().slice(0, 600)),
+});
+export type CharacterDescription = z.infer<typeof characterSchema>;
+
 /** Imagem enviada ao Claude (base64, já reduzida para o limite da API). */
 export type ClaudeImage = { mediaType: "image/jpeg" | "image/png" | "image/webp"; data: string };
 
@@ -79,4 +85,12 @@ export interface AiClient extends PromptAdjuster {
   writeScript(input: ScriptInput): Promise<Script>;
   checkFrame(input: FrameQcInput): Promise<FrameQc>;
   reviewTexts(input: { system: string; textos: string[] }): Promise<TextReview>;
+}
+
+/** Entrada da descrição de personagem: system (personagem-descricao.v1), fotos e dados do lojista. */
+export type CharacterInput = { system: string; fotos: ClaudeImage[]; dados: Record<string, unknown> };
+
+/** Descreve a personagem do catálogo (MD-17). Separado do AiClient para não mexer nos dublês existentes. */
+export interface CharacterDescriber {
+  describeCharacter(input: CharacterInput): Promise<CharacterDescription>;
 }

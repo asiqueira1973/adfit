@@ -3,7 +3,7 @@ import { createAdminClient } from "../db/supabase";
 
 export type GenerationFilter = { tipo?: string | null; status?: string | null; marcaId?: string | null };
 
-const TIPOS = ["ficha_produto", "quadro_chave", "clipe_video"] as const;
+const TIPOS = ["ficha_produto", "quadro_chave", "clipe_video", "ficha_personagem"] as const;
 const STATUS = ["na_fila", "processando", "concluida", "falhou", "bloqueada_nsfw"] as const;
 /** Quantas gerações a lista mostra (as mais recentes). */
 export const GENERATIONS_LIMIT = 200;

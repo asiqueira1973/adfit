@@ -61,4 +61,5 @@ O app terá pt-BR e inglês (emenda MD-1 em `docs/mudancas-de-escopo.md`); nenhu
 - Stripe Brasil: cartão brasileiro só paga em BRL — pacote novo precisa de Price em BRL e em USD (MD-16); `price_…`, nunca `prod_…`.
 - GitHub Actions: `run:` com `Authorization: Bearer …` sem aspas quebra o YAML (`: ` vira chave); use bloco `run: |` e o segredo via `env`.
 - Depois de migration, regenere `schema.sql` (`supabase db dump --local --schema public -f schema.sql`) no mesmo commit.
+- Banco compartilhado sem prefixo (D-27): as tabelas do AdFit não têm prefixo de sistema (os outros apps usam `oc_`, `livros_`). Não renomear; antes de criar objeto novo, conferir colisão de nome no remoto. Plano de saída: projeto Supabase próprio.
 - Quando o agente errar a mesma coisa duas vezes, a correção entra aqui.

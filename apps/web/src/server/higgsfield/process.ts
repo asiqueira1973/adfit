@@ -40,7 +40,7 @@ export type GenerationInput = {
 export type GenerationRow = {
   id: string;
   marca_id: string;
-  tipo: "ficha_produto" | "quadro_chave" | "clipe_video";
+  tipo: "ficha_produto" | "quadro_chave" | "clipe_video" | "ficha_personagem";
   modelo: string;
   request_id: string | null;
   status: "na_fila" | "processando" | "concluida" | "falhou" | "bloqueada_nsfw";
@@ -112,7 +112,7 @@ function mediaType(contentType: string, tipo: GenerationRow["tipo"]): { ext: str
  * acontece depois de gravar ou da falha definitiva.
  */
 export type GenerationTarget = {
-  table: "fichas_produto" | "quadros" | "clipes";
+  table: "fichas_produto" | "quadros" | "clipes" | "fichas_personagem";
   id: string;
   /** Caminho completo (com bucket) do arquivo do resultado. */
   path(ext: string): string;
@@ -127,6 +127,7 @@ async function findTarget(g: GenerationRow): Promise<GenerationTarget | null> {
   if (g.tipo === "ficha_produto") return sheetTarget(g);
   if (g.tipo === "quadro_chave") return frameTarget(g);
   if (g.tipo === "clipe_video") return clipTarget(g);
+  if (g.tipo === "ficha_personagem") return characterSheetTarget(g);
   throw new Error(`tipo_nao_suportado:${g.tipo}`);
 }
 
@@ -160,13 +161,41 @@ async function sheetTarget(g: GenerationRow): Promise<GenerationTarget | null> {
   };
 }
 
+/** Alvo `fichas_personagem` (MD-17): grava em `produtos/<marca>/personagens/<id>/fichas/`, libera para aprovação; falha → estorno. */
+async function characterSheetTarget(g: GenerationRow): Promise<GenerationTarget | null> {
+  const db = createAdminClient();
+  const { data: ficha } = await db.from("fichas_personagem").select("id, personagem_id, versao").eq("geracao_id", g.id).maybeSingle();
+  if (!ficha) return null;
+  return {
+    table: "fichas_personagem",
+    id: ficha.id,
+    path: (ext) => `${PHOTO_BUCKET}/${g.marca_id}/personagens/${ficha.personagem_id}/fichas/v${ficha.versao}-${g.id}.${ext}`,
+    afterStored: async (_g, path) => {
+      await db.from("fichas_personagem").update({ imagem_path: path, status: "aguardando_aprovacao" }).eq("id", ficha.id).eq("geracao_id", g.id).eq("status", "gerando");
+    },
+    afterFinalFailure: async (gen) => {
+      const { data: failed } = await db.from("fichas_personagem").update({ status: "falhou" }).eq("id", ficha.id).eq("geracao_id", gen.id).eq("status", "gerando").select("id");
+      if (failed?.length && gen.cobranca_id) {
+        const { error } = await db.rpc("estornar_creditos", {
+          p_movimentacao_id: gen.cobranca_id,
+          p_observacao: `Falha técnica na personagem (versão ${ficha.versao})`,
+          p_referencia_tipo: "personagem",
+          p_referencia_id: ficha.personagem_id,
+        });
+        if (error && error.message !== "ja_estornado") throw error;
+      }
+    },
+  };
+}
+
 /** Custo USD de uma geração concluída (seção 7.3): imagem = `preco_usd_por_imagem`; clipe = 5 s × preço/s. */
 async function generationCost(g: GenerationRow): Promise<number> {
   const { preco_usd_por_imagem, preco_usd_por_quadro, preco_usd_por_segundo_video } = await readConfig(["preco_usd_por_imagem", "preco_usd_por_quadro", "preco_usd_por_segundo_video"]);
   // Clipe: 5 s × preço por segundo (11.6; MD-4: Seedance 2.5 1080p).
   if (g.tipo === "clipe_video") return Math.round(Number(preco_usd_por_segundo_video) * 5 * 10000) / 10000;
   // Imagem da cena no modelo próprio (MD-12); ficha no modelo de imagem (MD-4).
-  return Number(g.tipo === "quadro_chave" ? preco_usd_por_quadro : preco_usd_por_imagem);
+  // Ficha de personagem também sai no Flare (`modelo_personagem`, MD-17).
+  return Number(g.tipo === "quadro_chave" || g.tipo === "ficha_personagem" ? preco_usd_por_quadro : preco_usd_por_imagem);
 }
 
 /**

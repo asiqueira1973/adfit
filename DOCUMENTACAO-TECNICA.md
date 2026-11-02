@@ -250,6 +250,7 @@ Imagens das cenas no modelo `modelo_quadro` (Marketing Studio Flare, MD-12); a f
 | MD-15 | Fecho opcional por anúncio (`anuncios.com_fecho`) | O lojista pode querer só as cenas. |
 | MD-16 | Pacotes por moeda; a tela mostra os da moeda do idioma (pt-BR → BRL) | A conta Stripe brasileira só cobra cartão brasileiro em BRL. |
 | D-25 | Tabela `downloads_anuncio` | A métrica "anúncios baixados por semana" (seção 21) precisa do registro; o spec não tinha onde guardar. |
+| D-27 | Tabelas e funções do AdFit **sem prefixo de sistema** no banco compartilhado (os outros apps usam `oc_`, `livros_`) | O spec exigia os nomes exatos da seção 7; o banco compartilhado foi decidido depois e só se conferiu colisão. Apontado pelo Alexandre em 01/11/2026 — mantido como está. Saída recomendada: projeto Supabase próprio do AdFit ao sair do piloto. Todo app novo no banco precisa conferir colisão com `marcas`, `perfis`, `produtos`, `anuncios`, `configuracoes`… |
 | D-26 | Meta "créditos por anúncio pronto ≤ 22" (seção 21) não se aplica | Com os preços do MD-4a um anúncio completo custa 47 créditos; o painel mostra o valor sem meta. |
 
 ### Varredura periódica (01/11/2026)

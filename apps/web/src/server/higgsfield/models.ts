@@ -5,7 +5,7 @@
 
 export type ImageRequest = { prompt: string; imageUrls: string[]; aspectRatio: "16:9" | "9:16" };
 
-type ImageAdapter = { maxRefs: number; build: (r: ImageRequest) => Record<string, unknown> };
+type ImageAdapter = { maxRefs: number; build: (r: ImageRequest) => Record<string, unknown>; textOnly?: boolean };
 
 /** Modelos de edição de imagem com referência suportados (docs.higgsfield.ai, conferido em 01/11/2026). */
 const IMAGE_MODELS: Record<string, ImageAdapter> = {
@@ -18,7 +18,9 @@ const IMAGE_MODELS: Record<string, ImageAdapter> = {
   // MD-12: imagens das cenas (o Grok barrava como nsfw toda cena de corrida de top). Até 16 referências.
   "marketing-studio/image/flare": {
     maxRefs: 16,
-    build: (r) => ({ prompt: r.prompt, image_urls: r.imageUrls.slice(0, 16), aspect_ratio: r.aspectRatio, resolution: "2k", quality: "high", enhance_prompt: false }),
+    // Sem referência = texto para imagem (personagem criada só por descrição, MD-17).
+    textOnly: true,
+    build: (r) => ({ prompt: r.prompt, ...(r.imageUrls.length ? { image_urls: r.imageUrls.slice(0, 16) } : {}), aspect_ratio: r.aspectRatio, resolution: "2k", quality: "high", enhance_prompt: false }),
   },
   "alibaba/qwen-image-3/edit": {
     maxRefs: 3,
@@ -38,7 +40,7 @@ export function isKnownImageModel(endpoint: string): boolean {
 export function buildImageBody(endpoint: string, request: ImageRequest): Record<string, unknown> {
   const adapter = IMAGE_MODELS[endpoint];
   if (!adapter) throw new Error(`modelo_desconhecido:${endpoint}`);
-  if (!request.imageUrls.length) throw new Error("sem_referencias");
+  if (!request.imageUrls.length && !adapter.textOnly) throw new Error("sem_referencias");
   return adapter.build(request);
 }
 

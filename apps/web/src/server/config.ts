@@ -5,6 +5,7 @@ import { createAdminClient } from "./db/supabase";
 export type ConfigKey =
   | "modelo_imagem"
   | "modelo_quadro"
+  | "modelo_personagem"
   | "preco_usd_por_quadro"
   | "modelo_video"
   | "resolucao_video"

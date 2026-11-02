@@ -21,7 +21,8 @@ export async function referenceUrls(marcaId: string, paths: string[], hf: Genera
       const { data, error } = await storage.from(bucket).download(object);
       if (error || !data) throw error ?? new Error("download_falhou");
       let jpeg = await toJpeg(new Uint8Array(await data.arrayBuffer()));
-      if (options.dropCloseUp && object.includes("/fichas/")) jpeg = await dropCloseUpPanel(jpeg);
+      // Só a ficha da PEÇA tem o painel do close (a de personagem tem 4 painéis de pessoa).
+      if (options.dropCloseUp && object.includes("/fichas/") && !object.includes("/personagens/")) jpeg = await dropCloseUpPanel(jpeg);
       return hf.uploadInput(new Uint8Array(jpeg), "image/jpeg");
     }),
   );

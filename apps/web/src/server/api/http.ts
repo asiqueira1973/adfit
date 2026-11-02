@@ -53,6 +53,9 @@ export function businessError(code: string, t: Dictionary, supportContact = ""):
     produto_sem_ficha: { mensagem: t.erros.produtoSemFicha, status: 422 },
     cenas_incompletas: { mensagem: t.erros.cenasIncompletas, status: 409 },
     servico_indisponivel: { mensagem: t.erros.servicoIndisponivel, status: 503 },
+    personagem_inexistente: { mensagem: t.erros.personagemInexistente, status: 404 },
+    personagem_sem_ficha: { mensagem: t.erros.personagemSemFicha, status: 422 },
+    limite_fotos: { mensagem: t.erros.limiteFotos, status: 422 },
   };
   return map[code] ?? { mensagem: t.erros.generico, status: 500 };
 }

@@ -22,6 +22,9 @@ export const PROMPT_VERSIONS = {
   qcQuadro: "qc-quadro.v1",
   // v2: revisão no idioma do texto (MD-1) e formato de saída explícito.
   qcTexto: "qc-texto.v2",
+  // MD-17 (catálogo de personagens): descrição em inglês da personagem e a ficha de personagem.
+  personagemDescricao: "personagem-descricao.v1",
+  personagem: "personagem.v1",
   tabelaModalidades: "tabela-modalidades.v1",
   tabelaEstilos: "tabela-estilos.v1",
 } as const;

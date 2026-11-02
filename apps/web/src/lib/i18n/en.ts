@@ -158,7 +158,7 @@ export const en: Dictionary = {
     reconsultado: "Checked. Refresh the page to see the new status.",
     semGeracoes: "No generations with these filters.",
     limite: "Showing the {n} most recent.",
-    tipos: { ficha_produto: "Sheet", quadro_chave: "Scene image", clipe_video: "Clip" },
+    tipos: { ficha_produto: "Sheet", quadro_chave: "Scene image", clipe_video: "Clip", ficha_personagem: "Character" },
     statusGeracao: { na_fila: "Queued", processando: "Processing", concluida: "Done", falhou: "Failed", bloqueada_nsfw: "Blocked" },
   },
   admin: {
@@ -274,6 +274,9 @@ export const en: Dictionary = {
     transicaoInvalida: "This action isn't available right now.",
     geracaoInexistente: "Generation not found.",
     cenasIncompletas: "Pick a ready image for each of the 3 scenes before generating the video.",
+    personagemInexistente: "Character not found.",
+    personagemSemFicha: "Approve the character sheet before using it in an ad.",
+    limiteFotos: "Up to 4 photos.",
     servicoIndisponivel: "We are having a technical issue creating images and videos. You were not charged. Please try again shortly.",
     anuncioInexistente: "Ad not found.",
     produtoSemFicha: "Approve the reference image before creating the ad.",

@@ -6,11 +6,13 @@ import { readConfig } from "../config";
 import { loadPrompt } from "../prompts";
 import {
   adjustedPromptSchema,
+  characterSchema,
   frameQcSchema,
   scriptSchema,
   textReviewSchema,
   type AdjustInput,
   type AiClient,
+  type CharacterDescriber,
   type ClaudeImage,
 } from "./types";
 
@@ -79,6 +81,12 @@ const SAVE_QC_TOOL: Tool = {
 };
 
 /** Ferramenta do Anexo C.6 (formato de saída do qc-texto.v2). */
+const SAVE_CHARACTER_TOOL: Tool = {
+  name: "salvar_personagem",
+  description: "Salva a descrição em inglês da aparência fixa da personagem.",
+  input_schema: { type: "object", properties: { modelo_en: { type: "string", description: "40 a 90 palavras, em inglês" } }, required: ["modelo_en"] },
+};
+
 const SAVE_TEXT_REVIEW_TOOL: Tool = {
   name: "salvar_revisao_texto",
   description: "Salva a revisão de cada texto de tela.",
@@ -199,6 +207,39 @@ export function createClaudeClient(): AiClient {
         textReviewSchema,
         1500,
       ),
+  };
+}
+
+/**
+ * Descrição da personagem do catálogo (MD-17): texto do lojista + fotos de referência → `modelo_en`.
+ * Mesmo padrão de tool use forçado com validação Zod e 2 tentativas. Recebe: nada. Devolve: CharacterDescriber.
+ */
+export function createCharacterDescriber(): CharacterDescriber {
+  const client = new Anthropic({ apiKey: anthropicEnv().ANTHROPIC_API_KEY, maxRetries: 1, timeout: 90_000 });
+  return {
+    async describeCharacter(input) {
+      const { modelo_claude_roteiro } = await readConfig(["modelo_claude_roteiro"]);
+      let lastError: unknown;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const response = await client.messages.create({
+            model: String(modelo_claude_roteiro),
+            max_tokens: 800,
+            system: input.system,
+            tools: [SAVE_CHARACTER_TOOL],
+            tool_choice: { type: "tool", name: SAVE_CHARACTER_TOOL.name },
+            messages: [{ role: "user", content: [...input.fotos.map(imageBlock), { type: "text", text: `Dados (JSON):\n${JSON.stringify(input.dados, null, 2)}` }] }],
+          });
+          const block = response.content.find((b) => b.type === "tool_use");
+          const parsed = characterSchema.safeParse(block && "input" in block ? block.input : null);
+          if (parsed.success) return parsed.data;
+          lastError = new Error("claude_fora_do_schema: modelo_en");
+        } catch (e) {
+          lastError = e;
+        }
+      }
+      throw lastError instanceof Error ? lastError : new Error("claude_falhou");
+    },
   };
 }
 

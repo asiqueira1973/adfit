@@ -12,6 +12,10 @@ export type ClientEvent = (typeof CLIENT_EVENTS)[number];
 export type EventName =
   | ClientEvent
   | "adfit_ficha_solicitada"
+  | "adfit_personagem_criada"
+  | "adfit_personagem_ficha_solicitada"
+  | "adfit_personagem_aprovada"
+  | "adfit_personagem_do_anuncio"
   | "adfit_ficha_aprovada"
   | "adfit_anuncio_criado"
   | "adfit_anuncio_cenas_prontas"

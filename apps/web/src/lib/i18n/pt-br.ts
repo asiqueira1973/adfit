@@ -157,7 +157,7 @@ export const ptBR = {
     reconsultado: "Consultado. Atualize a página para ver o novo status.",
     semGeracoes: "Nenhuma geração com esses filtros.",
     limite: "Mostrando as {n} mais recentes.",
-    tipos: { ficha_produto: "Ficha", quadro_chave: "Imagem de cena", clipe_video: "Clipe" },
+    tipos: { ficha_produto: "Ficha", quadro_chave: "Imagem de cena", clipe_video: "Clipe", ficha_personagem: "Personagem" },
     statusGeracao: { na_fila: "Na fila", processando: "Processando", concluida: "Concluída", falhou: "Falhou", bloqueada_nsfw: "Bloqueada" },
   },
   admin: {
@@ -273,6 +273,9 @@ export const ptBR = {
     transicaoInvalida: "Essa ação não está disponível agora.",
     geracaoInexistente: "Geração não encontrada.",
     cenasIncompletas: "Escolha uma imagem pronta para cada uma das 3 cenas antes de gerar o vídeo.",
+    personagemInexistente: "Personagem não encontrada.",
+    personagemSemFicha: "Aprove a ficha da personagem antes de usá-la num anúncio.",
+    limiteFotos: "São no máximo 4 fotos.",
     servicoIndisponivel: "Estamos com uma instabilidade técnica para criar imagens e vídeos. Nada foi cobrado. Tente de novo daqui a pouco.",
     anuncioInexistente: "Anúncio não encontrado.",
     produtoSemFicha: "Aprove a ficha do produto antes de criar o anúncio.",
