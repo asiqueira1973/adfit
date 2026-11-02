@@ -83,14 +83,14 @@ const preco = async (acao: "gerar_video" | "refazer_clipe") => (await db.from("p
 const status = async (id: string) => (await db.from("anuncios").select("status").eq("id", id).single()).data!.status;
 
 /** Anúncio pronto para gerar vídeo (3 quadros aprovados). */
-async function readyAd(): Promise<{ id: string; cenas: Array<{ id: string; ordem: number }> }> {
+async function readyAd(formato: "vertical_9_16" | "horizontal_16_9" = "vertical_9_16"): Promise<{ id: string; cenas: Array<{ id: string; ordem: number }> }> {
   const { data: p } = await db.from("produtos").insert({ marca_id: marcaId, nome: `Bermuda ${sfx}`, categoria: "shorts" }).select("id").single();
   const object = `${marcaId}/${p!.id}/fichas/v1-teste.png`;
   await db.storage.from("produtos").upload(object, PNG, { contentType: "image/png", upsert: true });
   const { data: f } = await db.from("fichas_produto").insert({ produto_id: p!.id, marca_id: marcaId, versao: 1, status: "aguardando_aprovacao", imagem_path: `produtos/${object}` }).select("id").single();
   await db.rpc("aprovar_ficha", { p_ficha_id: f!.id });
   const from = hf.submitted.length;
-  const { anuncioId } = await createAd(actor, { produto_id: p!.id, cenario: "box_crossfit", modalidade: "crossfit", genero_modelo: "homem", faixa_etaria: "de_30_a_45", estilo: "energetico", formato: "vertical_9_16", com_texto: true });
+  const { anuncioId } = await createAd(actor, { produto_id: p!.id, cenario: "box_crossfit", modalidade: "crossfit", genero_modelo: "homem", faixa_etaria: "de_30_a_45", estilo: "energetico", formato, com_texto: true });
   for (const s of hf.submitted.slice(from)) await deliver(webhookCompleted, s.requestId);
   expect(await status(anuncioId)).toBe("aguardando_aprovacao");
   const { data: cenas } = await db.from("cenas").select("id, ordem").eq("anuncio_id", anuncioId).order("ordem");
@@ -292,5 +292,15 @@ describe("clipes órfãos (B-14)", () => {
     await refreshAd(ad.id, later());
     expect(await saldo()).toBe(antes);
     expect(await status(ad.id)).not.toBe("gerando_clipes");
+  });
+});
+
+describe("registro do clipe (B-15)", () => {
+  it("anúncio 16:9 grava aspect_ratio 16:9 na entrada da geração do clipe (antes ficava sempre 9:16)", async () => {
+    const ad = await readyAd("horizontal_16_9");
+    await startVideo(actor, ad.id);
+    const { data } = await db.from("clipes").select("geracoes!clipes_geracao_id_fkey(entrada)").in("cena_id", ad.cenas.map((c) => c.id));
+    const ratios = (data ?? []).map((c) => ((c.geracoes as unknown as { entrada: { aspect_ratio: string } }).entrada.aspect_ratio));
+    expect(ratios).toEqual(["16:9", "16:9", "16:9"]);
   });
 });
