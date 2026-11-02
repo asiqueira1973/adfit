@@ -247,7 +247,7 @@ export const ptBR = {
     statusPagamento: { iniciado: "Iniciado", pago: "Pago", falhou: "Falhou", expirado: "Expirado", reembolsado: "Reembolsado" },
     statusAnuncio: { gerando_roteiro: "Preparando", gerando_quadros: "Criando cenas", aguardando_aprovacao: "Escolha as cenas", gerando_clipes: "Animando", montando: "Montando vídeo", pronto: "Pronto", falhou: "Falhou" },
     tipoMovimentacao: { compra: "Compra", bonus: "Bônus", consumo: "Consumo", estorno: "Estorno", ajuste_manual: "Ajuste" },
-    acoes: { gerar_ficha: "Gerar ficha do produto", refazer_ficha: "Refazer ficha", gerar_roteiro_quadros: "Criar anúncio", refazer_quadro: "Refazer imagem da cena", gerar_video: "Gerar vídeo", refazer_clipe: "Refazer cena em vídeo", remontar_texto: "Atualizar vídeo" },
+    acoes: { gerar_ficha: "Gerar ficha do produto", refazer_ficha: "Refazer ficha", gerar_roteiro_quadros: "Criar anúncio", refazer_quadro: "Refazer imagem da cena", gerar_video: "Gerar vídeo", refazer_clipe: "Refazer cena em vídeo", remontar_texto: "Atualizar vídeo", gerar_ficha_personagem: "Criar personagem", refazer_ficha_personagem: "Refazer personagem" },
   },
   erros: {
     validacao: "Confira os campos destacados.",

@@ -30,7 +30,9 @@ CREATE TYPE "public"."acao_cobravel" AS ENUM (
     'refazer_quadro',
     'gerar_video',
     'refazer_clipe',
-    'remontar_texto'
+    'remontar_texto',
+    'gerar_ficha_personagem',
+    'refazer_ficha_personagem'
 );
 
 
@@ -159,6 +161,16 @@ CREATE TYPE "public"."modalidade" AS ENUM (
 ALTER TYPE "public"."modalidade" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."origem_personagem" AS ENUM (
+    'descricao',
+    'fotos',
+    'anuncio'
+);
+
+
+ALTER TYPE "public"."origem_personagem" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."papel_usuario" AS ENUM (
     'admin_plataforma',
     'usuario_marca'
@@ -242,7 +254,8 @@ ALTER TYPE "public"."status_pagamento" OWNER TO "postgres";
 CREATE TYPE "public"."tipo_geracao" AS ENUM (
     'ficha_produto',
     'quadro_chave',
-    'clipe_video'
+    'clipe_video',
+    'ficha_personagem'
 );
 
 
@@ -291,6 +304,34 @@ $$;
 
 
 ALTER FUNCTION "public"."aprovar_ficha"("p_ficha_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."aprovar_ficha_personagem"("p_ficha_id" "uuid") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_ficha public.fichas_personagem%rowtype;
+begin
+  select * into v_ficha from public.fichas_personagem where id = p_ficha_id;
+  if not found then
+    raise exception 'ficha_inexistente';
+  end if;
+  perform 1 from public.personagens where id = v_ficha.personagem_id for update;
+  select * into v_ficha from public.fichas_personagem where id = p_ficha_id for update;
+  if v_ficha.status not in ('aguardando_aprovacao', 'aprovada', 'descartada') or v_ficha.imagem_path is null then
+    raise exception 'transicao_invalida';
+  end if;
+  update public.fichas_personagem set status = 'aprovada' where id = p_ficha_id;
+  update public.fichas_personagem set status = 'descartada'
+  where personagem_id = v_ficha.personagem_id and id <> p_ficha_id and status in ('aguardando_aprovacao', 'aprovada');
+  update public.personagens set ficha_aprovada_id = p_ficha_id where id = v_ficha.personagem_id;
+  return v_ficha.personagem_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."aprovar_ficha_personagem"("p_ficha_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."bloquear_alteracao_movimentacao"() RETURNS "trigger"
@@ -605,6 +646,23 @@ $$;
 ALTER FUNCTION "public"."lancar_creditos"("p_marca_id" "uuid", "p_tipo" "public"."tipo_movimentacao", "p_quantidade" integer, "p_valor_pago_centavos" integer, "p_observacao" "text", "p_criado_por" "uuid", "p_moeda" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."limitar_fotos_personagem"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  perform 1 from public.personagens where id = new.personagem_id for update;
+  if (select count(*) from public.fotos_personagem where personagem_id = new.personagem_id) >= 4 then
+    raise exception 'limite_fotos';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."limitar_fotos_personagem"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."limitar_fotos_produto"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -663,6 +721,25 @@ $$;
 
 
 ALTER FUNCTION "public"."pegar_proximo_anuncio_para_montar"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."pode_gravar_foto_personagem"("p_nome" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select (storage.foldername(p_nome))[2] = 'personagens'
+     and (storage.foldername(p_nome))[4] = 'originais'
+     and ((storage.foldername(p_nome))[1] = public.minha_marca_id()::text or public.eh_admin())
+     and exists (
+       select 1 from public.personagens p
+       where p.id::text = (storage.foldername(p_nome))[3]
+         and p.marca_id::text = (storage.foldername(p_nome))[1]
+         and not p.arquivado
+     );
+$$;
+
+
+ALTER FUNCTION "public"."pode_gravar_foto_personagem"("p_nome" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."pode_gravar_original"("p_nome" "text") RETURNS boolean
@@ -732,6 +809,7 @@ CREATE TABLE IF NOT EXISTS "public"."anuncios" (
     "criado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
     "atualizado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
     "com_fecho" boolean DEFAULT true NOT NULL,
+    "personagem_id" "uuid",
     CONSTRAINT "anuncios_observacoes_check" CHECK (("char_length"("observacoes") <= 200)),
     CONSTRAINT "anuncios_tentativas_montagem_check" CHECK (("tentativas_montagem" >= 0)),
     CONSTRAINT "anuncios_texto_oferta_check" CHECK (("char_length"("texto_oferta") <= 40)),
@@ -821,6 +899,24 @@ CREATE TABLE IF NOT EXISTS "public"."feedbacks" (
 ALTER TABLE "public"."feedbacks" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."fichas_personagem" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "personagem_id" "uuid" NOT NULL,
+    "marca_id" "uuid" NOT NULL,
+    "versao" integer NOT NULL,
+    "status" "public"."status_ficha" DEFAULT 'gerando'::"public"."status_ficha" NOT NULL,
+    "imagem_path" "text",
+    "geracao_id" "uuid",
+    "instrucao_refacao" "text",
+    "criado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "fichas_personagem_instrucao_refacao_check" CHECK (("char_length"("instrucao_refacao") <= 400)),
+    CONSTRAINT "fichas_personagem_versao_check" CHECK (("versao" >= 1))
+);
+
+
+ALTER TABLE "public"."fichas_personagem" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."fichas_produto" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "produto_id" "uuid" NOT NULL,
@@ -837,6 +933,21 @@ CREATE TABLE IF NOT EXISTS "public"."fichas_produto" (
 
 
 ALTER TABLE "public"."fichas_produto" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."fotos_personagem" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "personagem_id" "uuid" NOT NULL,
+    "marca_id" "uuid" NOT NULL,
+    "storage_path" "text" NOT NULL,
+    "ordem" smallint DEFAULT 1 NOT NULL,
+    "criado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "fotos_personagem_caminho_chk" CHECK (("storage_path" ~ (((('^produtos/'::"text" || ("marca_id")::"text") || '/personagens/'::"text") || ("personagem_id")::"text") || '/originais/[^/]+$'::"text"))),
+    CONSTRAINT "fotos_personagem_ordem_check" CHECK ((("ordem" >= 1) AND ("ordem" <= 4)))
+);
+
+
+ALTER TABLE "public"."fotos_personagem" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."fotos_produto" (
@@ -919,7 +1030,7 @@ CREATE TABLE IF NOT EXISTS "public"."movimentacoes_creditos" (
     CONSTRAINT "movimentacoes_acao_chk" CHECK ((("tipo" = ANY (ARRAY['consumo'::"public"."tipo_movimentacao", 'estorno'::"public"."tipo_movimentacao"])) = ("acao" IS NOT NULL))),
     CONSTRAINT "movimentacoes_creditos_moeda_check" CHECK (("moeda" ~ '^[a-z]{3}$'::"text")),
     CONSTRAINT "movimentacoes_creditos_quantidade_check" CHECK (("quantidade" <> 0)),
-    CONSTRAINT "movimentacoes_creditos_referencia_tipo_check" CHECK (("referencia_tipo" = ANY (ARRAY['ficha'::"text", 'anuncio'::"text", 'quadro'::"text", 'clipe'::"text"]))),
+    CONSTRAINT "movimentacoes_creditos_referencia_tipo_check" CHECK (("referencia_tipo" = ANY (ARRAY['ficha'::"text", 'anuncio'::"text", 'quadro'::"text", 'clipe'::"text", 'personagem'::"text"]))),
     CONSTRAINT "movimentacoes_creditos_saldo_apos_check" CHECK (("saldo_apos" >= 0)),
     CONSTRAINT "movimentacoes_estorno_chk" CHECK ((("tipo" = 'estorno'::"public"."tipo_movimentacao") = ("estorno_de_id" IS NOT NULL))),
     CONSTRAINT "movimentacoes_observacao_chk" CHECK ((("tipo" <> ALL (ARRAY['bonus'::"public"."tipo_movimentacao", 'ajuste_manual'::"public"."tipo_movimentacao"])) OR (NULLIF("btrim"("observacao"), ''::"text") IS NOT NULL))),
@@ -1012,6 +1123,30 @@ CREATE TABLE IF NOT EXISTS "public"."perfis" (
 
 
 ALTER TABLE "public"."perfis" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."personagens" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "marca_id" "uuid" NOT NULL,
+    "nome" "text" NOT NULL,
+    "descricao" "text",
+    "modelo_en" "text",
+    "genero_modelo" "public"."genero_modelo" NOT NULL,
+    "faixa_etaria" "public"."faixa_etaria" DEFAULT 'de_20_a_30'::"public"."faixa_etaria" NOT NULL,
+    "origem" "public"."origem_personagem" DEFAULT 'descricao'::"public"."origem_personagem" NOT NULL,
+    "anuncio_origem_id" "uuid",
+    "ficha_aprovada_id" "uuid",
+    "arquivado" boolean DEFAULT false NOT NULL,
+    "criado_por" "uuid" NOT NULL,
+    "criado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "atualizado_em" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "personagens_descricao_check" CHECK (("char_length"("descricao") <= 300)),
+    CONSTRAINT "personagens_modelo_en_check" CHECK (("char_length"("modelo_en") <= 600)),
+    CONSTRAINT "personagens_nome_check" CHECK ((("char_length"("btrim"("nome")) >= 1) AND ("char_length"("btrim"("nome")) <= 60)))
+);
+
+
+ALTER TABLE "public"."personagens" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."precos_acoes" (
@@ -1108,6 +1243,16 @@ ALTER TABLE ONLY "public"."feedbacks"
 
 
 
+ALTER TABLE ONLY "public"."fichas_personagem"
+    ADD CONSTRAINT "fichas_personagem_personagem_id_versao_key" UNIQUE ("personagem_id", "versao");
+
+
+
+ALTER TABLE ONLY "public"."fichas_personagem"
+    ADD CONSTRAINT "fichas_personagem_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."fichas_produto"
     ADD CONSTRAINT "fichas_produto_pkey" PRIMARY KEY ("id");
 
@@ -1115,6 +1260,11 @@ ALTER TABLE ONLY "public"."fichas_produto"
 
 ALTER TABLE ONLY "public"."fichas_produto"
     ADD CONSTRAINT "fichas_produto_produto_id_versao_key" UNIQUE ("produto_id", "versao");
+
+
+
+ALTER TABLE ONLY "public"."fotos_personagem"
+    ADD CONSTRAINT "fotos_personagem_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1183,6 +1333,16 @@ ALTER TABLE ONLY "public"."perfis"
 
 
 
+ALTER TABLE ONLY "public"."personagens"
+    ADD CONSTRAINT "personagens_id_marca_id_key" UNIQUE ("id", "marca_id");
+
+
+
+ALTER TABLE ONLY "public"."personagens"
+    ADD CONSTRAINT "personagens_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."precos_acoes"
     ADD CONSTRAINT "precos_acoes_pkey" PRIMARY KEY ("acao");
 
@@ -1216,6 +1376,10 @@ CREATE INDEX "anuncios_marca_id_idx" ON "public"."anuncios" USING "btree" ("marc
 
 
 CREATE INDEX "anuncios_montando_idx" ON "public"."anuncios" USING "btree" ("status") WHERE ("status" = 'montando'::"public"."status_anuncio");
+
+
+
+CREATE INDEX "anuncios_personagem_marca_idx" ON "public"."anuncios" USING "btree" ("personagem_id", "marca_id");
 
 
 
@@ -1271,6 +1435,22 @@ CREATE INDEX "feedbacks_usuario_id_idx" ON "public"."feedbacks" USING "btree" ("
 
 
 
+CREATE INDEX "fichas_personagem_geracao_id_idx" ON "public"."fichas_personagem" USING "btree" ("geracao_id");
+
+
+
+CREATE INDEX "fichas_personagem_marca_id_idx" ON "public"."fichas_personagem" USING "btree" ("marca_id");
+
+
+
+CREATE INDEX "fichas_personagem_personagem_marca_idx" ON "public"."fichas_personagem" USING "btree" ("personagem_id", "marca_id");
+
+
+
+CREATE UNIQUE INDEX "fichas_personagem_uma_gerando_uidx" ON "public"."fichas_personagem" USING "btree" ("personagem_id") WHERE ("status" = 'gerando'::"public"."status_ficha");
+
+
+
 CREATE INDEX "fichas_produto_geracao_id_idx" ON "public"."fichas_produto" USING "btree" ("geracao_id");
 
 
@@ -1280,6 +1460,14 @@ CREATE INDEX "fichas_produto_marca_id_idx" ON "public"."fichas_produto" USING "b
 
 
 CREATE UNIQUE INDEX "fichas_produto_uma_gerando_uidx" ON "public"."fichas_produto" USING "btree" ("produto_id") WHERE ("status" = 'gerando'::"public"."status_ficha");
+
+
+
+CREATE INDEX "fotos_personagem_marca_id_idx" ON "public"."fotos_personagem" USING "btree" ("marca_id");
+
+
+
+CREATE INDEX "fotos_personagem_personagem_marca_idx" ON "public"."fotos_personagem" USING "btree" ("personagem_id", "marca_id");
 
 
 
@@ -1339,6 +1527,22 @@ CREATE INDEX "perfis_marca_id_idx" ON "public"."perfis" USING "btree" ("marca_id
 
 
 
+CREATE INDEX "personagens_anuncio_origem_id_idx" ON "public"."personagens" USING "btree" ("anuncio_origem_id");
+
+
+
+CREATE INDEX "personagens_criado_por_idx" ON "public"."personagens" USING "btree" ("criado_por");
+
+
+
+CREATE INDEX "personagens_ficha_aprovada_id_idx" ON "public"."personagens" USING "btree" ("ficha_aprovada_id");
+
+
+
+CREATE INDEX "personagens_marca_id_idx" ON "public"."personagens" USING "btree" ("marca_id");
+
+
+
 CREATE INDEX "produtos_ficha_aprovada_id_idx" ON "public"."produtos" USING "btree" ("ficha_aprovada_id");
 
 
@@ -1360,6 +1564,10 @@ CREATE OR REPLACE TRIGGER "trg_anuncios_atualizado_em" BEFORE UPDATE ON "public"
 
 
 CREATE OR REPLACE TRIGGER "trg_feedbacks_atualizado_em" BEFORE UPDATE ON "public"."feedbacks" FOR EACH ROW EXECUTE FUNCTION "public"."definir_atualizado_em"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_fotos_personagem_limite" BEFORE INSERT ON "public"."fotos_personagem" FOR EACH ROW EXECUTE FUNCTION "public"."limitar_fotos_personagem"();
 
 
 
@@ -1391,6 +1599,10 @@ CREATE OR REPLACE TRIGGER "trg_pedidos_convite_atualizado_em" BEFORE UPDATE ON "
 
 
 
+CREATE OR REPLACE TRIGGER "trg_personagens_atualizado_em" BEFORE UPDATE ON "public"."personagens" FOR EACH ROW EXECUTE FUNCTION "public"."definir_atualizado_em"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_produtos_atualizado_em" BEFORE UPDATE ON "public"."produtos" FOR EACH ROW EXECUTE FUNCTION "public"."definir_atualizado_em"();
 
 
@@ -1407,6 +1619,11 @@ ALTER TABLE ONLY "public"."anuncios"
 
 ALTER TABLE ONLY "public"."anuncios"
     ADD CONSTRAINT "anuncios_marca_id_fkey" FOREIGN KEY ("marca_id") REFERENCES "public"."marcas"("id");
+
+
+
+ALTER TABLE ONLY "public"."anuncios"
+    ADD CONSTRAINT "anuncios_personagem_fk" FOREIGN KEY ("personagem_id", "marca_id") REFERENCES "public"."personagens"("id", "marca_id");
 
 
 
@@ -1475,6 +1692,21 @@ ALTER TABLE ONLY "public"."feedbacks"
 
 
 
+ALTER TABLE ONLY "public"."fichas_personagem"
+    ADD CONSTRAINT "fichas_personagem_geracao_id_fkey" FOREIGN KEY ("geracao_id") REFERENCES "public"."geracoes"("id");
+
+
+
+ALTER TABLE ONLY "public"."fichas_personagem"
+    ADD CONSTRAINT "fichas_personagem_marca_id_fkey" FOREIGN KEY ("marca_id") REFERENCES "public"."marcas"("id");
+
+
+
+ALTER TABLE ONLY "public"."fichas_personagem"
+    ADD CONSTRAINT "fichas_personagem_personagem_id_marca_id_fkey" FOREIGN KEY ("personagem_id", "marca_id") REFERENCES "public"."personagens"("id", "marca_id");
+
+
+
 ALTER TABLE ONLY "public"."fichas_produto"
     ADD CONSTRAINT "fichas_produto_geracao_id_fkey" FOREIGN KEY ("geracao_id") REFERENCES "public"."geracoes"("id");
 
@@ -1487,6 +1719,16 @@ ALTER TABLE ONLY "public"."fichas_produto"
 
 ALTER TABLE ONLY "public"."fichas_produto"
     ADD CONSTRAINT "fichas_produto_produto_id_fkey" FOREIGN KEY ("produto_id") REFERENCES "public"."produtos"("id");
+
+
+
+ALTER TABLE ONLY "public"."fotos_personagem"
+    ADD CONSTRAINT "fotos_personagem_marca_id_fkey" FOREIGN KEY ("marca_id") REFERENCES "public"."marcas"("id");
+
+
+
+ALTER TABLE ONLY "public"."fotos_personagem"
+    ADD CONSTRAINT "fotos_personagem_personagem_id_marca_id_fkey" FOREIGN KEY ("personagem_id", "marca_id") REFERENCES "public"."personagens"("id", "marca_id");
 
 
 
@@ -1552,6 +1794,26 @@ ALTER TABLE ONLY "public"."perfis"
 
 ALTER TABLE ONLY "public"."perfis"
     ADD CONSTRAINT "perfis_marca_id_fkey" FOREIGN KEY ("marca_id") REFERENCES "public"."marcas"("id");
+
+
+
+ALTER TABLE ONLY "public"."personagens"
+    ADD CONSTRAINT "personagens_anuncio_origem_id_fkey" FOREIGN KEY ("anuncio_origem_id") REFERENCES "public"."anuncios"("id");
+
+
+
+ALTER TABLE ONLY "public"."personagens"
+    ADD CONSTRAINT "personagens_criado_por_fkey" FOREIGN KEY ("criado_por") REFERENCES "public"."perfis"("id");
+
+
+
+ALTER TABLE ONLY "public"."personagens"
+    ADD CONSTRAINT "personagens_ficha_aprovada_fk" FOREIGN KEY ("ficha_aprovada_id") REFERENCES "public"."fichas_personagem"("id");
+
+
+
+ALTER TABLE ONLY "public"."personagens"
+    ADD CONSTRAINT "personagens_marca_id_fkey" FOREIGN KEY ("marca_id") REFERENCES "public"."marcas"("id");
 
 
 
@@ -1636,6 +1898,13 @@ CREATE POLICY "feedbacks_update_admin" ON "public"."feedbacks" FOR UPDATE TO "au
 
 
 
+ALTER TABLE "public"."fichas_personagem" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "fichas_personagem_select" ON "public"."fichas_personagem" FOR SELECT TO "authenticated" USING ((("marca_id" = ( SELECT "public"."minha_marca_id"() AS "minha_marca_id")) OR ( SELECT "public"."eh_admin"() AS "eh_admin")));
+
+
+
 ALTER TABLE "public"."fichas_produto" ENABLE ROW LEVEL SECURITY;
 
 
@@ -1652,6 +1921,13 @@ CREATE POLICY "fotos_delete" ON "public"."fotos_produto" FOR DELETE TO "authenti
 CREATE POLICY "fotos_insert" ON "public"."fotos_produto" FOR INSERT TO "authenticated" WITH CHECK (((("marca_id" = ( SELECT "public"."minha_marca_id"() AS "minha_marca_id")) OR ( SELECT "public"."eh_admin"() AS "eh_admin")) AND (EXISTS ( SELECT 1
    FROM "public"."produtos" "p"
   WHERE (("p"."id" = "fotos_produto"."produto_id") AND ("p"."marca_id" = "fotos_produto"."marca_id") AND ("p"."ficha_aprovada_id" IS NULL))))));
+
+
+
+ALTER TABLE "public"."fotos_personagem" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "fotos_personagem_select" ON "public"."fotos_personagem" FOR SELECT TO "authenticated" USING ((("marca_id" = ( SELECT "public"."minha_marca_id"() AS "minha_marca_id")) OR ( SELECT "public"."eh_admin"() AS "eh_admin")));
 
 
 
@@ -1719,6 +1995,13 @@ CREATE POLICY "perfis_select" ON "public"."perfis" FOR SELECT TO "authenticated"
 
 
 
+ALTER TABLE "public"."personagens" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "personagens_select" ON "public"."personagens" FOR SELECT TO "authenticated" USING ((("marca_id" = ( SELECT "public"."minha_marca_id"() AS "minha_marca_id")) OR ( SELECT "public"."eh_admin"() AS "eh_admin")));
+
+
+
 ALTER TABLE "public"."precos_acoes" ENABLE ROW LEVEL SECURITY;
 
 
@@ -1757,6 +2040,11 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 REVOKE ALL ON FUNCTION "public"."aprovar_ficha"("p_ficha_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."aprovar_ficha"("p_ficha_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."aprovar_ficha_personagem"("p_ficha_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."aprovar_ficha_personagem"("p_ficha_id" "uuid") TO "service_role";
 
 
 
@@ -1801,6 +2089,11 @@ GRANT ALL ON FUNCTION "public"."lancar_creditos"("p_marca_id" "uuid", "p_tipo" "
 
 
 
+REVOKE ALL ON FUNCTION "public"."limitar_fotos_personagem"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."limitar_fotos_personagem"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."limitar_fotos_produto"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."limitar_fotos_produto"() TO "service_role";
 
@@ -1814,6 +2107,12 @@ GRANT ALL ON FUNCTION "public"."minha_marca_id"() TO "service_role";
 
 REVOKE ALL ON FUNCTION "public"."pegar_proximo_anuncio_para_montar"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."pegar_proximo_anuncio_para_montar"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."pode_gravar_foto_personagem"("p_nome" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."pode_gravar_foto_personagem"("p_nome" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."pode_gravar_foto_personagem"("p_nome" "text") TO "service_role";
 
 
 
@@ -1916,6 +2215,10 @@ GRANT SELECT("atualizado_em") ON TABLE "public"."anuncios" TO "authenticated";
 
 
 
+GRANT SELECT("personagem_id") ON TABLE "public"."anuncios" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."cenas" TO "service_role";
 
 
@@ -2001,8 +2304,18 @@ GRANT UPDATE("status") ON TABLE "public"."feedbacks" TO "authenticated";
 
 
 
+GRANT ALL ON TABLE "public"."fichas_personagem" TO "service_role";
+GRANT SELECT ON TABLE "public"."fichas_personagem" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."fichas_produto" TO "service_role";
 GRANT SELECT ON TABLE "public"."fichas_produto" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."fotos_personagem" TO "service_role";
+GRANT SELECT ON TABLE "public"."fotos_personagem" TO "authenticated";
 
 
 
@@ -2092,6 +2405,11 @@ GRANT UPDATE("status") ON TABLE "public"."pedidos_convite" TO "authenticated";
 
 GRANT ALL ON TABLE "public"."perfis" TO "service_role";
 GRANT SELECT ON TABLE "public"."perfis" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."personagens" TO "service_role";
+GRANT SELECT ON TABLE "public"."personagens" TO "authenticated";
 
 
 

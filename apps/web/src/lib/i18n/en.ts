@@ -248,7 +248,7 @@ export const en: Dictionary = {
     statusPagamento: { iniciado: "Started", pago: "Paid", falhou: "Failed", expirado: "Expired", reembolsado: "Refunded" },
     statusAnuncio: { gerando_roteiro: "Preparing", gerando_quadros: "Building scenes", aguardando_aprovacao: "Pick scenes", gerando_clipes: "Animating", montando: "Assembling video", pronto: "Ready", falhou: "Failed" },
     tipoMovimentacao: { compra: "Purchase", bonus: "Bonus", consumo: "Usage", estorno: "Refund", ajuste_manual: "Adjustment" },
-    acoes: { gerar_ficha: "Create reference image", refazer_ficha: "Redo reference image", gerar_roteiro_quadros: "Create ad", refazer_quadro: "Redo scene image", gerar_video: "Generate video", refazer_clipe: "Redo scene video", remontar_texto: "Update video" },
+    acoes: { gerar_ficha: "Create reference image", refazer_ficha: "Redo reference image", gerar_roteiro_quadros: "Create ad", refazer_quadro: "Redo scene image", gerar_video: "Generate video", refazer_clipe: "Redo scene video", remontar_texto: "Update video", gerar_ficha_personagem: "Create character", refazer_ficha_personagem: "Redo character" },
   },
   erros: {
     validacao: "Check the highlighted fields.",

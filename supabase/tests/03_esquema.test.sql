@@ -6,14 +6,14 @@ select plan(32);
 select tables_are('public', array[
   'marcas', 'perfis', 'produtos', 'fotos_produto', 'fichas_produto', 'anuncios', 'cenas', 'quadros', 'clipes',
   'geracoes', 'movimentacoes_creditos', 'pacotes_creditos', 'pagamentos', 'precos_acoes', 'configuracoes',
-  'feedbacks', 'pedidos_convite', 'downloads_anuncio'
-], 'tabelas da seção 7.3 (+ feedbacks, MD-6; + pedidos_convite, MD-9; + downloads_anuncio, métrica da seção 21)');
+  'feedbacks', 'pedidos_convite', 'downloads_anuncio', 'personagens', 'fotos_personagem', 'fichas_personagem'
+], 'tabelas da seção 7.3 (+ feedbacks, MD-6; + pedidos_convite, MD-9; + downloads_anuncio, seção 21; + personagens, MD-17)');
 
 select enums_are('public', array[
   'papel_usuario', 'categoria_peca', 'genero_alvo', 'status_ficha', 'status_anuncio', 'status_item', 'status_geracao',
   'tipo_geracao', 'cenario', 'modalidade', 'genero_modelo', 'faixa_etaria', 'estilo_video', 'formato_video',
-  'tipo_movimentacao', 'acao_cobravel', 'status_pagamento', 'idioma', 'feedback_tipo', 'feedback_status', 'pedido_convite_status'
-], 'enums da seção 7.2 (+ idioma, MD-1; + feedback_tipo/feedback_status, MD-6; + pedido_convite_status, MD-9)');
+  'tipo_movimentacao', 'acao_cobravel', 'status_pagamento', 'idioma', 'feedback_tipo', 'feedback_status', 'pedido_convite_status', 'origem_personagem'
+], 'enums da seção 7.2 (+ idioma, MD-1; + feedback_tipo/feedback_status, MD-6; + pedido_convite_status, MD-9; + origem_personagem, MD-17)');
 
 select has_function('public', f, 'função ' || f) from unnest(array[
   'eh_admin', 'minha_marca_id', 'debitar_creditos', 'estornar_creditos', 'lancar_creditos',

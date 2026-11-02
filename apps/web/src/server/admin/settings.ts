@@ -29,7 +29,7 @@ export const packagePatchSchema = packageFields.partial();
 
 /** Corpo de PUT /api/admin/configuracoes (seção 13: creditos ≥ 0). */
 export const settingsSchema = z.object({
-  precos: z.array(z.object({ acao: z.enum(["gerar_ficha", "refazer_ficha", "gerar_roteiro_quadros", "refazer_quadro", "gerar_video", "refazer_clipe", "remontar_texto"]), creditos: z.number().int().min(0) })).optional(),
+  precos: z.array(z.object({ acao: z.enum(["gerar_ficha", "refazer_ficha", "gerar_ficha_personagem", "refazer_ficha_personagem", "gerar_roteiro_quadros", "refazer_quadro", "gerar_video", "refazer_clipe", "remontar_texto"]), creditos: z.number().int().min(0) })).optional(),
   configuracoes: z.array(z.object({ chave: z.string().min(1).max(60), valor: z.unknown() })).optional(),
 });
 

@@ -22,7 +22,8 @@ select is((select count(*) from movimentacoes_creditos where marca_id = 'bbbbbbb
 select is((select count(*) from pagamentos where marca_id = 'bbbbbbbb-0000-0000-0000-000000000000'), 0::bigint, 'pagamentos: A não lê B');
 select is((select count(*) from configuracoes), 0::bigint, 'configuracoes: usuário da marca não lê');
 select is((select count(*) from pacotes_creditos where id in ('cccccccc-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000002')), 1::bigint, 'pacotes_creditos: usuário da marca só vê o pacote ativo (não vê o inativo)');
-select is((select count(*) from precos_acoes), 7::bigint, 'precos_acoes: todo autenticado lê');
+-- 9 ações: as 7 da regra 11.1 + ficha de personagem e refazer (MD-17).
+select is((select count(*) from precos_acoes), 9::bigint, 'precos_acoes: todo autenticado lê');
 
 -- E a própria marca continua visível.
 select is((select count(*) from anuncios where marca_id = 'aaaaaaaa-0000-0000-0000-000000000000'), 1::bigint, 'anuncios: A lê os próprios');

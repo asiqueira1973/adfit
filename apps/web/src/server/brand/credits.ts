@@ -44,7 +44,7 @@ export async function listActionPrices() {
   const supabase = await createUserClient();
   const { data, error } = await supabase.from("precos_acoes").select("acao, creditos, descricao");
   if (error) throw error;
-  const order = ["gerar_ficha", "refazer_ficha", "gerar_roteiro_quadros", "refazer_quadro", "gerar_video", "refazer_clipe", "remontar_texto"];
+  const order = ["gerar_ficha", "refazer_ficha", "gerar_ficha_personagem", "refazer_ficha_personagem", "gerar_roteiro_quadros", "refazer_quadro", "gerar_video", "refazer_clipe", "remontar_texto"];
   return (data ?? []).sort((a, b) => order.indexOf(a.acao) - order.indexOf(b.acao));
 }
 

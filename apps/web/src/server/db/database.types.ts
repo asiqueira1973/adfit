@@ -7,14 +7,14 @@ export type Database = {
           Tables: {
             "anuncios": {
                   Row: {
-                    "arquivado": boolean,"atualizado_em": string,"cenario": Database["public"]['Enums']["cenario"],"com_texto": boolean,"com_fecho": boolean,"criado_em": string,"criado_por": string,"erro": string | null,"estilo": Database["public"]['Enums']["estilo_video"],"faixa_etaria": Database["public"]['Enums']["faixa_etaria"],"ficha_id": string,"formato": Database["public"]['Enums']["formato_video"],"genero_modelo": Database["public"]['Enums']["genero_modelo"],"id": string,"marca_id": string,"modalidade": Database["public"]['Enums']["modalidade"],"montagem_iniciada_em": string | null,"observacoes": string | null,"produto_id": string,"prompt_versao": string | null,"roteiro": Json | null,"status": Database["public"]['Enums']["status_anuncio"],"tentativas_montagem": number,"texto_oferta": string | null,"titulo": string,"versao_montagem": number,"video_final_path": string | null
+                    "arquivado": boolean,"atualizado_em": string,"cenario": Database["public"]['Enums']["cenario"],"com_fecho": boolean,"com_texto": boolean,"criado_em": string,"criado_por": string,"erro": string | null,"estilo": Database["public"]['Enums']["estilo_video"],"faixa_etaria": Database["public"]['Enums']["faixa_etaria"],"ficha_id": string,"formato": Database["public"]['Enums']["formato_video"],"genero_modelo": Database["public"]['Enums']["genero_modelo"],"id": string,"marca_id": string,"modalidade": Database["public"]['Enums']["modalidade"],"montagem_iniciada_em": string | null,"observacoes": string | null,"personagem_id": string | null,"produto_id": string,"prompt_versao": string | null,"roteiro": Json | null,"status": Database["public"]['Enums']["status_anuncio"],"tentativas_montagem": number,"texto_oferta": string | null,"titulo": string,"versao_montagem": number,"video_final_path": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "arquivado"?: boolean,"atualizado_em"?: string,"cenario": Database["public"]['Enums']["cenario"],"com_texto"?: boolean,"com_fecho"?: boolean,"criado_em"?: string,"criado_por": string,"erro"?: string | null,"estilo"?: Database["public"]['Enums']["estilo_video"],"faixa_etaria"?: Database["public"]['Enums']["faixa_etaria"],"ficha_id": string,"formato"?: Database["public"]['Enums']["formato_video"],"genero_modelo": Database["public"]['Enums']["genero_modelo"],"id"?: string,"marca_id": string,"modalidade": Database["public"]['Enums']["modalidade"],"montagem_iniciada_em"?: string | null,"observacoes"?: string | null,"produto_id": string,"prompt_versao"?: string | null,"roteiro"?: Json | null,"status"?: Database["public"]['Enums']["status_anuncio"],"tentativas_montagem"?: number,"texto_oferta"?: string | null,"titulo": string,"versao_montagem"?: number,"video_final_path"?: string | null
+                    "arquivado"?: boolean,"atualizado_em"?: string,"cenario": Database["public"]['Enums']["cenario"],"com_fecho"?: boolean,"com_texto"?: boolean,"criado_em"?: string,"criado_por": string,"erro"?: string | null,"estilo"?: Database["public"]['Enums']["estilo_video"],"faixa_etaria"?: Database["public"]['Enums']["faixa_etaria"],"ficha_id": string,"formato"?: Database["public"]['Enums']["formato_video"],"genero_modelo": Database["public"]['Enums']["genero_modelo"],"id"?: string,"marca_id": string,"modalidade": Database["public"]['Enums']["modalidade"],"montagem_iniciada_em"?: string | null,"observacoes"?: string | null,"personagem_id"?: string | null,"produto_id": string,"prompt_versao"?: string | null,"roteiro"?: Json | null,"status"?: Database["public"]['Enums']["status_anuncio"],"tentativas_montagem"?: number,"texto_oferta"?: string | null,"titulo": string,"versao_montagem"?: number,"video_final_path"?: string | null
                   }
                   Update: {
-                    "arquivado"?: boolean,"atualizado_em"?: string,"cenario"?: Database["public"]['Enums']["cenario"],"com_texto"?: boolean,"com_fecho"?: boolean,"criado_em"?: string,"criado_por"?: string,"erro"?: string | null,"estilo"?: Database["public"]['Enums']["estilo_video"],"faixa_etaria"?: Database["public"]['Enums']["faixa_etaria"],"ficha_id"?: string,"formato"?: Database["public"]['Enums']["formato_video"],"genero_modelo"?: Database["public"]['Enums']["genero_modelo"],"id"?: string,"marca_id"?: string,"modalidade"?: Database["public"]['Enums']["modalidade"],"montagem_iniciada_em"?: string | null,"observacoes"?: string | null,"produto_id"?: string,"prompt_versao"?: string | null,"roteiro"?: Json | null,"status"?: Database["public"]['Enums']["status_anuncio"],"tentativas_montagem"?: number,"texto_oferta"?: string | null,"titulo"?: string,"versao_montagem"?: number,"video_final_path"?: string | null
+                    "arquivado"?: boolean,"atualizado_em"?: string,"cenario"?: Database["public"]['Enums']["cenario"],"com_fecho"?: boolean,"com_texto"?: boolean,"criado_em"?: string,"criado_por"?: string,"erro"?: string | null,"estilo"?: Database["public"]['Enums']["estilo_video"],"faixa_etaria"?: Database["public"]['Enums']["faixa_etaria"],"ficha_id"?: string,"formato"?: Database["public"]['Enums']["formato_video"],"genero_modelo"?: Database["public"]['Enums']["genero_modelo"],"id"?: string,"marca_id"?: string,"modalidade"?: Database["public"]['Enums']["modalidade"],"montagem_iniciada_em"?: string | null,"observacoes"?: string | null,"personagem_id"?: string | null,"produto_id"?: string,"prompt_versao"?: string | null,"roteiro"?: Json | null,"status"?: Database["public"]['Enums']["status_anuncio"],"tentativas_montagem"?: number,"texto_oferta"?: string | null,"titulo"?: string,"versao_montagem"?: number,"video_final_path"?: string | null
                   }
                   Relationships: [
                     {
@@ -35,6 +35,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "marcas"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "anuncios_personagem_fk"
+      columns: ["personagem_id","marca_id"]
+isOneToOne: false
+      referencedRelation: "personagens"
+      referencedColumns: ["id","marca_id"]
     },{
       foreignKeyName: "anuncios_produto_id_fkey"
       columns: ["produto_id"]
@@ -134,18 +140,32 @@ isOneToOne: false
                     
                   ]
                 },"downloads_anuncio": {
-                Row: {
+                  Row: {
                     "anuncio_id": string,"criado_em": string,"id": string,"marca_id": string
-                };
-                Insert: {
+                  }
+                  ComputedFields: never
+                  Insert: {
                     "anuncio_id": string,"criado_em"?: string,"id"?: string,"marca_id": string
-                };
-                Update: {
+                  }
+                  Update: {
                     "anuncio_id"?: string,"criado_em"?: string,"id"?: string,"marca_id"?: string
-                };
-                Relationships: [];
-            };
-            "feedbacks": {
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "downloads_anuncio_anuncio_id_marca_id_fkey"
+      columns: ["anuncio_id","marca_id"]
+isOneToOne: false
+      referencedRelation: "anuncios"
+      referencedColumns: ["id","marca_id"]
+    },{
+      foreignKeyName: "downloads_anuncio_marca_id_fkey"
+      columns: ["marca_id"]
+isOneToOne: false
+      referencedRelation: "marcas"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"feedbacks": {
                   Row: {
                     "atualizado_em": string,"criado_em": string,"id": string,"marca_id": string | null,"status": Database["public"]['Enums']["feedback_status"],"tela": string | null,"texto": string,"tipo": Database["public"]['Enums']["feedback_tipo"],"usuario_id": string
                   }
@@ -169,6 +189,38 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "perfis"
       referencedColumns: ["id"]
+    }
+                  ]
+                },"fichas_personagem": {
+                  Row: {
+                    "criado_em": string,"geracao_id": string | null,"id": string,"imagem_path": string | null,"instrucao_refacao": string | null,"marca_id": string,"personagem_id": string,"status": Database["public"]['Enums']["status_ficha"],"versao": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "criado_em"?: string,"geracao_id"?: string | null,"id"?: string,"imagem_path"?: string | null,"instrucao_refacao"?: string | null,"marca_id": string,"personagem_id": string,"status"?: Database["public"]['Enums']["status_ficha"],"versao": number
+                  }
+                  Update: {
+                    "criado_em"?: string,"geracao_id"?: string | null,"id"?: string,"imagem_path"?: string | null,"instrucao_refacao"?: string | null,"marca_id"?: string,"personagem_id"?: string,"status"?: Database["public"]['Enums']["status_ficha"],"versao"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "fichas_personagem_geracao_id_fkey"
+      columns: ["geracao_id"]
+isOneToOne: false
+      referencedRelation: "geracoes"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "fichas_personagem_marca_id_fkey"
+      columns: ["marca_id"]
+isOneToOne: false
+      referencedRelation: "marcas"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "fichas_personagem_personagem_id_marca_id_fkey"
+      columns: ["personagem_id","marca_id"]
+isOneToOne: false
+      referencedRelation: "personagens"
+      referencedColumns: ["id","marca_id"]
     }
                   ]
                 },"fichas_produto": {
@@ -201,6 +253,32 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "produtos"
       referencedColumns: ["id"]
+    }
+                  ]
+                },"fotos_personagem": {
+                  Row: {
+                    "criado_em": string,"id": string,"marca_id": string,"ordem": number,"personagem_id": string,"storage_path": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "criado_em"?: string,"id"?: string,"marca_id": string,"ordem"?: number,"personagem_id": string,"storage_path": string
+                  }
+                  Update: {
+                    "criado_em"?: string,"id"?: string,"marca_id"?: string,"ordem"?: number,"personagem_id"?: string,"storage_path"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "fotos_personagem_marca_id_fkey"
+      columns: ["marca_id"]
+isOneToOne: false
+      referencedRelation: "marcas"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "fotos_personagem_personagem_id_marca_id_fkey"
+      columns: ["personagem_id","marca_id"]
+isOneToOne: false
+      referencedRelation: "personagens"
+      referencedColumns: ["id","marca_id"]
     }
                   ]
                 },"fotos_produto": {
@@ -387,6 +465,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"personagens": {
+                  Row: {
+                    "anuncio_origem_id": string | null,"arquivado": boolean,"atualizado_em": string,"criado_em": string,"criado_por": string,"descricao": string | null,"faixa_etaria": Database["public"]['Enums']["faixa_etaria"],"ficha_aprovada_id": string | null,"genero_modelo": Database["public"]['Enums']["genero_modelo"],"id": string,"marca_id": string,"modelo_en": string | null,"nome": string,"origem": Database["public"]['Enums']["origem_personagem"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "anuncio_origem_id"?: string | null,"arquivado"?: boolean,"atualizado_em"?: string,"criado_em"?: string,"criado_por": string,"descricao"?: string | null,"faixa_etaria"?: Database["public"]['Enums']["faixa_etaria"],"ficha_aprovada_id"?: string | null,"genero_modelo": Database["public"]['Enums']["genero_modelo"],"id"?: string,"marca_id": string,"modelo_en"?: string | null,"nome": string,"origem"?: Database["public"]['Enums']["origem_personagem"]
+                  }
+                  Update: {
+                    "anuncio_origem_id"?: string | null,"arquivado"?: boolean,"atualizado_em"?: string,"criado_em"?: string,"criado_por"?: string,"descricao"?: string | null,"faixa_etaria"?: Database["public"]['Enums']["faixa_etaria"],"ficha_aprovada_id"?: string | null,"genero_modelo"?: Database["public"]['Enums']["genero_modelo"],"id"?: string,"marca_id"?: string,"modelo_en"?: string | null,"nome"?: string,"origem"?: Database["public"]['Enums']["origem_personagem"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "personagens_anuncio_origem_id_fkey"
+      columns: ["anuncio_origem_id"]
+isOneToOne: false
+      referencedRelation: "anuncios"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "personagens_criado_por_fkey"
+      columns: ["criado_por"]
+isOneToOne: false
+      referencedRelation: "perfis"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "personagens_ficha_aprovada_fk"
+      columns: ["ficha_aprovada_id"]
+isOneToOne: false
+      referencedRelation: "fichas_personagem"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "personagens_marca_id_fkey"
+      columns: ["marca_id"]
+isOneToOne: false
+      referencedRelation: "marcas"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"precos_acoes": {
                   Row: {
                     "acao": Database["public"]['Enums']["acao_cobravel"],"atualizado_em": string,"creditos": number,"descricao": string
@@ -468,6 +584,9 @@ isOneToOne: false
             "aprovar_ficha":
 { Args: { "p_ficha_id": string }; Returns: string
                            },
+"aprovar_ficha_personagem":
+{ Args: { "p_ficha_id": string }; Returns: string
+                           },
 "creditar_pagamento":
 { Args: { "p_moeda": string,"p_pagamento_id": string,"p_stripe_payment_intent_id": string,"p_valor_centavos": number }; Returns: string
                            },
@@ -492,12 +611,15 @@ isOneToOne: false
 "pegar_proximo_anuncio_para_montar":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"pode_gravar_foto_personagem":
+{ Args: { "p_nome": string }; Returns: boolean
+                           },
 "pode_gravar_original":
 { Args: { "p_nome": string }; Returns: boolean
                            }
           }
           Enums: {
-            "acao_cobravel": "gerar_ficha"|"refazer_ficha"|"gerar_roteiro_quadros"|"refazer_quadro"|"gerar_video"|"refazer_clipe"|"remontar_texto","categoria_peca": "top"|"legging"|"shorts"|"camiseta"|"regata"|"jaqueta"|"conjunto"|"outro","cenario": "academia"|"box_crossfit"|"estudio_funcional"|"ao_ar_livre_urbano"|"ao_ar_livre_natureza"|"pista_de_corrida"|"orla_praia"|"academia_praia"|"parque_urbano"|"calcadao_rio"|"academia_ampla","estilo_video": "energetico"|"cinematografico"|"lifestyle","faixa_etaria": "de_20_a_30"|"de_30_a_45"|"acima_de_45","feedback_status": "novo"|"visto"|"resolvido","feedback_tipo": "problema"|"sugestao","formato_video": "vertical_9_16"|"horizontal_16_9","genero_alvo": "feminino"|"masculino"|"unissex","genero_modelo": "mulher"|"homem","idioma": "pt_br"|"en","modalidade": "musculacao"|"crossfit"|"hyrox"|"corrida"|"funcional"|"yoga_pilates","papel_usuario": "admin_plataforma"|"usuario_marca","pedido_convite_status": "novo"|"convidado"|"recusado","status_anuncio": "gerando_roteiro"|"gerando_quadros"|"aguardando_aprovacao"|"gerando_clipes"|"montando"|"pronto"|"falhou","status_ficha": "gerando"|"aguardando_aprovacao"|"aprovada"|"descartada"|"falhou","status_geracao": "na_fila"|"processando"|"concluida"|"falhou"|"bloqueada_nsfw","status_item": "gerando"|"pronto"|"descartado"|"falhou","status_pagamento": "iniciado"|"pago"|"falhou"|"expirado"|"reembolsado","tipo_geracao": "ficha_produto"|"quadro_chave"|"clipe_video","tipo_movimentacao": "compra"|"bonus"|"consumo"|"estorno"|"ajuste_manual"
+            "acao_cobravel": "gerar_ficha"|"refazer_ficha"|"gerar_roteiro_quadros"|"refazer_quadro"|"gerar_video"|"refazer_clipe"|"remontar_texto"|"gerar_ficha_personagem"|"refazer_ficha_personagem","categoria_peca": "top"|"legging"|"shorts"|"camiseta"|"regata"|"jaqueta"|"conjunto"|"outro","cenario": "academia"|"box_crossfit"|"estudio_funcional"|"ao_ar_livre_urbano"|"ao_ar_livre_natureza"|"pista_de_corrida"|"orla_praia"|"academia_praia"|"parque_urbano"|"calcadao_rio"|"academia_ampla","estilo_video": "energetico"|"cinematografico"|"lifestyle","faixa_etaria": "de_20_a_30"|"de_30_a_45"|"acima_de_45","feedback_status": "novo"|"visto"|"resolvido","feedback_tipo": "problema"|"sugestao","formato_video": "vertical_9_16"|"horizontal_16_9","genero_alvo": "feminino"|"masculino"|"unissex","genero_modelo": "mulher"|"homem","idioma": "pt_br"|"en","modalidade": "musculacao"|"crossfit"|"hyrox"|"corrida"|"funcional"|"yoga_pilates","origem_personagem": "descricao"|"fotos"|"anuncio","papel_usuario": "admin_plataforma"|"usuario_marca","pedido_convite_status": "novo"|"convidado"|"recusado","status_anuncio": "gerando_roteiro"|"gerando_quadros"|"aguardando_aprovacao"|"gerando_clipes"|"montando"|"pronto"|"falhou","status_ficha": "gerando"|"aguardando_aprovacao"|"aprovada"|"descartada"|"falhou","status_geracao": "na_fila"|"processando"|"concluida"|"falhou"|"bloqueada_nsfw","status_item": "gerando"|"pronto"|"descartado"|"falhou","status_pagamento": "iniciado"|"pago"|"falhou"|"expirado"|"reembolsado","tipo_geracao": "ficha_produto"|"quadro_chave"|"clipe_video"|"ficha_personagem","tipo_movimentacao": "compra"|"bonus"|"consumo"|"estorno"|"ajuste_manual"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -613,7 +735,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "acao_cobravel": ["gerar_ficha", "refazer_ficha", "gerar_roteiro_quadros", "refazer_quadro", "gerar_video", "refazer_clipe", "remontar_texto"],"categoria_peca": ["top", "legging", "shorts", "camiseta", "regata", "jaqueta", "conjunto", "outro"],"cenario": ["academia", "box_crossfit", "estudio_funcional", "ao_ar_livre_urbano", "ao_ar_livre_natureza", "pista_de_corrida", "orla_praia", "academia_praia", "parque_urbano", "calcadao_rio", "academia_ampla"],"estilo_video": ["energetico", "cinematografico", "lifestyle"],"faixa_etaria": ["de_20_a_30", "de_30_a_45", "acima_de_45"],"feedback_status": ["novo", "visto", "resolvido"],"feedback_tipo": ["problema", "sugestao"],"formato_video": ["vertical_9_16", "horizontal_16_9"],"genero_alvo": ["feminino", "masculino", "unissex"],"genero_modelo": ["mulher", "homem"],"idioma": ["pt_br", "en"],"modalidade": ["musculacao", "crossfit", "hyrox", "corrida", "funcional", "yoga_pilates"],"papel_usuario": ["admin_plataforma", "usuario_marca"],"pedido_convite_status": ["novo", "convidado", "recusado"],"status_anuncio": ["gerando_roteiro", "gerando_quadros", "aguardando_aprovacao", "gerando_clipes", "montando", "pronto", "falhou"],"status_ficha": ["gerando", "aguardando_aprovacao", "aprovada", "descartada", "falhou"],"status_geracao": ["na_fila", "processando", "concluida", "falhou", "bloqueada_nsfw"],"status_item": ["gerando", "pronto", "descartado", "falhou"],"status_pagamento": ["iniciado", "pago", "falhou", "expirado", "reembolsado"],"tipo_geracao": ["ficha_produto", "quadro_chave", "clipe_video"],"tipo_movimentacao": ["compra", "bonus", "consumo", "estorno", "ajuste_manual"]
+            "acao_cobravel": ["gerar_ficha", "refazer_ficha", "gerar_roteiro_quadros", "refazer_quadro", "gerar_video", "refazer_clipe", "remontar_texto", "gerar_ficha_personagem", "refazer_ficha_personagem"],"categoria_peca": ["top", "legging", "shorts", "camiseta", "regata", "jaqueta", "conjunto", "outro"],"cenario": ["academia", "box_crossfit", "estudio_funcional", "ao_ar_livre_urbano", "ao_ar_livre_natureza", "pista_de_corrida", "orla_praia", "academia_praia", "parque_urbano", "calcadao_rio", "academia_ampla"],"estilo_video": ["energetico", "cinematografico", "lifestyle"],"faixa_etaria": ["de_20_a_30", "de_30_a_45", "acima_de_45"],"feedback_status": ["novo", "visto", "resolvido"],"feedback_tipo": ["problema", "sugestao"],"formato_video": ["vertical_9_16", "horizontal_16_9"],"genero_alvo": ["feminino", "masculino", "unissex"],"genero_modelo": ["mulher", "homem"],"idioma": ["pt_br", "en"],"modalidade": ["musculacao", "crossfit", "hyrox", "corrida", "funcional", "yoga_pilates"],"origem_personagem": ["descricao", "fotos", "anuncio"],"papel_usuario": ["admin_plataforma", "usuario_marca"],"pedido_convite_status": ["novo", "convidado", "recusado"],"status_anuncio": ["gerando_roteiro", "gerando_quadros", "aguardando_aprovacao", "gerando_clipes", "montando", "pronto", "falhou"],"status_ficha": ["gerando", "aguardando_aprovacao", "aprovada", "descartada", "falhou"],"status_geracao": ["na_fila", "processando", "concluida", "falhou", "bloqueada_nsfw"],"status_item": ["gerando", "pronto", "descartado", "falhou"],"status_pagamento": ["iniciado", "pago", "falhou", "expirado", "reembolsado"],"tipo_geracao": ["ficha_produto", "quadro_chave", "clipe_video", "ficha_personagem"],"tipo_movimentacao": ["compra", "bonus", "consumo", "estorno", "ajuste_manual"]
           }
         }
 } as const
