@@ -13,3 +13,15 @@ supabase/.temp/
 *.tsbuildinfo
 .vercel
 apps/web/*.tmp.ts
+
+# --- Segredos e credenciais (nunca versionar) ---
+GoogleService-Info.plist
+google-services.json
+*.p8
+*.p12
+*.mobileprovision
+*.keystore
+*.jks
+key.properties
+local.properties
+secrets/
