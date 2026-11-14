@@ -1,55 +1,94 @@
 # AdFit
 
-Plataforma de anúncios em vídeo com IA para marcas de roupa fitness — https://adfit.com.br. Spec: [`docs/spec.md`](docs/spec.md); emendas: [`docs/mudancas-de-escopo.md`](docs/mudancas-de-escopo.md); bugs: [`docs/bugs.md`](docs/bugs.md); ideias/backlog: [`docs/ideias.md`](docs/ideias.md); planos: [`plans/`](plans/); como está implementado: [`DOCUMENTACAO-TECNICA.md`](DOCUMENTACAO-TECNICA.md).
+Plataforma web que transforma fotos de uma peça de roupa fitness num vídeo de anúncio de 15 segundos, gerado com IA, pronto para Reels, Stories ou feed.
 
-Estado: MVP completo (épicos 8.0 a 8.9 + emendas MD-1 a MD-16). Próxima release: I-1 (catálogo pelo Google Drive + plano semanal), plano estacionado em `plans/I-1-catalogo-drive-plano.md`.
+**Site:** [adfit.com.br](https://adfit.com.br)
 
-## Estrutura
-- `apps/web` — Next.js 16 (App Router) + Supabase; deploy na Vercel (Root Directory `apps/web`).
-- `apps/worker` — esqueleto do worker previsto no spec; **não usado**: a montagem roda numa função da Vercel com `ffmpeg-static` (D-23).
-- `supabase/` — migrations, seed e testes pgTAP.
-- `scripts/` — seed do admin e utilitários.
+<p>
+  <img src="docs/design/07a-novo-anuncio-passo1-390-claro.jpg" alt="Novo anúncio: escolha das opções" width="220">
+  <img src="docs/design/08b-anuncio-aguardando-390-claro.jpg" alt="Aprovação das imagens de cada cena" width="220">
+  <img src="docs/design/08f-anuncio-pronto-390-claro.jpg" alt="Anúncio pronto" width="220">
+</p>
 
-## Setup local
-1. Node 22+, Docker (para o Supabase local), Supabase CLI, `jq` (guardrails em `.claude/hooks`).
-2. `npm install` na raiz.
-3. `supabase start` (portas 553xx: API http://127.0.0.1:55321, Mailpit http://127.0.0.1:55324 para ver e-mails de convite).
-4. `cp .env.example apps/web/.env.local` e preencher com `supabase status -o env` (URL, ANON_KEY, SERVICE_ROLE_KEY, DB_URL→DATABASE_URL), `APP_URL`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_SENHA`.
-5. `npm run seed:admin` (admin local; pacotes só com `SEED_STRIPE_PRICE_*`).
-6. `npm run dev` → http://localhost:3000.
+## Principais funcionalidades
 
-## Banco
-- Migrations: `supabase/migrations/` (nunca editar uma versionada; criar nova). Local: `supabase migration up --local`.
-- Remoto (projeto compartilhado "BANCO DE TESTE"): aplicar o mesmo SQL com `apply_migration` do MCP do Supabase e rodar os advisors (security e performance). Não usar `supabase db push`.
-- Tipos: `npm run db:types`. Schema: `supabase db dump --local --schema public -f schema.sql`.
-- Admin remoto: `npx tsx --env-file=<arquivo com as variáveis do remoto> scripts/seed-admin.ts`.
+- **Ficha de produto:** a marca sobe fotos da peça como tiver (no cabide, na mesa, vestida) e aprova uma ficha gerada por IA, que serve de referência de fidelidade.
+- **Novo anúncio por opções de negócio:** cenário, modalidade esportiva, modelo, estilo e formato (9:16 ou 16:9) — sem prompt e sem jargão de IA.
+- **Imagem antes de vídeo:** o roteiro é escrito por IA, cada cena vira uma imagem que o usuário aprova ou pede para refazer, com checagem automática de fidelidade à peça; só então os clipes de vídeo são gerados.
+- **Montagem no código:** texto na tela, CTA e logo da marca são sobrepostos na montagem (ffmpeg), nunca gerados pelo modelo.
+- **Créditos:** toda ação mostra o custo antes do clique; compra de pacotes de créditos com Stripe Checkout.
+- **Login com Google** e acesso por convite; interface em português e inglês.
+- Área administrativa para gerir marcas, usuários, créditos e gerações.
 
-## Verificação
-`npm run verify` roda typecheck, lint, testes (banco + Vitest) e build; termina com erro se qualquer um falhar.
+## Stack técnica
 
-## Deploy
-- Web: push na `main` (integração Git da Vercel) ou `vercel deploy --prod` (projeto `adfit`; domínio https://adfit.com.br, também https://adfit-roan.vercel.app). `APP_URL` de produção = `https://adfit.com.br`.
-- Varredura periódica (montagem, retentativas, órfãos): `GET /api/cron/varredura` com `Authorization: Bearer $CRON_SECRET`, disparada a cada 5 min por `.github/workflows/varredura.yml` e 1×/dia pelo cron da Vercel. `CRON_SECRET` precisa existir na Vercel (Production) e nos secrets do GitHub.
-- Migrations: no remoto compartilhado, pelo MCP `apply_migration` com o mesmo SQL do arquivo (nunca `supabase db push`); depois rodar os advisors.
+- **Monorepo** npm workspaces, TypeScript.
+- **Web:** Next.js 16 (App Router) em [`apps/web`](apps/web), deploy na Vercel.
+- **Banco, autenticação e arquivos:** Supabase (Postgres com RLS, Auth, Storage).
+- **IA:** Claude API (Anthropic) para roteiro e checagem de qualidade; API da Higgsfield para imagens e clipes de vídeo.
+- **Montagem do vídeo:** `ffmpeg-static` numa função da Vercel, com textos renderizados via `opentype.js`.
+- **Pagamentos:** Stripe Checkout e webhooks.
+- **E-mail:** Resend (convites).
+- **Agendamento:** cron da Vercel e um workflow do GitHub Actions ([`.github/workflows/varredura.yml`](.github/workflows/varredura.yml)) que dispara a varredura de anúncios em andamento.
+- **Testes:** pgTAP (banco) e Vitest.
 
-## Pagamentos (Stripe, modo de teste)
-1. Chaves de TESTE no `apps/web/.env.local`: `STRIPE_SECRET_KEY=sk_test_…`, `SEED_STRIPE_PRICE_PACOTE_60/150=price_…` (Prices **avulsos/One-off** em USD) e `npm run seed:admin` para criar os pacotes.
-2. `stripe login` (sandbox) e `stripe listen --print-secret` → `STRIPE_WEBHOOK_SECRET=whsec_…` no `.env.local`.
-3. `stripe listen --forward-to localhost:<porta>/api/webhooks/stripe` com o app rodando e `APP_URL` apontando para a mesma porta.
-4. Comprar em Créditos → Comprar créditos com o cartão `4242 4242 4242 4242`, validade futura, qualquer CVC.
-5. Reenvio de evento: `stripe events resend <evt_…>`; reembolso: painel da Stripe ou `POST /v1/refunds`.
-Produção (ativa desde 01/11/2026): chave secreta live dedicada "AdFit" e o webhook `https://adfit.com.br/api/webhooks/stripe` (5 eventos da seção 4.5, payload Snapshot) — `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET` só na Vercel, nunca no `.env.local`. A conta Stripe é brasileira: **cartão brasileiro só paga em BRL**, então cada pacote existe em BRL e em USD (Prices próprios) e a tela mostra os da moeda do idioma (MD-16).
+## Como foi construído
 
-## Geração (Higgsfield e Claude)
-- `apps/web/.env.local`: `HF_API_KEY_ID` e `HF_API_KEY_SECRET` (console da Higgsfield API — são os dois lados do par `id:secret`), `HF_WEBHOOK_TOKEN` (aleatório, ≥ 16 caracteres), `HF_WEBHOOK_SECRET=whsec_…` (opcional, Settings do console) e `ANTHROPIC_API_KEY`.
-- A API da Higgsfield tem **saldo pré-pago próprio** (console → Billing), separado do plano/assinatura do site ou do conector MCP. Sem saldo, toda submissão volta `403 not_enough_credits` e a ficha falha com estorno.
-- Localmente não há webhook (o `APP_URL` é http): o resultado chega pelo polling da tela (reconsulta a cada 30 s depois de 3 min) ou pelo "Reconsultar" do admin.
-- Modelos e preços ficam em `configuracoes` (`modelo_imagem` = ficha, `modelo_quadro` = imagens das cenas, `modelo_video`, `preco_usd_*`): trocar sem deploy. Valores jsonb são strings simples (`"xai/grok-imagine-image-2.0"`), nunca `JSON.stringify` de novo.
-- Modelos atuais: ficha no Grok Imagine 2.0 (US$ 0,09); cenas no Marketing Studio 2.5 Flare (US$ 0,07 — o Grok barrava cena de corrida com top como nsfw); clipes no Seedance 2.5 1080p com som ambiente (US$ 4,83 por 5 s). Custo real = **extrato da Higgsfield** (modelos por token cobram estimativa e devolvem a diferença).
-- Saldo da API esgotado: faixa vermelha no admin e ações cobradas bloqueadas antes do débito (`servico_indisponivel`) até a próxima geração dar certo. Recarga automática: gatilho ≥ US$ 20 e recarga ≥ US$ 50 (um vídeo consome US$ 14,49 de uma vez).
-- Montagem do vídeo: `apps/web/src/server/video/assemble.ts` (ffmpeg-static; textos em PNG via opentype.js porque o ffmpeg Linux não tem drawtext). Diagnóstico em `GET /api/admin/saude`.
+O AdFit foi desenvolvido com Claude (Anthropic) a partir de uma especificação no formato SDD:
 
-## Login e convites (MD-7)
-- Em produção o login é só com Google. Variáveis: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (web) e o provedor Google ligado no Supabase com o mesmo client ID. As origens JavaScript autorizadas no Google Cloud precisam incluir cada domínio do app.
-- Localmente, a tela Entrar mostra também "Entrada de desenvolvimento" (e-mail e senha), usada pelos testes e capturas.
-- E-mail de boas-vindas do convite: `RESEND_API_KEY` e `MAIL_FROM` (ex.: `AdFit <ola@adfit.com.br>`, com o domínio verificado no Resend). Sem elas, o admin recebe o link para mandar manualmente.
+- [`docs/spec.md`](docs/spec.md) — a fonte única de verdade (cópia idêntica em [`spec.md`](spec.md)).
+- [`docs/mudancas-de-escopo.md`](docs/mudancas-de-escopo.md) — as emendas aprovadas depois da spec.
+- [`plans/`](plans/) — o plano aprovado de cada épico antes da implementação.
+- [`CLAUDE.md`](CLAUDE.md) — regras e convenções para o agente; [`DOCUMENTACAO-TECNICA.md`](DOCUMENTACAO-TECNICA.md) — como está implementado.
+- [`docs/design/`](docs/design/) — capturas de todas as telas, em claro e escuro.
+
+Guardrails que existem no repositório:
+
+- **Hooks do Claude Code** em [`.claude/hooks/`](.claude/hooks/), configurados em [`.claude/settings.json`](.claude/settings.json): bloqueiam segredos em código que roda no cliente, edição de migrations já versionadas, edição de prompts versionados (mudança vira nova versão) e edição de testes durante correção de bug; e lembram de rodar os advisors do Supabase.
+- **Agente verificador** ([`.claude/agents/verifier.md`](.claude/agents/verifier.md)) e instruções de revisão em [`REVIEW.md`](REVIEW.md).
+- **Testes:** pgTAP em [`supabase/tests/`](supabase/tests/) e Vitest no app. `npm run verify` roda typecheck, lint, testes e build, e falha se qualquer um falhar.
+
+## Status
+
+Publicado — no ar em [adfit.com.br](https://adfit.com.br).
+
+## Rodar localmente
+
+Requisitos: Node 22+, Docker (para o Supabase local), Supabase CLI e `jq` (usado pelos hooks de `.claude/hooks/`).
+
+```bash
+npm install
+supabase start                         # Supabase local
+cp .env.example apps/web/.env.local    # preencha com `supabase status -o env` e as demais chaves
+npm run seed:admin                     # cria um admin local
+npm run dev                            # http://localhost:3000
+```
+
+```bash
+npm run verify    # typecheck, lint, testes (pgTAP + Vitest) e build
+```
+
+Estrutura:
+
+- `apps/web` — o site (Next.js).
+- `apps/worker` — esqueleto do worker previsto na spec; não usado, porque a montagem roda numa função da Vercel.
+- `supabase/` — migrations, seed e testes pgTAP. Migration versionada nunca se edita: mudança de esquema vira arquivo novo.
+- `scripts/` — seed do admin, testes de banco e captura das telas.
+
+Para o fluxo completo de geração (Higgsfield, Claude), pagamentos em modo de teste da Stripe e login, veja [`DOCUMENTACAO-TECNICA.md`](DOCUMENTACAO-TECNICA.md).
+
+## Créditos de terceiros
+
+- A fonte **Inter** ([rsms/inter](https://github.com/rsms/inter)), usada nos textos sobrepostos ao vídeo, está em `apps/web/src/server/video/assets/` sob a SIL Open Font License 1.1, com o aviso original em [`LICENSE.txt`](apps/web/src/server/video/assets/LICENSE.txt).
+
+## Licença
+
+O código está disponível apenas para leitura e estudo. Veja [LICENSE](LICENSE).
+
+## Contribuições
+
+Issues são bem-vindas; pull requests não são aceitos. Veja [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+Feito pela [Dab Lab](https://www.dablab.com.br/) — agência de inovação no-code para startups e PMEs, com automações usando IA.
